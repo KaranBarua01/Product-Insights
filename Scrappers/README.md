@@ -1,103 +1,75 @@
-# Product Insights — Scrappers (Diode Master Lite V1)
+# Product Insights — Scrappers V1.1 (portable prototype)
 
-**Status:** prototype source only. No Cloudflare deployment, browser binding, OCR service, or production claim is included.
-
-Three independent extraction strategies and a pattern-aware router live in this folder. They run **after** `engine/pattern-systems/` and produce bounded, evidence-linked *source content*, not manufacturing intelligence or JS1–JS10.
+**Primary runtime: Node.js 24+ on Windows, Linux, macOS, Docker or any suitable VPS.** The three scraper strategies are independent of Cloudflare. Cloudflare Worker/Browser Run remains an optional adapter, not a required server or dependency.
 
 ```text
-URL + Pattern Systems analysis (optional)
-    → access policy (explicit host allowlist, robots.txt)
-    → routing decision
-       S01  HTTP / HTML / JSON-LD / __NEXT_DATA__ / links
-       S02  Cloudflare Browser Run, one optional "Load more" action
-       S03  Text PDF, strict byte/page limits
-    → extracted content + source locations + attempts + warnings
+Approved website URL + optional Pattern Systems assessments
+  -> host allowlist + robots.txt
+  -> pattern-informed router
+      S01: bounded HTTP/HTML + JSON-LD + app state + relevant same-host page samples
+      S02: optional Playwright on Node or remote Chromium CDP (Cloudflare optional)
+      S03: PDF digital-text extraction; scanned documents flagged needs_ocr
+  -> evidence-linked structured content + sampled URLs + attempts + warnings
 ```
 
-## Components
+## Install and test locally (PowerShell)
 
-| Module | What is implemented | Important limitation |
-|---|---|---|
-| S01 | bounded manual-redirect HTTP, readable text, headings, links, PDF leads, JSON-LD and embedded app state | heuristic HTML parser, not a complete DOM parser or catalog crawler |
-| S02 | `@cloudflare/puppeteer` browser binding, same-host request interception, limited interaction and rendered HTML capture | needs Cloudflare Browser Run account/binding; may block third-party JS and some SPA sites |
-| S03 | bounded PDF retrieval + `unpdf` digital text extraction with page-level provenance | no OCR or reconstructed table grid; scanned PDFs produce `needs_ocr` |
-| Router | consumes Pattern Systems assessment IDs, selects best first strategy and does bounded fallback | heuristic routing; accuracy not benchmarked against real sites |
+From `Scrappers/`:
 
-## Install and run
-
-Node.js 24+ recommended (required by current `unpdf`). Inside `Scrappers/`:
-
-```bash
-npm install
-npm test
-npm run dev
+```powershell
+npm.cmd install
+npm.cmd test
+npm.cmd run benchmark:dry
 ```
 
-Set a secret in `.dev.vars` (do not commit it):
+The dry run makes **zero network requests**. Live benchmarks require an explicitly reviewed `benchmark/approved-hosts.txt` and a site CSV. Build the adjacent Pattern Systems module first for `--pattern-mode local`:
 
-```text
-SCRAPPERS_API_TOKEN=choose-a-long-random-local-token
+```powershell
+cd ..\engine\pattern-systems
+npm.cmd install
+npm.cmd run build
+cd ..\..\Scrappers
 ```
 
-Update the explicit `ALLOWED_HOSTS` list in `wrangler.jsonc` to your approved test domains. The sample host is a placeholder. An empty allowlist **rejects all extraction**.
+## Run a first three-site test on your own server/PC
 
-S01 and S03 require no browser binding. To enable S02, add `"browser":{"binding":"MYBROWSER"}` to your Wrangler configuration and use an account with Browser Run support. Cloudflare browser execution may incur costs. Do not deploy without reviewing outbound network policy, plan limits and DNS-level SSRF protections.
+```powershell
+# Needed once for Playwright-backed S02 (optional for S01/S03):
+npx.cmd playwright install chromium
 
-### API
-
-- `GET /health` — strategy and binding readiness.
-- `GET /api/strategies` — strategy descriptions.
-- `POST /api/extract` — requires `Authorization: Bearer <SCRAPPERS_API_TOKEN>`.
-
-Request body (maximum 9 KB):
-
-```json
-{
-  "url": "https://manufacturer.com/products",
-  "mode": "auto",
-  "maxPdfPages": 8,
-  "patternAnalysis": {
-    "assessments": [
-      {"patternId":"R01","status":"observed"},
-      {"patternId":"R03","status":"lead"}
-    ]
-  }
-}
+# Review the exact hosts and permissions first; then:
+npm.cmd run benchmark -- --sites benchmark/sites.first3.csv --allow-hosts benchmark/approved-hosts.txt --pattern-mode local --browser playwright --html-pages 3 --delay-ms 2000 --out benchmark/results/portable-v11
 ```
 
-`mode` accepts `auto`, `S01`, `S02`, `S03`. An omitted `patternAnalysis` triggers HTTP-first routing. To connect a deployed Pattern Systems Worker, configure both `PATTERN_API_URL` and `PATTERN_API_TOKEN` as appropriate; this module calls its existing `POST /api/analyze` endpoint. Do not interpret route candidates as proof that an API or interaction works.
+Omit `--browser playwright` if you do not have Chromium installed; S02 then reports unavailable and the router uses its HTTP fallback. A remote browser service can be configured using `PLAYWRIGHT_CDP_URL` with the same CLI flag.
 
-Sample command:
+The CLI can alternatively call **any compatible HTTP API**, not only Cloudflare:
 
-```bash
-curl -sS http://127.0.0.1:8787/api/extract \
-  -H 'Authorization: Bearer choose-a-long-random-local-token' \
-  -H 'Content-Type: application/json' \
-  -d '{"url":"https://manufacturer.com/","mode":"auto"}'
+```powershell
+$env:SCRAPPERS_API_TOKEN = "your-service-token"
+npm.cmd run benchmark -- --sites benchmark/sites.first3.csv --allow-hosts benchmark/approved-hosts.txt --pattern-mode local --extract-api http://127.0.0.1:8787 --out benchmark/results/http-service
 ```
 
-Response includes `schemaVersion`, selected/final strategy, routing rationale, output `content`, source-specific `evidence`, `attempts` and explicit `warnings`. S03 can report `needs_ocr`. No data is stored by this module.
+`--worker-url` remains a backward-compatible alias of `--extract-api`. The HTTP endpoint must be HTTPS except for localhost loopback.
 
-## Pattern-to-route logic
+For standalone API server setup and Docker examples, see [`deploy/README.md`](deploy/README.md). The Node API uses `POST /api/extract`, `GET /health`, `GET /api/strategies` with the same response contract as the optional Cloudflare Worker.
 
-- Direct `.pdf` URL → S03.
-- Sparse application shell `R04` + hydration `R07` or Load More `N11` → S02 (when available; otherwise S01).
-- Ordinary HTML, JSON-LD `R02`, embedded state `R03` → S01 first; hydration alone does **not** require the browser.
-- If S01 discovers a PDF response → S03 (automatic mode only).
-- If S01 returns very sparse HTML, optionally try S02 and keep whichever yielded more text.
-- No loops, login bypass, CAPTCHA solving, exhaustive pagination, or external-site traversal.
+## What improved over V1
 
-## Testing and known risks
+- S01 can recover **up to three** targeted same-host content pages from observed links rather than reading only a homepage. It keeps page-level source records and deduplicates repeated text.
+- Large HTML responses are handled as **bounded partial samples**, explicitly marked `truncated`. A truncated response is not silently called complete. PDF and robots responses retain strict byte limits.
+- S02 browser execution is now injected. The portable implementation uses Playwright and Chromium locally or a remote CDP connection. Off-host requests, forbidden robots paths, downloads and service workers are blocked by the adapter.
+- New Node HTTP server and minimal Docker image support deployment beyond Cloudflare.
+- Default npm dependency graph no longer includes `@cloudflare/puppeteer` 1.x or Wrangler. Run `npm.cmd install` and `npm.cmd audit --omit=dev` locally to verify that your **actual installed** dependency tree is clear of the previously reported advisories; the audit cannot be certified from fixture testing.
+- The benchmark still produces JSON, CSV, attempt history, and manual review queue. Accuracy remains **unmeasured until humans label the expected extraction method and content**.
 
-`npm test` runs deterministic fixture tests without network calls. These cover URL policy, robots, redirect bounds, HTML JSON-LD, strategy routing, browser mock, PDF parser mock, fallback behavior and Worker authorization. **They are not live-site accuracy tests.** `S02` requires a separately configured Browser Run environment; `S03`'s actual `unpdf` integration needs dependency installation and a real test PDF before relying on it. Resource limits are conservative but not an exhaustive security boundary; neither the allowlist nor request interception proves DNS destinations are public. Treat as an internal experiment only.
+## Important limitations
 
-## CLI benchmark prototype (added)
+- This is an internal prototype, not a production crawler, AI JS1–JS10 enrichment, or OS integration.
+- `robots.txt` HTTP 429 (ConnectDER in the first trial) must remain blocked; no bypass is performed.
+- Pattern Systems still has a separate 512 KB sample limit. If that detector fails on a large page, the extraction runner records the error and defaults to HTTP-first; it does not invent patterns.
+- Shallow HTML heuristics do not prove product completeness. Browser adapters require real-world validation and optional Chromium installation. PDF integration requires a real-document test; scanned pages still need OCR.
+- No DNS-pinned public-only egress policy yet: exact host allowlists **do not fully prevent SSRF/DNS rebinding**. Do not expose arbitrary-site extraction publicly without network controls.
+- Large HTML and multi-page sampling improve diagnosability, not guaranteed extraction quality. The initial three-site benchmark must be repeated; **no new live-site improvement has been measured**.
 
-A **sequential 25-site candidate test batch**, JSON/CSV evidence exports, review queue, human-labeled route/keyword accuracy, automated basic usability, elapsed time and explicit limitations are in [`benchmark/README.md`](benchmark/README.md). No UI or cloud deployment is required for the local S01/S03 path; S02 still requires a configured Cloudflare Browser Run Worker.
-
-```bash
-npm run benchmark:dry
-# Then review the hosts and create benchmark/approved-hosts.txt; see benchmark/README.md.
-```
-
-These are **prototype benchmark utilities**, not validated live-site performance. No 25-site live benchmark has been claimed or run by adding these files. Do not conflate sample successes with complete company or catalog coverage.
+Cloudflare users may still use `src/worker.ts`, `src/cloudflare-adapter.ts`, `wrangler.jsonc` by separately installing compatible Cloudflare tooling (`wrangler` and `@cloudflare/puppeteer` 2.x or later), configuring a Browser binding, and validating its version-specific APIs. Cloudflare production deployment has not been attempted.

@@ -49,13 +49,13 @@ npm run benchmark -- \
   --out benchmark/results/run-001
 ```
 
-`--pattern-mode local` imports the compiled existing Pattern Systems library and samples at most **2 pages per website**. Pattern results are passed to the Scrappers router; if classification fails, that site's extraction falls back to conservative HTTP-first routing with an explicit error. S01 and S03 can run locally after dependencies are installed. **S02 cannot execute in plain Node** and will be recorded as unavailable / backed down to HTTP when selected.
+`--pattern-mode local` imports the compiled existing Pattern Systems library and samples at most **2 pages per website**. Pattern results are passed to the Scrappers router; if classification fails, that site's extraction falls back to conservative HTTP-first routing with an explicit error. S01 and S03 can run locally after dependencies are installed. **S02 can execute on Node via the optional Playwright adapter.** Install Chromium and add `--browser playwright` to the local command. Without it, S02 is unavailable and auto mode retains its HTTP fallback.
 
 If the Pattern Systems library has not been built, build it as shown above, or use `--pattern-mode none` to test extraction without pattern-assisted routing. `none` does **not** validate the full Pattern → Router workflow.
 
-## Test all three strategies via configured Worker
+## Test all three strategies via a generic Node or Cloudflare HTTP API
 
-Set up and run the existing Scrappers Cloudflare Worker with approved `ALLOWED_HOSTS`, a bearer token and an actual `MYBROWSER` binding for S02. Then:
+Run the portable Node extraction API (`npm run serve`) or the optional Cloudflare Worker with approved `ALLOWED_HOSTS` and an API token. Configure Playwright or an equivalent browser adapter on that server to use S02. Then:
 
 ```bash
 export SCRAPPERS_API_TOKEN='your-worker-token'
@@ -63,7 +63,7 @@ npm run benchmark -- \
   --sites benchmark/sites.example.csv \
   --allow-hosts benchmark/approved-hosts.txt \
   --pattern-mode local \
-  --worker-url https://your-authorized-worker.example.workers.dev \
+  --extract-api https://your-authorized-api.example.com \
   --out benchmark/results/worker-run-001
 ```
 
@@ -113,3 +113,11 @@ npm test
 ```
 
 The code is under `tools/benchmark.mjs` (CLI) and `tools/benchmark-lib.mjs` (CSV, evaluation, artifacts). Fixture tests live in `tests/benchmark.test.mjs`. No dashboard or database is required.
+
+## Portable Node / Docker mode (V1.1)
+
+The scraper core, Node API, Docker image, and Playwright adapter now run independently of Cloudflare. `--worker-url` remains a backward-compatible alias for `--extract-api`; use `--extract-api http://127.0.0.1:8787` for the portable Node service. Set `SCRAPPERS_API_TOKEN` for either API. See `../deploy/README.md` for service startup and safe defaults.
+
+For locally rendered S02, install Chromium once with `npx.cmd playwright install chromium` on Windows (or `npx playwright install chromium` on Linux/macOS), then add `--browser playwright`. For a trusted remote browser endpoint, set `PLAYWRIGHT_CDP_URL`; the same flag is used. `--html-pages 1..4` controls shallow internal-page discovery on local execution. Cloudflare-specific tooling is not installed by default.
+
+The first Dometic benchmark failed above the pattern detector's 512 KB cap; that detector remains a separate limitation. S01 now salvages bounded HTML prefixes (and marks them partial), but **no live-site accuracy gain has yet been established**. The ConnectDER robots HTTP 429 remains a required stop. Re-run the three-site test, inspect `results.json`, and manually label claims before reporting extraction accuracy.

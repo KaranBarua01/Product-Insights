@@ -5,7 +5,6 @@
   "compatibility_date": "2026-11-10",
   "compatibility_flags": ["nodejs_compat_v2"],
   "vars": {"ALLOWED_HOSTS": "manufacturer.com"}
-  // To enable S02, add: "browser": {"binding": "MYBROWSER"}
-  // Replace ALLOWED_HOSTS with an approved comma-separated test-host list.
-  // Use: npx wrangler secret put SCRAPPERS_API_TOKEN
+  // Optional Cloudflare deployment ONLY. See README; install wrangler and puppeteer 2.x separately.
+  // Optional Browser Run: "browser": {"binding": "MYBROWSER"}
 }

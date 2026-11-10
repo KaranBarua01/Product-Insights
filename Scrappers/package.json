@@ -1,26 +1,21 @@
 {
-  "name": "insidejob-scrappers-prototype",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": ">=24"
+  "name":"insidejob-scrappers-prototype",
+  "version":"0.2.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=24"},
+  "scripts":{
+    "check":"tsc --noEmit -p tsconfig.json",
+    "build":"tsc -p tsconfig.json",
+    "test":"npm run build && node --test tests/*.test.mjs",
+    "dev":"npm run serve",
+    "serve":"npm run build && node tools/node-server.mjs",
+    "dev:cloudflare":"wrangler dev",
+    "deploy:cloudflare":"wrangler deploy",
+    "benchmark":"npm run build && node tools/benchmark.mjs",
+    "benchmark:dry":"npm run build && node tools/benchmark.mjs --sites benchmark/sites.example.csv --allow-hosts benchmark/approved-hosts.example.txt --dry-run"
   },
-  "scripts": {
-    "check": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test tests/*.test.mjs",
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "benchmark": "npm run build && node tools/benchmark.mjs",
-    "benchmark:dry": "npm run build && node tools/benchmark.mjs --sites benchmark/sites.example.csv --allow-hosts benchmark/approved-hosts.example.txt --dry-run"
-  },
-  "dependencies": {
-    "@cloudflare/puppeteer": "^1.1.0",
-    "unpdf": "^2.1.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3",
-    "wrangler": "^4.50.0"
-  }
+  "dependencies":{"unpdf":"^2.1.0"},
+  "optionalDependencies":{"playwright":"^1.65.0"},
+  "devDependencies":{"typescript":"^5.9.3"}
 }
