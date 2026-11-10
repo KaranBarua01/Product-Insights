@@ -2,7 +2,7 @@
 
 **Local test environment:** Node.js 22.16.0; global TypeScript 5.8.3; no npm packages installed in this container.
 
-**Executed:** `npm run test` (`tsc` compile followed by Node built-in test runner). The first verification run passed 9/9 tests after one TypeScript nullability correction.
+**Executed:** `npm run test` (`tsc` compile followed by Node built-in test runner). The first verification run passed 9/9 tests after one TypeScript nullability correction. The final verification run passed **12/12 tests**, including extra controls for social-link false positives, pagination uncertainty, and unreviewed new-pattern candidates.
 
 **Scope:** Deterministic local fixtures and in-memory mocked HTTP responses only. These tests do **not** validate deployment to a Cloudflare account, real website accessibility, production HTTP fingerprint accuracy, browser interactions, API endpoint discovery, or cost/speed improvements. Dependency installation and Wrangler deployment require network/cloud credentials not present in the execution environment.
 
