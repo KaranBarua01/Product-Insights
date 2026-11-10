@@ -73,3 +73,7 @@ For standalone API server setup and Docker examples, see [`deploy/README.md`](de
 - Large HTML and multi-page sampling improve diagnosability, not guaranteed extraction quality. Live tests on three candidate sites reported S01 and S02 completed on Saginaw and Dometic, while ConnectDER remained blocked by robots.txt HTTP 429. These results do not establish catalog completeness, S03 live behavior, or labeled routing accuracy.
 
 **Cloudflare deployment:** See [the repository Cloudflare setup guide](../CLOUDFLARE_SETUP.md) for PowerShell login, deploying Pattern Systems and Scrappers Workers, configuring secrets, optional Browser Run Quick Actions, and connecting GitHub Builds. `wrangler` is a development dependency; the Node/Playwright runtime is unchanged. The first Cloudflare deployment has not yet been performed or verified.
+
+## Internal Pattern Systems calls on Cloudflare
+
+For Cloudflare Workers in the same account, public `workers.dev` Worker-to-Worker fetches may return HTTP 404. The Scrappers Worker now prefers an optional `PATTERN_SERVICE` **Service Binding**, with the existing `PATTERN_API_TOKEN` authentication; see [`CLOUDFLARE_SETUP.md`](../CLOUDFLARE_SETUP.md#4-connect-pattern-systems-to-scrappers-using-a-service-binding). Add the binding to your already customized **local** `wrangler.jsonc`, preserving your approved hostnames. The Node/Playwright engine and public HTTPS fallback remain unchanged.

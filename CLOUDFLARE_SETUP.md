@@ -58,21 +58,33 @@ npx.cmd wrangler secret put SCRAPPERS_API_TOKEN
 
 Use a **different long random secret** for Scrappers. Check the resulting `https://<your-scrappers-worker>/health` URL. `configured.browser` will be `false` initially, which is expected.
 
-### 4. Connect Pattern Systems to Scrappers (optional after both Workers deploy)
+### 4. Connect Pattern Systems to Scrappers using a Service Binding
 
-In `Scrappers/wrangler.jsonc`, under `vars`, add:
+**Important:** One Cloudflare Worker may receive HTTP 404 when fetching another Worker through its public `workers.dev` address on the same account. Both `/health` endpoints can still work externally. Use a Cloudflare **Service Binding** for Worker-to-Worker calls.
+
+In your existing **local** `Scrappers/wrangler.jsonc`, add this property at the **top level** (beside `vars` and `workers_dev`):
 
 ```json
-"PATTERN_API_URL": "https://insidejob-pattern-systems.<YOUR_SUBDOMAIN>.workers.dev"
+"services": [
+  { "binding": "PATTERN_SERVICE", "service": "insidejob-pattern-systems" }
+],
 ```
 
-Remember to insert a comma after the preceding `ALLOWED_HOSTS` property. Re-deploy Scrappers and then:
+Keep your already-reviewed `vars.ALLOWED_HOSTS` intact. You may keep `PATTERN_API_URL` for reference; when the binding exists, the Scrappers Worker uses `PATTERN_SERVICE.fetch` instead of external HTTP. **The checked-in `wrangler.jsonc` is intentionally unchanged**, to avoid overwriting approved hostnames already edited locally.
+
+Both Workers must be in the same Cloudflare account. From the Scrappers folder:
 
 ```powershell
-npx.cmd wrangler secret put PATTERN_API_TOKEN
+git pull
+npm.cmd test
+npx.cmd wrangler deploy
 ```
 
-Enter the **same value** as `PATTERN_SYSTEM_API_TOKEN` in the Pattern Worker. Scrappers will use it to request pattern analysis if the incoming extraction request does not already include `patternAnalysis`.
+If `PATTERN_API_TOKEN` has already been uploaded, **do not create another token**. It must match the Pattern Worker's `PATTERN_SYSTEM_API_TOKEN`. Wrangler preserves existing secrets during normal Worker deployment.
+
+Verify that Scrappers' `GET /health` reports `configured.patternApi=true` and `configured.patternTransport="service-binding"`. Then run authenticated `POST /api/extract` with an approved site and no supplied `patternAnalysis`. `routing.provenance="remote"` proves the Pattern Worker supplied classifications.
+
+If the new response warns HTTP 401, the two Pattern token values probably differ. If you still see 404, check that `PATTERN_SERVICE` was actually added and that the binding targets exactly `insidejob-pattern-systems`.
 
 ### 5. Test authenticated extraction
 
