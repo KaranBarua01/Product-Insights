@@ -58,33 +58,23 @@ npx.cmd wrangler secret put SCRAPPERS_API_TOKEN
 
 Use a **different long random secret** for Scrappers. Check the resulting `https://<your-scrappers-worker>/health` URL. `configured.browser` will be `false` initially, which is expected.
 
-### 4. Connect Pattern Systems to Scrappers using a Service Binding
+### 4. Internal connection: GitHub-managed Service Binding
 
-**Important:** One Cloudflare Worker may receive HTTP 404 when fetching another Worker through its public `workers.dev` address on the same account. Both `/health` endpoints can still work externally. Use a Cloudflare **Service Binding** for Worker-to-Worker calls.
-
-In your existing **local** `Scrappers/wrangler.jsonc`, add this property at the **top level** (beside `vars` and `workers_dev`):
+**Already committed to GitHub:** `Scrappers/wrangler.jsonc` includes:
 
 ```json
 "services": [
-  { "binding": "PATTERN_SERVICE", "service": "insidejob-pattern-systems" }
-],
+  {"binding": "PATTERN_SERVICE", "service": "insidejob-pattern-systems"}
+]
 ```
 
-Keep your already-reviewed `vars.ALLOWED_HOSTS` intact. You may keep `PATTERN_API_URL` for reference; when the binding exists, the Scrappers Worker uses `PATTERN_SERVICE.fetch` instead of external HTTP. **The checked-in `wrangler.jsonc` is intentionally unchanged**, to avoid overwriting approved hostnames already edited locally.
+The checked-in config also lists the two already-tested, explicitly selected test hosts (`www.saginawcontrol.com` and `www.dometic.com`) and points to the existing Pattern Systems Worker. Only review and add other hosts when they have been approved. A robots block must still be respected.
 
-Both Workers must be in the same Cloudflare account. From the Scrappers folder:
+The Scrappers Worker now calls the Pattern Systems Worker **internally** through `PATTERN_SERVICE.fetch`, instead of sending Worker-to-Worker HTTP requests through `workers.dev` (which can yield 404). The existing `PATTERN_API_TOKEN` remains necessary for authenticating the internal call; it must match the Pattern Worker's `PATTERN_SYSTEM_API_TOKEN`. **Do not put either secret in this repository.**
 
-```powershell
-git pull
-npm.cmd test
-npx.cmd wrangler deploy
-```
+**If Cloudflare Builds is already connected**, a push to `main` will build and deploy this configuration. Otherwise, connect it once using Section 7. **You do not need to paste this binding into local files.** If you choose a manual deployment, check your local Wrangler configuration first: local uncommitted changes may differ from this new GitHub source of truth.
 
-If `PATTERN_API_TOKEN` has already been uploaded, **do not create another token**. It must match the Pattern Worker's `PATTERN_SYSTEM_API_TOKEN`. Wrangler preserves existing secrets during normal Worker deployment.
-
-Verify that Scrappers' `GET /health` reports `configured.patternApi=true` and `configured.patternTransport="service-binding"`. Then run authenticated `POST /api/extract` with an approved site and no supplied `patternAnalysis`. `routing.provenance="remote"` proves the Pattern Worker supplied classifications.
-
-If the new response warns HTTP 401, the two Pattern token values probably differ. If you still see 404, check that `PATTERN_SERVICE` was actually added and that the binding targets exactly `insidejob-pattern-systems`.
+Verify Scrappers `GET /health`: `configured.patternTransport="service-binding"` and `configured.patternApi=true`. Then call authenticated `POST /api/extract` with `mode=auto`. Successful end-to-end pattern retrieval yields `routing.provenance="remote"`. An HTTP 401 warning indicates mismatched or missing Pattern token values; 404 indicates that the binding may not have deployed.
 
 ### 5. Test authenticated extraction
 
@@ -109,14 +99,25 @@ Cloudflare offers Browser Run on supported plans. To enable, add this property a
 
 The Cloudflare adapter uses `MYBROWSER.quickAction("content", ...)` with a bounded HTML response and exact hostname request regex, but it does **not** support the interactive `Load more` behavior of the Node Playwright adapter. Quick Actions do not provide session-level guardrails or a verified final browser URL: do not present its final URL as proven without further evidence. Browser Run usage is metered. For local Quick Actions development, use `npx.cmd wrangler dev --remote` (not plain local mode). Never bypass a robots block.
 
-### 7. Optional: connect GitHub to Cloudflare for automatic deployment
+### 7. GitHub-driven automatic deployment (one-time Cloudflare setup)
 
-Only after **manual deploys are successful**: open Cloudflare dashboard > Workers & Pages > select each Worker > Settings > Builds > Connect. Select `KaranBarua01/Product-Insights` and main branch. Set **root directory** separately for each service:
+Once your two Workers exist, **you can let GitHub be the deployment source of truth**. Connect each existing Worker once in the Cloudflare dashboard:
 
-- Pattern Systems: `engine/pattern-systems`
-- Scrappers: `Scrappers`
+1. Open **Workers & Pages → select the Worker → Settings → Builds → Connect**.
+2. Authorize GitHub if needed; select **`KaranBarua01/Product-Insights`**, branch **`main`**.
+3. Set the **Root directory** as shown below.
+4. Use **Build command** `npm run build` and **Deploy command** `npx wrangler deploy`.
+5. Save. Once connected, subsequent GitHub commits trigger builds and deployments. On first connection, a new commit or an explicit Cloudflare build may be needed to deploy the current commit.
 
-Build command: `npm run build` or leave blank for Wrangler-managed compilation. Deploy command: `npx wrangler deploy`. Ensure Worker names match the `name` fields of each folder's Wrangler file. Cloudflare's Git integration supports monorepos and builds on pushes. Inspect security and preview settings before enabling automatic deploys.
+| Existing Cloudflare Worker | Root directory | Wrangler name |
+|---|---|---|
+| `insidejob-pattern-systems` | `engine/pattern-systems` | `insidejob-pattern-systems` |
+| `product-insights-scrappers-prototype` | `Scrappers` | `product-insights-scrappers-prototype` |
+
+**Never place API secrets in GitHub build configuration or commits.** Worker runtime secrets already stored via `wrangler secret put` belong to the Worker and should remain there. Review any Cloudflare build permissions and deploy previews before enabling public usage.
+
+Once this one-time dashboard connection is done, source edits and config changes can be committed through the GitHub integration; the user does not need to run Wrangler locally for every code change. The actual Cloudflare deployment and its status still need checking in Cloudflare's Builds logs.
+
 
 ## Operating boundaries
 

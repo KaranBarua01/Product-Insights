@@ -3,12 +3,21 @@
   "name": "product-insights-scrappers-prototype",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-10",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
-  "observability": {"enabled": true},
-  "vars": {"ALLOWED_HOSTS": "manufacturer.com"}
-  // Replace the placeholder host before testing any live website.
-  // Optional S02 Cloudflare Browser Run: "browser": {"binding": "MYBROWSER"}
-  // PATTERN_API_URL can be configured as a variable after deploying Pattern Systems.
-  // Secrets: SCRAPPERS_API_TOKEN and (if needed) PATTERN_API_TOKEN.
+  "observability": {
+    "enabled": true
+  },
+  "services": [
+    {
+      "binding": "PATTERN_SERVICE",
+      "service": "insidejob-pattern-systems"
+    }
+  ],
+  "vars": {
+    "ALLOWED_HOSTS": "www.saginawcontrol.com,www.dometic.com",
+    "PATTERN_API_URL": "https://insidejob-pattern-systems.injindiaops.workers.dev"
+  }
 }
