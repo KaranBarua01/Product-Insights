@@ -4,3 +4,8 @@ dist/
 .dev.vars
 .env
 *.log
+
+# Benchmark outputs and private approvals / manual labels
+benchmark/results/
+benchmark/approved-hosts.txt
+benchmark/labels.csv

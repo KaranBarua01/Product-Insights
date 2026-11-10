@@ -1,0 +1,28 @@
+# EXAMPLE ONLY. These are research candidates, not automatically approved.
+# Review website ownership, access permissions, robots and exact hosts.
+# Copy this file to benchmark/approved-hosts.txt and remove unapproved hosts.
+www.saginawcontrol.com
+www.dometic.com
+connectder.com
+www.littelfuse.com
+www.dataprobe.com
+www.ancast.mb.ca
+www.atlascopco.com
+www.festo.com
+www.parker.com
+www.emerson.com
+global.abb
+www.siemens.com
+www.boschrexroth.com
+www.balluff.com
+www.smcworld.com
+www.rockwellautomation.com
+www.eaton.com
+schunk.com
+www.ifm.com
+www.igus.com
+www.skf.com
+www.trelleborg.com
+www.danfoss.com
+www.omron.com
+us.misumi-ec.com

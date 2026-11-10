@@ -1,0 +1,26 @@
+site_id,company_name,url,note
+SITE-001,Saginaw Control & Engineering,https://www.saginawcontrol.com/,Research test plan / catalog links
+SITE-002,Dometic,https://www.dometic.com/,Research test plan / interactive catalog
+SITE-003,ConnectDER,https://connectder.com/,Research test plan / PDF content-type
+SITE-004,Littelfuse,https://www.littelfuse.com/,Research test plan / embedded app state
+SITE-005,Dataprobe,https://www.dataprobe.com/,Research test plan / JSON-LD
+SITE-006,Ancast Industries,https://www.ancast.mb.ca/,Research test plan / capability-led
+SITE-007,Atlas Copco,https://www.atlascopco.com/,Research test plan / region routing
+SITE-008,Festo,https://www.festo.com/,Additional candidate / product catalog
+SITE-009,Parker Hannifin,https://www.parker.com/,Additional candidate / product catalog
+SITE-010,Emerson,https://www.emerson.com/,Additional candidate / multi-brand
+SITE-011,ABB,https://global.abb/,Additional candidate / corporate and catalog
+SITE-012,Siemens,https://www.siemens.com/,Additional candidate / corporate and catalog
+SITE-013,Bosch Rexroth,https://www.boschrexroth.com/,Additional candidate / component catalog
+SITE-014,Balluff,https://www.balluff.com/,Additional candidate / product variants
+SITE-015,SMC,https://www.smcworld.com/,Additional candidate / industrial pneumatics
+SITE-016,Rockwell Automation,https://www.rockwellautomation.com/,Additional candidate / documentation
+SITE-017,Eaton,https://www.eaton.com/,Additional candidate / product categories
+SITE-018,SCHUNK,https://schunk.com/,Additional candidate / product detail
+SITE-019,ifm,https://www.ifm.com/,Additional candidate / sensors
+SITE-020,igus,https://www.igus.com/,Additional candidate / technical catalogs
+SITE-021,SKF,https://www.skf.com/,Additional candidate / bearings
+SITE-022,Trelleborg,https://www.trelleborg.com/,Additional candidate / materials
+SITE-023,Danfoss,https://www.danfoss.com/,Additional candidate / product families
+SITE-024,Omron,https://www.omron.com/,Additional candidate / group and divisions
+SITE-025,MISUMI,https://us.misumi-ec.com/,Additional candidate / configurable products

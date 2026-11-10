@@ -91,6 +91,13 @@ Response includes `schemaVersion`, selected/final strategy, routing rationale, o
 
 `npm test` runs deterministic fixture tests without network calls. These cover URL policy, robots, redirect bounds, HTML JSON-LD, strategy routing, browser mock, PDF parser mock, fallback behavior and Worker authorization. **They are not live-site accuracy tests.** `S02` requires a separately configured Browser Run environment; `S03`'s actual `unpdf` integration needs dependency installation and a real test PDF before relying on it. Resource limits are conservative but not an exhaustive security boundary; neither the allowlist nor request interception proves DNS destinations are public. Treat as an internal experiment only.
 
-## Next experiment
+## CLI benchmark prototype (added)
 
-Build a labeled 20–30-company test set with approved hostnames and compare: selection accuracy, content completeness, source attribution, document yield, cost, and failure reasons. Extend the system only after measuring those results.
+A **sequential 25-site candidate test batch**, JSON/CSV evidence exports, review queue, human-labeled route/keyword accuracy, automated basic usability, elapsed time and explicit limitations are in [`benchmark/README.md`](benchmark/README.md). No UI or cloud deployment is required for the local S01/S03 path; S02 still requires a configured Cloudflare Browser Run Worker.
+
+```bash
+npm run benchmark:dry
+# Then review the hosts and create benchmark/approved-hosts.txt; see benchmark/README.md.
+```
+
+These are **prototype benchmark utilities**, not validated live-site performance. No 25-site live benchmark has been claimed or run by adding these files. Do not conflate sample successes with complete company or catalog coverage.
