@@ -1,0 +1,584 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Research-derived provisional 34 website patterns, 6 technology signals, 10 methods; not observed prevalence",
+  "patterns": [
+    {
+      "id": "I01",
+      "name": "Company narrative / corporate overview",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Company narrative / corporate overview",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay",
+        "Sourav",
+        "Vaish"
+      ]
+    },
+    {
+      "id": "I02",
+      "name": "Product and product-family discovery",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Product and product-family discovery",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay",
+        "Sourav",
+        "Vaish"
+      ]
+    },
+    {
+      "id": "I03",
+      "name": "Individual model / SKU product records",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Individual model / SKU product records",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "I04",
+      "name": "Technical specifications and attribute tables",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Technical specifications and attribute tables",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "I05",
+      "name": "Manufacturing capabilities / process information",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Manufacturing capabilities / process information",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "I06",
+      "name": "Linked technical documents and datasheets",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Linked technical documents and datasheets",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav",
+        "Vaish"
+      ]
+    },
+    {
+      "id": "I07",
+      "name": "Markets, industries and applications",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Markets, industries and applications",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "I08",
+      "name": "Corporate group, brand and subsidiary portfolios",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Corporate group, brand and subsidiary portfolios",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "I09",
+      "name": "Sparse company / product profile",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Sparse company / product profile",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "I10",
+      "name": "Service- or software-led offering pages",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Service- or software-led offering pages",
+      "sourceResearchers": [
+        "Abhishek"
+      ]
+    },
+    {
+      "id": "I11",
+      "name": "Lifecycle, replacement and aftermarket taxonomy",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Lifecycle, replacement and aftermarket taxonomy",
+      "sourceResearchers": [
+        "Abhishek"
+      ]
+    },
+    {
+      "id": "I12",
+      "name": "Capability-first manufacturing site taxonomy",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Capability-first manufacturing site taxonomy",
+      "sourceResearchers": [
+        "Abhishek"
+      ]
+    },
+    {
+      "id": "I13",
+      "name": "Document-first technical information taxonomy",
+      "group": "information",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Document-first technical information taxonomy",
+      "sourceResearchers": [
+        "Abhishek"
+      ]
+    },
+    {
+      "id": "N01",
+      "name": "Discoverable internal section links",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Discoverable internal section links",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N02",
+      "name": "Hierarchical category > family > model navigation",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Hierarchical category > family > model navigation",
+      "sourceResearchers": [
+        "Abhishek",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N03",
+      "name": "Faceted filters or configurable product selection",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Faceted filters or configurable product selection",
+      "sourceResearchers": [
+        "Abhishek",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N04",
+      "name": "Filter state expressed through URL query parameters",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Filter state expressed through URL query parameters",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "N05",
+      "name": "Cross-host brand, catalog or documentation paths",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Cross-host brand, catalog or documentation paths",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay",
+        "Sourav",
+        "Vaish"
+      ]
+    },
+    {
+      "id": "N06",
+      "name": "Grouped document libraries",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Grouped document libraries",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N07",
+      "name": "Regional or multilingual routing",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Regional or multilingual routing",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N08",
+      "name": "Numbered product listing pagination",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Numbered product listing pagination",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "N09",
+      "name": "Repeated site-wide navigation links",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Repeated site-wide navigation links",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "N10",
+      "name": "Accordion/disclosure with preloaded content",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Accordion/disclosure with preloaded content",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "N11",
+      "name": "Load More / incremental listing expansion",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Load More / incremental listing expansion",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay"
+      ]
+    },
+    {
+      "id": "N12",
+      "name": "Site search or part-number search interface",
+      "group": "navigation",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Site search or part-number search interface",
+      "sourceResearchers": [
+        "Abhishek",
+        "Ajay"
+      ]
+    },
+    {
+      "id": "R01",
+      "name": "Readable HTML without browser execution",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Readable HTML without browser execution",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R02",
+      "name": "Embedded JSON-LD structured data",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Embedded JSON-LD structured data",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R03",
+      "name": "Embedded structured application state",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Embedded structured application state",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R04",
+      "name": "Sparse application shell / deferred content",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Sparse application shell / deferred content",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R05",
+      "name": "Non-HTML PDF document delivery",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Non-HTML PDF document delivery",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R06",
+      "name": "Access challenges and non-content responses",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Access challenges and non-content responses",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "R07",
+      "name": "Client-side application / hydration markers",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Client-side application / hydration markers",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "R08",
+      "name": "PDF with machine-readable text layer",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "PDF with machine-readable text layer",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "R09",
+      "name": "Misleading HTTP success or error-like content",
+      "group": "delivery",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Misleading HTTP success or error-like content",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "T01",
+      "name": "WordPress asset / deployment signals",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "WordPress asset / deployment signals",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "T02",
+      "name": "Webflow markup or hosting signals",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Webflow markup or hosting signals",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "T03",
+      "name": "Drupal asset / settings signals",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Drupal asset / settings signals",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "T04",
+      "name": "Next.js asset / state signals",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Next.js asset / state signals",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "T05",
+      "name": "React hydration signals",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "React hydration signals",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "T06",
+      "name": "Shopify storefront identifiers",
+      "group": "technology",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Shopify storefront identifiers",
+      "sourceResearchers": [
+        "Vaish"
+      ]
+    },
+    {
+      "id": "M01",
+      "name": "HTTP fetch and HTML parsing",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "HTTP fetch and HTML parsing",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M02",
+      "name": "Structured JSON-LD parsing",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Structured JSON-LD parsing",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M03",
+      "name": "Embedded application-state parsing",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Embedded application-state parsing",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M04",
+      "name": "Text PDF parsing",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Text PDF parsing",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M05",
+      "name": "Selective OCR of image-only documents",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Selective OCR of image-only documents",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M06",
+      "name": "Browser interaction / rendering escalation",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Browser interaction / rendering escalation",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M07",
+      "name": "Sitemap-assisted discovery",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Sitemap-assisted discovery",
+      "sourceResearchers": [
+        "Ajay",
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M08",
+      "name": "Identity or access review",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Identity or access review",
+      "sourceResearchers": [
+        "Sourav"
+      ]
+    },
+    {
+      "id": "M09",
+      "name": "HTTP retrieval of observed pagination states",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "HTTP retrieval of observed pagination states",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    },
+    {
+      "id": "M10",
+      "name": "Policy-checked cross-host expansion",
+      "group": "method",
+      "origin": "four-batch-deduplication-2026-11-10",
+      "status": "provisional",
+      "definition": "Policy-checked cross-host expansion",
+      "sourceResearchers": [
+        "Ajay"
+      ]
+    }
+  ]
+}

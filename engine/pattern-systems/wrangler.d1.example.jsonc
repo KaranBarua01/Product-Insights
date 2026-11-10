@@ -1,0 +1,8 @@
+{
+  "name": "insidejob-pattern-systems",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-09",
+  "d1_databases": [
+    {"binding":"DB", "database_name":"insidejob-patterns", "database_id":"REPLACE_WITH_YOUR_REAL_D1_DATABASE_ID"}
+  ]
+}

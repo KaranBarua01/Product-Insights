@@ -1,0 +1,80 @@
+Researcher,Researcher ID,Original label,Canonical ID(s),Type,Description
+Sourav,P01,Company narrative,I01,Information,Readable company-level HTML text
+Sourav,P02,Product discovery section,I02,Information,Visible links to products or catalog sections
+Sourav,P03,Technical attributes,I04,Information,Product attributes or process-equipment details
+Sourav,P04,Capabilities and processes,I05,Information,Service and manufacturing capability sections
+Sourav,P05,Technical documents,I06,Information,Links or libraries for catalogs and technical documents
+Sourav,P06,Markets and applications,I07,Information,Industry/application labels separate from products
+Sourav,P07,Group and brand portfolios,I08,Information,Parent company routes to brand/subsidiary product information
+Sourav,L01,Section navigation,N01,Navigation,Internal content links for discovery
+Sourav,L02,Hierarchical catalog,N02,Navigation,"Category, family and product paths"
+Sourav,L03,Faceted or configurable catalog,N03,Navigation,Selection controls coexist with product listings
+Sourav,L04,Cross-host catalog,N05,Navigation,Corporate pages link to another host for catalogs
+Sourav,L05,Document library,N06,Navigation,Downloads grouped by content and product types
+Sourav,L06,Regional or multilingual routes,N07,Navigation,Content varies by locale and market
+Sourav,L07,Numbered catalog pagination,N08,Navigation,Separate page links partition catalog results
+Sourav,R01,Readable initial HTML,R01,Rendering,Meaningful text is returned without JS execution
+Sourav,R02,JSON-LD in HTML,R02,Rendering,Schema.org objects available in script elements
+Sourav,R03,Embedded application JSON,R03,Rendering,Structured application payload returned in HTML
+Sourav,R04,Sparse HTML application response,R04,Rendering,Little visible text with application assets or state
+Sourav,R05,Retrieved PDF representation,R05,Rendering,Downloaded bytes parse as a PDF
+Sourav,R06,Non-content challenge response,R06,Rendering,HTTP success or error delivers access machinery
+Sourav,S01,HTTP and HTML extraction,M01,Research method,Retrieve and parse content and anchors
+Sourav,S02,JSON-LD extraction,M02,Research method,Parse typed public structured objects without script execution
+Sourav,S03,Embedded-state extraction,M03,Research method,Parse public serialized state as data
+Sourav,S04,Text PDF extraction,M04,Research method,Parse text layer and preserve page anchors
+Sourav,S05,Selective OCR route,M05,Research method,OCR only pages without useful text
+Sourav,S06,Browser escalation,M06,Research method,Render or interact when justified by missing target fields
+Sourav,S07,Sitemap-assisted discovery,M07,Research method,Parse declared XML sitemaps and scope child maps
+Sourav,S08,Identity or access review,M08,Research method,Pause automatic enrichment when company match/access is unresolved
+Ajay,P01,Company narrative,I01,Information,Company role and overview text
+Ajay,P02,Product family routes,I02,Information,Product or solution categories linked from pages
+Ajay,P03,Individual product records,I03,Information,Distinct model detail pages
+Ajay,P04,Linked technical documents,I06,Information,PDFs linked from inspected pages
+Ajay,P05,Manufacturing capabilities,I05,Information,Company-specific capability and process descriptions
+Ajay,P06,Markets and applications,I07,Information,Industry-oriented information pages
+Ajay,P07,Corporate and brand ecosystem,I08,Information,Company/brand/service information spans hosts
+Ajay,P08,Sparse company profile,I09,Information,Limited public business/technical detail
+Ajay,L01,Linked discovery routes,N01,Navigation,HTTP-discoverable navigation anchors
+Ajay,L02,Repeated navigation,N09,Navigation,Same URL repeated in header/mobile/footer navigation
+Ajay,L03,Accordion with embedded content,N10,Navigation,Interactive disclosure over pre-existing links
+Ajay,L04,Faceted query routes,N04,Navigation,Filter state encoded in query parameters
+Ajay,L05,Incremental product list,N11,Navigation,Load more adds records and changes URL
+Ajay,L06,Locale-scoped routes,N07,Navigation,Regional/language selectors and redirects
+Ajay,L07,Cross-host information graph,N05,Navigation,Relevant information spans corporate/brand/asset hosts
+Ajay,L08,Search interface present,N12,Navigation,Search inputs or forms visible in HTML
+Ajay,L09,Document discovery links,I06,Information,Download anchors connect pages to files
+Ajay,R01,Initial HTML text,R01,Rendering,Text content available without executing page JavaScript
+Ajay,R02,JSON LD blocks,R02,Rendering,Public structured objects embedded in HTML
+Ajay,R03,Application markers,R07,Rendering,Application assets or hydration/state markers in source
+Ajay,R04,PDF with extractable text,R08,Rendering,Downloaded PDF has a usable text layer
+Ajay,R05,Limited or misleading response,R09,Rendering,Thin response or error page despite HTTP success
+Ajay,R06,Client-side list expansion,N11,Navigation,Rendered DOM changes after an interaction
+Ajay,S01,HTTP and HTML parsing,M01,Research method,Retrieve permitted public HTML and parse text/links
+Ajay,S02,Structured object parsing,M02,Research method,Parse JSON LD then validate entity and page scope
+Ajay,S03,Sitemap discovery,M07,Research method,Retrieve a permitted XML sitemap and parse loc elements
+Ajay,S04,Document text extraction,M04,Research method,Fetch linked public PDF and extract its text layer
+Ajay,S05,Controlled browser inspection,M06,Research method,Operate the minimum necessary visible control
+Ajay,S06,Observed pagination over HTTP,M09,Research method,Replay a URL state discovered in the browser
+Ajay,S07,Policy-checked host expansion,M10,Research method,Follow relevant brand route with a separate robots check
+Abhishek,AB-01,Capability-led contract manufacturing,I12,Information,
+Abhishek,AB-02,Corporate / descriptive pages,I01,Information,
+Abhishek,AB-03,Document-led enrichment,I13,Information,
+Abhishek,AB-04,Dynamic discovery demonstrated,N11,Navigation,
+Abhishek,AB-05,Faceted or configurable selection,N03,Navigation,
+Abhishek,AB-06,Insufficient retrieved content,EXCLUDED,"Research status, not a website behavior",
+Abhishek,AB-07,Lifecycle / aftermarket taxonomy,I11,Information,
+Abhishek,AB-08,Multiple domains / regional routes,"N05,N07",Navigation + Navigation,
+Abhishek,AB-09,Product / family catalog,"I02,N02",Information + Navigation,
+Abhishek,AB-10,Search or selector interface,N12,Navigation,
+Abhishek,AB-11,Service / software-led offering,I10,Information,
+Vaish,V-flag-1,Catalog/store/document host links,N05,Navigation,
+Vaish,V-flag-2,Corporate/solution HTML sample,I01,Information,
+Vaish,V-flag-3,Linked product/family discovery,I02,Information,
+Vaish,V-flag-4,PDF links observed,I06,Information,
+Vaish,V-tech-1,Drupal,T03,Technology signal,
+Vaish,V-tech-2,Next.js,T04,Technology signal,
+Vaish,V-tech-3,React hydration,T05,Technology signal,
+Vaish,V-tech-4,Shopify,T06,Technology signal,
+Vaish,V-tech-5,Webflow,T02,Technology signal,
+Vaish,V-tech-6,WordPress,T01,Technology signal,
