@@ -3,8 +3,12 @@
   "name": "product-insights-scrappers-prototype",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-10",
-  "compatibility_flags": ["nodejs_compat_v2"],
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {"enabled": true},
   "vars": {"ALLOWED_HOSTS": "manufacturer.com"}
-  // Optional Cloudflare deployment ONLY. See README; install wrangler and puppeteer 2.x separately.
-  // Optional Browser Run: "browser": {"binding": "MYBROWSER"}
+  // Replace the placeholder host before testing any live website.
+  // Optional S02 Cloudflare Browser Run: "browser": {"binding": "MYBROWSER"}
+  // PATTERN_API_URL can be configured as a variable after deploying Pattern Systems.
+  // Secrets: SCRAPPERS_API_TOKEN and (if needed) PATTERN_API_TOKEN.
 }

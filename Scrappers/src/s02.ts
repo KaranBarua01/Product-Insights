@@ -9,5 +9,5 @@ export async function scrapeS02(url:string,deps:Dependencies,policy:ExecutionPol
   assertAllowed(output.url,policy.allowedHosts,safe.hostname);
   const parsed=parseHtml(output.html,output.url,'S02');
   const length=(parsed.content.text||'').trim().length;
-  return {strategy:'S02',status:length?'completed':'partial',reason:`Rendered HTML (${length} text chars)`,sourceUrl:output.url,content:parsed.content,evidence:parsed.evidence,warnings:[...parsed.warnings,...(output.truncated?['Browser HTML truncated at 1.5 MB']:[]),...(length<180?['Browser rendered insufficient primary text']:[])]};
+  return {strategy:'S02',status:length?'completed':'partial',reason:`Rendered HTML (${length} text chars)`,sourceUrl:output.url,content:parsed.content,evidence:parsed.evidence,warnings:[...parsed.warnings,...(output.truncated?['Browser HTML truncated at adapter byte limit']:[]),...(length<180?['Browser rendered insufficient primary text']:[])]};
 }

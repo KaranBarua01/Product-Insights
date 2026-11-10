@@ -1,25 +1,70 @@
-/* OPTIONAL Cloudflare adapter. Not part of the Node.js dependency graph.
-   To deploy the Cloudflare Worker, install a supported @cloudflare/puppeteer release separately. */
-import {assertAllowed,robotsAllowed} from './safety.js';
+/** Cloudflare-only S02 adapter. The portable scraper core has no Cloudflare dependencies.
+ * Browser Run Quick Actions are optional and require an explicit MYBROWSER binding.
+ * Quick Actions do not expose the final navigation URL or support session guardrails;
+ * use Node Playwright or a guarded browser session when strict provenance is required.
+ */
+import {assertAllowed, robotsAllowed} from './safety.js';
+
+interface QuickActionBrowser {
+  quickAction: (action:'content', options:Record<string,unknown>) => Promise<Response>;
+}
+const MAX_BROWSER_HTML_BYTES=1_250_000;
+
+function asBinding(value:unknown):QuickActionBrowser {
+  if(!value || typeof value!=='object' || !('quickAction' in value) || typeof value.quickAction!=='function') {
+    throw new Error('Cloudflare Browser Run binding unavailable (configure MYBROWSER)');
+  }
+  return value as QuickActionBrowser;
+}
+
+function exactHostRegex(host:string):string {
+  const escaped=host.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return `/^https?:\\/\\/${escaped}(?::(?:80|443))?(?:[\\/?#]|$)/i`;
+}
+
+async function readHtmlPrefix(response:Response):Promise<{html:string;truncated:boolean}> {
+  const reader=response.body?.getReader();
+  if(!reader) return {html:'',truncated:false};
+  const chunks:Uint8Array[]=[];let total=0;let truncated=false;
+  try {
+    while(true) {
+      const {done,value}=await reader.read();
+      if(done)break;
+      const remaining=MAX_BROWSER_HTML_BYTES-total;
+      if(value.byteLength>remaining) {
+        if(remaining>0)chunks.push(value.subarray(0,remaining));
+        total=MAX_BROWSER_HTML_BYTES;
+        truncated=true;
+        await reader.cancel();
+        break;
+      }
+      chunks.push(value);total+=value.byteLength;
+    }
+  } finally {try{reader.releaseLock()}catch{/* no-op */}}
+  const bytes=new Uint8Array(total);let at=0;
+  for(const part of chunks){bytes.set(part,at);at+=part.byteLength;}
+  return {html:new TextDecoder('utf-8',{fatal:false}).decode(bytes),truncated};
+}
+
 export function cloudflareBrowserCapture(binding:unknown){
-  return async(raw:string,hosts:readonly string[],rules='')=>{
-    const validated=assertAllowed(raw,hosts);
-    const module=await import('@cloudflare/puppeteer');const browser=await module.default.launch(binding);
-    try{
-      const page=await browser.newPage();
-      try{
-        await page.setRequestInterception(true);
-        page.on('request',(req:{url:()=>string;continue:()=>Promise<unknown>;abort:()=>Promise<unknown>})=>{
-          let allowed=false;
-          try{const u=assertAllowed(req.url(),hosts,validated.hostname);allowed=robotsAllowed(rules,u.pathname+u.search)}catch{/* blocked */}
-          void (allowed?req.continue():req.abort()).catch(()=>{});
-        });
-        await page.goto(validated.href,{waitUntil:'domcontentloaded',timeout:12_000});
-        const label=await page.evaluate(()=>Array.from(document.querySelectorAll('button,[role="button"]')).findIndex(el=>/^(load more|show more|view more)$/i.test((el.textContent||'').trim())));
-        if(label>=0){try{await page.evaluate((i:number)=>{(document.querySelectorAll('button,[role="button"]')[i] as HTMLElement | undefined)?.click()},label);await new Promise(r=>setTimeout(r,600))}catch{/* optional */}}
-        const finalUrl=page.url();assertAllowed(finalUrl,hosts,validated.hostname);
-        return {url:finalUrl,html:(await page.content()).slice(0,1_250_000)};
-      }finally{await page.close()}
-    }finally{await browser.close()}
+  const browser=asBinding(binding);
+  return async(raw:string,hosts:readonly string[],robotsRules='')=>{
+    const target=assertAllowed(raw,hosts);
+    if(!robotsAllowed(robotsRules,target.pathname+target.search))throw new Error('robots.txt disallows browser target');
+    // Browser Run Quick Actions support request-regex allowlisting but not session guardrails.
+    // Keep only the already approved hostname; no off-host redirects or dependencies.
+    const response=await browser.quickAction('content',{
+      url:target.href,
+      allowRequestPattern:[exactHostRegex(target.hostname)],
+      rejectResourceTypes:['image','media','font'],
+      gotoOptions:{waitUntil:'domcontentloaded',timeout:10000},
+      actionTimeout:10000,
+      cacheTTL:0
+    });
+    if(!response.ok)throw new Error(`Cloudflare Browser Run HTTP ${response.status}`);
+    const parsed=await readHtmlPrefix(response);
+    // The Quick Action response does not provide the final browser URL.
+    // This is the requested URL, not independently verified final-URL provenance.
+    return {url:target.href,...parsed};
   };
 }
