@@ -119,6 +119,10 @@ Once your two Workers exist, **you can let GitHub be the deployment source of tr
 Once this one-time dashboard connection is done, source edits and config changes can be committed through the GitHub integration; the user does not need to run Wrangler locally for every code change. The actual Cloudflare deployment and its status still need checking in Cloudflare's Builds logs.
 
 
+## Alternative: GitHub Actions deployment (recommended when Cloudflare GitHub account picker fails)
+
+The repo now includes [GitHub Actions deployment instructions](GITHUB_ACTIONS_DEPLOY.md) and a workflow which tests both projects and deploys to the existing Workers. This bypasses Cloudflare's `Settings -> Builds -> Connect` GitHub account picker. Configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in **GitHub repository Actions secrets**; never send them in chat.
+
 ## Operating boundaries
 
 - Worker endpoints are internet-reachable even when the API operations use bearer tokens. Do not use them for uncontrolled crawling or send credentials in URL parameters.
