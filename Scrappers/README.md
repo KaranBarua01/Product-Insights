@@ -12,6 +12,15 @@ Approved website URL + optional Pattern Systems assessments
   -> evidence-linked structured content + sampled URLs + attempts + warnings
 ```
 
+## Company-facing Product Insights demonstration
+
+The deployed Scrappers Worker can serve a company-facing UI at `/demo`. It displays a **recorded and verified** Saginaw integration result without fabricating missing excerpts or pattern IDs; provides a clickable four-stage pipeline; fetches the real pattern catalog over the existing `PATTERN_SERVICE` binding; and supports **authenticated** live analysis of the two approved websites.
+
+- Demo: `https://product-insights-scrappers-prototype.injindiaops.workers.dev/demo`
+- To run live: choose **Live analysis**, select Saginaw or Dometic, and enter the existing `SCRAPPERS_API_TOKEN` **privately on the presenter's machine**. The token is used in one same-origin request to `POST /api/extract`, then cleared from the input. No token is stored in localStorage, sessionStorage, cookies, or URLs.
+- The UI reports actual pattern IDs, routing provenance/reason, extraction status, strategy attempts, content previews, evidence and warnings. The public recorded view cannot reveal original evidence text because it was not retained in the verification run.
+- Live extraction authentication, domain allowlist and robots checks remain unchanged. This is still a prototype: S02/S03 live validation, completeness measurement and OEM/supplier classification remain pending.
+
 ## Install and test locally (PowerShell)
 
 From `Scrappers/`:

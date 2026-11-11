@@ -3,6 +3,7 @@ import type {ExtractRequest,Mode,PatternAnalysis} from './types.js';
 import {extract,limitedPatternAnalysis} from './engine.js';
 import {normalizeAllowedHosts,assertAllowed} from './safety.js';
 import {cloudflareBrowserCapture} from './cloudflare-adapter.js';
+import {handleDemoRequest} from './demo-routes.js';
 interface Env {SCRAPPERS_API_TOKEN?:string;ALLOWED_HOSTS?:string;MYBROWSER?:unknown;PATTERN_API_URL?:string;PATTERN_API_TOKEN?:string;PATTERN_SERVICE?:{fetch(request:Request):Promise<Response>}}
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validModes:Mode[]=['auto','S01','S02','S03'];
@@ -25,6 +26,7 @@ export async function remotePatterns(url:string,env:Env):Promise<PatternAnalysis
 export default {
   async fetch(request:Request,env:Env):Promise<Response>{
     const url=new URL(request.url);
+    const demo=await handleDemoRequest(request,env);if(demo)return demo;
     if(request.method==='GET'&&url.pathname==='/health')return json({module:'scrappers',version:'0.2',runtime:'cloudflare-optional',strategies:['S01','S02','S03'],configured:{allowlist:!!env.ALLOWED_HOSTS,token:!!env.SCRAPPERS_API_TOKEN,browser:!!env.MYBROWSER,patternApi:!!env.PATTERN_API_TOKEN&&!!(env.PATTERN_SERVICE||env.PATTERN_API_URL),patternTransport:env.PATTERN_SERVICE?'service-binding':env.PATTERN_API_URL?'public-http':'none'}});
     if(request.method==='GET'&&url.pathname==='/api/strategies')return json({strategies:{S01:'Bounded HTTP/HTML with shallow same-host discovery',S02:'Host-injected browser adapter',S03:'Bounded PDF text extraction'},note:'Standalone Node service is also supported'});
     if(request.method!=='POST'||url.pathname!=='/api/extract')return json({error:'Not found'},404);
