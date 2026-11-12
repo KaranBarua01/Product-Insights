@@ -8,6 +8,8 @@ export async function scrapeS02(url:string,deps:Dependencies,policy:ExecutionPol
   const output=await deps.browser(safe.href,policy.allowedHosts,policy.robotsRules);
   assertAllowed(output.url,policy.allowedHosts,safe.hostname);
   const parsed=parseHtml(output.html,output.url,'S02');
+  const challenge=/^(?:just a moment|attention required|access denied|bot verification|security check)/i.test((parsed.content.title??'').trim());
+  if(challenge)return {strategy:'S02',status:'blocked',reason:'Browser rendered access challenge; no bypass attempted',sourceUrl:output.url,content:{},evidence:[],warnings:[]};
   const length=(parsed.content.text||'').trim().length;
   return {strategy:'S02',status:length?'completed':'partial',reason:`Rendered HTML (${length} text chars)`,sourceUrl:output.url,content:parsed.content,evidence:parsed.evidence,warnings:[...parsed.warnings,...(output.truncated?['Browser HTML truncated at adapter byte limit']:[]),...(length<180?['Browser rendered insufficient primary text']:[])]};
 }

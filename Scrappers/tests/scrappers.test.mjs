@@ -96,3 +96,11 @@ test('Worker requires token, allowlist, and supports strategy metadata',async()=
   const metadata=await worker.fetch(new Request('https://worker.com/api/strategies'),env);assert.equal(metadata.status,200);
   assert.ok((await metadata.json()).strategies.S03.includes('PDF'));
 });
+
+test('HTTP 200 challenge pages are blocked by S01 without treating them as evidence',async()=>{
+ const fetcher=async url=>String(url).endsWith('robots.txt')?r('',404,'text/plain')
+   :r('<html><title>Just a moment...</title><body>Checking your browser before accessing this site.</body></html>',200,'text/html');
+ const result=await extract({url:URL},{fetcher},policy);
+ assert.equal(result.status,'blocked');
+ assert.equal(result.evidence.length,0);
+});

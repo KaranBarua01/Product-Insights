@@ -175,6 +175,10 @@ export async function inspectWebsite(value:string,opts:InspectOptions={}):Promis
         blockedCount++;
       }
       if(response.status>=400){result.errors.push('HTTP '+response.status+': '+safe.pathname);continue;}
+      // HTTP 200 interstitials are access blocks, not successful website evidence.
+      if(page.signals.some(s=>s.type==='challenge')){
+        blockedCount++;result.errors.push('Challenge/interstitial response; no bypass attempted: '+page.url);continue;
+      }
       for(const link of page.links){
         if(!link.external&&new URL(link.href).hostname===policy.host&&isLikelyPdf(link)&&pdfLinks.size<6)pdfLinks.add(link.href);
       }

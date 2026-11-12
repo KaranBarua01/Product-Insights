@@ -127,3 +127,12 @@ test('403 is blocked and does not produce negative HTML pattern assessments',asy
  const r=await inspectWebsite(base,{fetcher,maxPages:1});
  assert.equal(r.status,'blocked');assert.equal(r.assessments.find(p=>p.patternId==='I02').status,'not_assessed');
 });
+
+test('HTTP 200 security interstitial is blocked and not treated as pattern evidence',async()=>{
+ const fetcher=async(u)=>String(u).endsWith('/robots.txt')
+   ?new Response('',{status:404})
+   :new Response('<html><head><title>Just a moment...</title></head><body>Checking your browser before accessing this site.</body></html>',{headers:{'content-type':'text/html'}});
+ const r=await inspectWebsite(base,{fetcher,maxPages:1});
+ assert.equal(r.status,'blocked');
+ assert.equal(r.assessments.find(p=>p.patternId==='I02').status,'not_assessed');
+});

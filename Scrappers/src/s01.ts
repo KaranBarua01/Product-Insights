@@ -37,6 +37,11 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
       }
       const parsed=parseHtml(new TextDecoder('utf-8',{fatal:false}).decode(fetched.bytes),fetched.url,'S01');
       const content=parsed.content;
+      const challengeTitle=/^(?:just a moment|attention required|access denied|bot verification|security check)/i.test((content.title??'').trim());
+      const challengeBody=(content.text??'').length<1400&&/checking your browser|verify you are human|enable javascript and cookies to continue|captcha challenge|access denied\s*\(\s*error\s*\d+/i.test(content.text??'');
+      if(challengeTitle||challengeBody){
+        return {strategy:'S01',status:'blocked',reason:'Access challenge/interstitial detected; no bypass attempted',sourceUrl:fetched.url,content:{},evidence:[],warnings};
+      }
       if(pages.length===0){firstTitle=content.title;firstDescription=content.description;firstUrl=fetched.url}
       const text=(content.text??'').trim();pages.push({url:fetched.url,title:content.title,textChars:text.length,truncated:fetched.truncated});
       if(text&&!seenText.has(text)){textParts.push(text);seenText.add(text)}
