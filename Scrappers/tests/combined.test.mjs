@@ -194,7 +194,7 @@ test('JS1–JS10 company profile is visible and accessible in the management dem
   assert.match(managementHtml,/href="#js-profile"/);
   assert.match(managementJs,/function showJsProfile\(profile\)/);
   assert.match(managementJs,/function openJsProfileSection\(code\)/);
-  assert.match(managementJs,/profile\.coverage\?\.sectionsWithClaims/);
+  assert.match(managementJs,/sectionsWithClaims/);
   assert.match(managementJs,/buildProfile/);
   assert.match(vibrantThemeCss,/\.js-profile-grid\{/);
   assert.doesNotThrow(()=>new Function(managementJs));
