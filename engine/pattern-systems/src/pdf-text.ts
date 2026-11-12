@@ -8,5 +8,5 @@ export async function hasExtractablePdfText(bytes:Uint8Array):Promise<boolean|un
     const text=await extractText(pdf,{mergePages:false});
     const pages=Array.isArray(text.text)?text.text:[text.text];
     return pages.join(' ').replace(/\s/g,'').length>=30;
-  }finally{await pdf.destroy();}
+  }finally{const close=pdf as unknown as {destroy?:()=>Promise<unknown>|unknown};await close.destroy?.();}
 }
