@@ -1,0 +1,86 @@
+name: Product Insights CI (source-only; no deployment)
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-insights-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collaboration:
+    name: Ownership and contract guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node --test scripts/collaboration/check.test.mjs
+      - run: node scripts/collaboration/check.mjs
+
+  patterns:
+    name: Pattern Systems tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install and test
+        working-directory: engine/pattern-systems
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+
+  scrappers:
+    name: Scrappers tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install and test
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm test
+
+  manufacturing:
+    name: Manufacturing tests (when imported)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deterministic Python tests if approved package exists
+        run: |
+          if [ -f intelligence/manufacturing/pyproject.toml ]; then
+            python -m pip install -e "./intelligence/manufacturing[dev]"
+            python -m pytest -q intelligence/manufacturing/tests
+          else
+            echo "::notice::No manufacturing Python source imported yet; tests not claimed."
+          fi
+
+# Production releases are ONLY in KaranBarua01/development-controller at a pinned source SHA.

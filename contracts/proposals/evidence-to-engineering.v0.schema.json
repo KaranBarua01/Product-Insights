@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:insidejob:product-insights:proposals:evidence-to-engineering:v0",
+  "title": "DRAFT: reviewed evidence to manufacturing inputs (unapproved proposal)",
+  "description": "Not an engine API. Requires both Karan and Patricio to approve final I/O before creating v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "company",
+    "product",
+    "components"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.0-proposal"
+    },
+    "company": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "companyRef",
+        "displayName"
+      ],
+      "properties": {
+        "companyRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "website": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productRef",
+        "name",
+        "companyRef"
+      ],
+      "properties": {
+        "productRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "companyRef": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "componentRef",
+          "name",
+          "roleClassification",
+          "facts"
+        ],
+        "properties": {
+          "componentRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parentRef": {
+            "type": "string"
+          },
+          "roleClassification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "basis"
+            ],
+            "properties": {
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "basis": {
+                "enum": [
+                  "explicit_source",
+                  "engineering_hypothesis",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "factRef",
+                "statement",
+                "reviewStatus",
+                "interpretation",
+                "source"
+              ],
+              "properties": {
+                "factRef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reviewStatus": {
+                  "enum": [
+                    "candidate",
+                    "reviewed",
+                    "rejected"
+                  ]
+                },
+                "interpretation": {
+                  "enum": [
+                    "source_explicit",
+                    "engineering_hypothesis"
+                  ]
+                },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "url",
+                    "quote"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "quote": {
+                      "type": "string",
+                      "minLength": 12
+                    },
+                    "capturedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

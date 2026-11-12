@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "1.0",
+  "repository": "KaranBarua01/Product-Insights",
+  "releaseRepository": "KaranBarua01/development-controller",
+  "lanes": [
+    {
+      "code": "ACQUISITION",
+      "primary": "Karan",
+      "github": "KaranBarua01",
+      "trackingIssue": 2,
+      "pathPrefixes": [
+        "Scrappers/",
+        "engine/pattern-systems/"
+      ],
+      "notes": "Website collection, JS1–JS10 quote-backed extraction, presentation."
+    },
+    {
+      "code": "MANUFACTURING",
+      "primary": "Patricio",
+      "github": null,
+      "trackingIssue": 3,
+      "pathPrefixes": [
+        "intelligence/manufacturing/"
+      ],
+      "notes": "Python deterministic inference, taxonomy and synthetic supplier matching. GitHub handle pending."
+    },
+    {
+      "code": "INTEGRATION",
+      "primary": "Joint (one DRI per issue)",
+      "github": null,
+      "trackingIssue": 4,
+      "pathPrefixes": [
+        "contracts/",
+        "integration/"
+      ],
+      "notes": "Versioned contracts, adapters, cross-engine tests; both owners review."
+    },
+    {
+      "code": "PLATFORM",
+      "primary": "Karan",
+      "github": "KaranBarua01",
+      "trackingIssue": 1,
+      "pathPrefixes": [
+        ".github/",
+        "docs/collaboration/",
+        "collaboration/",
+        "scripts/collaboration/",
+        "README.md",
+        "AGENTS.md",
+        ".gitignore",
+        "GITHUB_ACTIONS_DEPLOY.md",
+        "CLOUDFLARE_SETUP.md"
+      ],
+      "notes": "CI, ownership governance, security and central controller coordination."
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "website-patterns",
+      "ownerLane": "ACQUISITION",
+      "canonicalPath": "engine/pattern-systems/",
+      "status": "implemented"
+    },
+    {
+      "id": "website-extraction-and-router",
+      "ownerLane": "ACQUISITION",
+      "canonicalPath": "Scrappers/src/engine.ts",
+      "status": "implemented"
+    },
+    {
+      "id": "js1-js10-proposals",
+      "ownerLane": "ACQUISITION",
+      "canonicalPath": "Scrappers/src/js-profile.ts",
+      "status": "implemented-prototype"
+    },
+    {
+      "id": "management-demo",
+      "ownerLane": "ACQUISITION",
+      "canonicalPath": "Scrappers/src/management-ui.ts",
+      "status": "implemented-prototype"
+    },
+    {
+      "id": "patricio-static-demo-snapshot",
+      "ownerLane": "ACQUISITION",
+      "canonicalPath": "Scrappers/src/patricio-pilot.ts",
+      "status": "static-display-only"
+    },
+    {
+      "id": "manufacturing-process-inference",
+      "ownerLane": "MANUFACTURING",
+      "canonicalPath": "intelligence/manufacturing/process_inference/",
+      "status": "external-python-prototype-pending-import"
+    },
+    {
+      "id": "supplier-capability-matching",
+      "ownerLane": "MANUFACTURING",
+      "canonicalPath": "intelligence/manufacturing/supplier_matching/",
+      "status": "external-python-prototype-pending-import"
+    },
+    {
+      "id": "reviewed-evidence-engineering-contract",
+      "ownerLane": "INTEGRATION",
+      "canonicalPath": "contracts/proposals/evidence-to-engineering.v0.schema.json",
+      "status": "proposal-only"
+    },
+    {
+      "id": "cross-engine-adapter",
+      "ownerLane": "INTEGRATION",
+      "canonicalPath": "integration/",
+      "status": "not-built"
+    },
+    {
+      "id": "release-orchestration",
+      "ownerLane": "PLATFORM",
+      "canonicalPath": ".github/workflows/ci.yml",
+      "status": "source-ci-only-controller-deploys"
+    }
+  ]
+}

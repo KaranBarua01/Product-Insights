@@ -1,5 +1,7 @@
 # Product Insights: Cloudflare test environment (prototype)
 
+> **Current release policy (2026-11-12):** [Development Controller is the only production deployer](GITHUB_ACTIONS_DEPLOY.md). Commands below are historical/operator reference; source-repo GitHub Actions do not deploy. All shared code changes require a PR and review.
+
 **Purpose:** deploy the existing Pattern Systems and Scrappers APIs to Cloudflare Workers. This does **not** change the portable Node/Playwright architecture, create the JS1–JS10 system, or deploy anything without your Cloudflare login. Keep the full project handoff separate.
 
 ## Existing services
