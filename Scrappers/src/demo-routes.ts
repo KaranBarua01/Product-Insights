@@ -1,6 +1,9 @@
 import {demoHtml,demoStyles,demoScript} from './demo.js';
+import {managementHtml,managementCss,managementJs} from './management-ui.js';
+import {handleInsightsRoutes} from './insights-routes.js';
 
 interface DemoEnv {
+  AI?:unknown;
   PATTERN_API_URL?:string;
   PATTERN_SERVICE?:{fetch(request:Request):Promise<Response>};
 }
@@ -38,11 +41,15 @@ async function catalog(env:DemoEnv):Promise<Response>{
 /** Public read-only demo and catalog. Extraction remains authenticated in worker.ts. */
 export async function handleDemoRequest(request:Request,env:DemoEnv):Promise<Response|undefined>{
   if(request.method!=='GET')return undefined;
+  const insight=handleInsightsRoutes(request,env);if(insight)return insight;
   const path=new URL(request.url).pathname;
   if(path==='/')return new Response(null,{status:302,headers:{...baseHeaders,Location:'/demo'}});
-  if(path==='/demo')return new Response(demoHtml,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
-  if(path==='/demo/styles.css')return new Response(demoStyles,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
-  if(path==='/demo/app.js')return new Response(demoScript,{headers:{...baseHeaders,'Content-Type':'text/javascript; charset=utf-8'}});
+  if(path==='/demo')return new Response(managementHtml,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
+  if(path==='/demo/styles.css')return new Response(managementCss,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
+  if(path==='/demo/app.js')return new Response(managementJs,{headers:{...baseHeaders,'Content-Type':'text/javascript; charset=utf-8'}});
+  if(path==='/demo/legacy')return new Response(demoHtml.replaceAll('/demo/styles.css','/demo/legacy/styles.css').replaceAll('/demo/app.js','/demo/legacy/app.js'),{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
+  if(path==='/demo/legacy/styles.css')return new Response(demoStyles,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
+  if(path==='/demo/legacy/app.js')return new Response(demoScript,{headers:{...baseHeaders,'Content-Type':'text/javascript; charset=utf-8'}});
   if(path==='/api/pattern-catalog')return catalog(env);
   return undefined;
 }

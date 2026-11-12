@@ -19,5 +19,8 @@
   "vars": {
     "ALLOWED_HOSTS": "www.saginawcontrol.com,www.dometic.com",
     "PATTERN_API_URL": "https://insidejob-pattern-systems.injindiaops.workers.dev"
+  },
+  "ai": {
+    "binding": "AI"
   }
 }

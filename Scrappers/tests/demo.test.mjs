@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../dist/worker.js';
 import {demoHtml,demoStyles,demoScript} from '../dist/demo.js';
+import {managementHtml,managementCss,managementJs} from '../dist/management-ui.js';
 const origin='https://product-insights-scrappers-prototype.example';
 const req=(path)=>new Request(origin+path);
 const env={SCRAPPERS_API_TOKEN:'super-secret-test-token',ALLOWED_HOSTS:'www.saginawcontrol.com,www.dometic.com',PATTERN_API_TOKEN:'private-pattern-token'};
@@ -18,10 +19,10 @@ test('company demo has a standalone responsive UI and never embeds runtime secre
   assert.equal(response.headers.get('cache-control'),'no-store');
   const html=await response.text();
   assert.match(html,/Product Insights \| Working Prototype/);
-  assert.match(html,/Verified sample/);
-  assert.match(html,/Live analysis/);
+  assert.match(html,/Busch R5 RA 0100 F/);
+  assert.match(html,/LIVE WEBSITE EXPERIMENT/);
   assert.match(html,/Pattern Systems/);
-  assert.equal(html,demoHtml);
+  assert.equal(html,managementHtml);
   for(const secret of [env.SCRAPPERS_API_TOKEN,env.PATTERN_API_TOKEN])assert.doesNotMatch(html,new RegExp(secret));
 });
 
@@ -32,12 +33,12 @@ test('demo static assets are served with restrictive headers and JS syntax is va
   assert.match(js.headers.get('content-type')??'',/javascript/);
   assert.match(await css.text(),/@media\(max-width:600px\)/);
   const source=await js.text();
-  assert.equal(source,demoScript);
+  assert.equal(source,managementJs);
   assert.doesNotMatch(source,/localStorage|sessionStorage|document\.cookie/);
-  assert.match(source,/fetch\('\/api\/extract'/);
+  assert.match(source,/\/api\/extract/);
   assert.match(source,/tokenField\.value=''/);
   assert.doesNotThrow(()=>new Function(source));
-  assert.ok(demoStyles.length>1000);
+  assert.ok(managementCss.length>1000);
 });
 
 test('pattern catalog is proxied over internal service binding without exposing upstream tokens',async()=>{
