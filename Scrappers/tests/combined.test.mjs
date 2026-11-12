@@ -186,3 +186,16 @@ test('JS profile never fills missing sections or invents supplier/manufacturing 
   assert.equal(missing.status,'not_configured');
   assert.equal(missing.sections.filter(s=>s.status==='not_analysed').length,9);
 });
+
+test('JS1–JS10 company profile is visible and accessible in the management demo',()=>{
+  assert.match(managementHtml,/id="js-profile"/);
+  assert.match(managementHtml,/id="js-profile-checkbox" checked/);
+  assert.match(managementHtml,/id="js-profile-grid"/);
+  assert.match(managementHtml,/href="#js-profile"/);
+  assert.match(managementJs,/function showJsProfile\(profile\)/);
+  assert.match(managementJs,/function openJsProfileSection\(code\)/);
+  assert.match(managementJs,/profile\.coverage\?\.sectionsWithClaims/);
+  assert.match(managementJs,/buildProfile/);
+  assert.match(vibrantThemeCss,/\.js-profile-grid\{/);
+  assert.doesNotThrow(()=>new Function(managementJs));
+});
