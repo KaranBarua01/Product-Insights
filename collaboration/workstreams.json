@@ -47,7 +47,9 @@
         "scripts/collaboration/",
         "README.md",
         "AGENTS.md",
-        ".gitignore"
+        ".gitignore",
+        "GITHUB_ACTIONS_DEPLOY.md",
+        "CLOUDFLARE_SETUP.md"
       ],
       "notes": "CI, ownership governance, security and central controller coordination."
     }

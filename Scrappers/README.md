@@ -1,5 +1,7 @@
 # Product Insights — Scrappers V1.1 (portable prototype)
 
+> **Shared engineering context:** [Karan–Patricio handoff](../docs/collaboration/HANDOFF.md) and [controller-only deployment policy](../GITHUB_ACTIONS_DEPLOY.md). Older sections below contain historical prototype status and are not current release instructions.
+
 **Primary runtime: Node.js 24+ on Windows, Linux, macOS, Docker or any suitable VPS.** The three scraper strategies are independent of Cloudflare. Cloudflare Worker/Browser Run remains an optional adapter, not a required server or dependency.
 
 ```text
