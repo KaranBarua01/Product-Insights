@@ -6,6 +6,7 @@ import {cloudflareBrowserCapture} from './cloudflare-adapter.js';
 import {handleDemoRequest} from './demo-routes.js';
 import {runEvidenceAi} from './ai-bridge.js';
 import type {AiBinding} from './ai-bridge.js';
+import {buildJsProfile,jsProfileToAiReview} from './js-profile.js';
 interface Env {AI?:AiBinding;SCRAPPERS_API_TOKEN?:string;ALLOWED_HOSTS?:string;MYBROWSER?:unknown;PATTERN_API_URL?:string;PATTERN_API_TOKEN?:string;PATTERN_SERVICE?:{fetch(request:Request):Promise<Response>}}
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validModes:Mode[]=['auto','S01','S02','S03'];
@@ -42,6 +43,7 @@ export default {
     if(body.mode!==undefined&&!validModes.includes(body.mode as Mode))return json({error:'Invalid mode'},400);
     if(body.maxPdfPages!==undefined&&(!Number.isInteger(body.maxPdfPages)||Number(body.maxPdfPages)<1||Number(body.maxPdfPages)>15))return json({error:'maxPdfPages must be 1-15'},400);
     if(isInsights&&body.useAI!==undefined&&typeof body.useAI!=='boolean')return json({error:'useAI must be boolean'},400);
+    if(isInsights&&body.buildProfile!==undefined&&typeof body.buildProfile!=='boolean')return json({error:'buildProfile must be boolean'},400);
     let hosts:string[];try{hosts=normalizeAllowedHosts(env.ALLOWED_HOSTS??'');assertAllowed(body.url,hosts)}catch(e){return json({error:String(e instanceof Error?e.message:e)},400)}
     const supplied=body.patternAnalysis===undefined?undefined:limitedPatternAnalysis(body.patternAnalysis);
     if(body.patternAnalysis!==undefined&&!supplied)return json({error:'Invalid patternAnalysis payload'},400);
@@ -50,7 +52,15 @@ export default {
     const payload:ExtractRequest={url:body.url,mode:body.mode as Mode|undefined,patternAnalysis,maxPdfPages:body.maxPdfPages as number|undefined};
     const result=await extract(payload,{fetcher:fetch,...(env.MYBROWSER?{browser:cloudflareBrowserCapture(env.MYBROWSER)}:{})},{allowedHosts:hosts},provenance);
     if(warning)result.warnings.unshift(warning);
-    if(isInsights){const ai=await runEvidenceAi(env.AI,result,body.useAI===true);return json({kind:'website_analysis',scrape:result,ai});}
+    if(isInsights){
+      const createProfile=body.buildProfile===true;
+      const companyProfile=createProfile?await buildJsProfile(env.AI,result):undefined;
+      // One AI call for profile + basic suggestions when both are requested (metered inference).
+      const ai=body.useAI===true&&companyProfile
+        ?jsProfileToAiReview(companyProfile)
+        :await runEvidenceAi(env.AI,result,body.useAI===true);
+      return json({kind:'website_analysis',scrape:result,ai,...(companyProfile?{companyProfile}:{})});
+    }
     return json(result);
   }
 };

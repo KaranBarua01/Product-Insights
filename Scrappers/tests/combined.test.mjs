@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {publicPilot,handleInsightsRoutes} from '../dist/insights-routes.js';
 import {runEvidenceAi,selectAiSources} from '../dist/ai-bridge.js';
+import {JS_DEFINITIONS,buildJsProfile,selectJsSources,jsProfileToAiReview} from '../dist/js-profile.js';
 import {managementHtml,managementCss,managementJs} from '../dist/management-ui.js';
 import {pilotSnapshot} from '../dist/patricio-pilot.js';
 import {vibrantThemeCss} from '../dist/vibrant-theme.js';
@@ -133,4 +134,55 @@ test('no grounded facts reports whether model proposed unsupported quotes withou
   assert.equal(result.diagnostics.modelSuggestions,1);
   assert.equal(result.diagnostics.rejectedSuggestions,1);
   assert.match(result.detail,/none passed exact quote/);
+});
+
+test('JS1–JS10 definitions are complete, ordered and faithful to the specification',()=>{
+  assert.deepEqual(JS_DEFINITIONS.map(x=>x.code),['JS1','JS2','JS3','JS4','JS5','JS6','JS7','JS8','JS9','JS10']);
+  assert.equal(JS_DEFINITIONS[4].title,'Manufacturing Processes');
+  assert.equal(JS_DEFINITIONS[5].title,'Manufacturing Capabilities');
+  assert.equal(JS_DEFINITIONS[6].title,'Supply Chain Insights');
+});
+test('JS profile grounds roles, products, JS5 and JS6 separately and rejects invented buyer RFQs',async()=>{
+  const sections=[
+    {sourceUrl:'https://www.epcpower.com/',title:'EPC Power',text:'We design and manufacture all power conversion systems in the USA. We serve data centers and utility scale energy storage.'},
+    {sourceUrl:'https://www.epcpower.com/products/m-system',title:'M System',text:'M System is a modular grid forming inverter. A technical datasheet is available.'},
+    {sourceUrl:'https://www.epcpower.com/products/m-rack',title:'M Rack',text:'M Rack is a liquid cooled power conversion system for data centers.'}
+  ];
+  let called=0;
+  const ai={run:async(_model,args)=>{
+    called++;assert.equal(args.max_tokens,2200);
+    assert.match(args.messages[1].content,/We design and manufacture/);
+    assert.match(args.messages[1].content,/M Rack is a liquid cooled/);
+    return {response:{facts:[
+      {js:'JS1',claim:'Company says it designs and manufactures power conversion systems',quote:'We design and manufacture all power conversion systems in the USA.',sourceId:1},
+      {js:'JS3',claim:'M System is a modular inverter',quote:'M System is a modular grid forming inverter',sourceId:2},
+      {js:'JS8',claim:'Serves data centers',quote:'We serve data centers and utility scale energy storage.',sourceId:1},
+      {js:'JS6',claim:'Owns a foundry',quote:'casting and foundry operations at this plant',sourceId:1},
+      {js:'JS7',claim:'Has a confirmed RFQ for foundry parts',quote:'We are currently purchasing 1000 pump housings',sourceId:1},
+      {js:'JS3',claim:'M Rack incorrectly attributed to homepage',quote:'M Rack is a liquid cooled power conversion system',sourceId:1}
+    ]}};
+  }};
+  const extraction={...sample,sourceUrl:sections[0].sourceUrl,requestedUrl:sections[0].sourceUrl,content:{title:'EPC Power',text:sections.map(s=>s.text).join('\n'),sampledPages:sections.map(s=>({url:s.sourceUrl,title:s.title,textChars:s.text.length,truncated:false})),sourceSections:sections}};
+  const sourceOrder=selectJsSources(extraction).map(x=>x.url);
+  assert.deepEqual(sourceOrder,sections.map(s=>s.sourceUrl));
+  const result=await buildJsProfile(ai,extraction);
+  assert.equal(called,1);assert.equal(result.sections.length,10);assert.equal(result.status,'proposed');
+  assert.equal(result.coverage.acceptedClaims,3);assert.equal(result.coverage.rejectedSuggestions,3);
+  assert.equal(result.sections.find(s=>s.code==='JS6').status,'not_found_in_sample');
+  assert.equal(result.sections.find(s=>s.code==='JS7').status,'not_found_in_sample');
+  assert.equal(result.sections.find(s=>s.code==='JS10').status,'coverage_report');
+  assert.equal(result.sections.find(s=>s.code==='JS3').claims[0].sourceUrl,sections[1].sourceUrl);
+  const basic=jsProfileToAiReview(result);
+  assert.equal(basic.candidates.length,3);
+  assert.ok(basic.candidates.every(c=>c.reviewStatus==='requires_human_verification'));
+});
+test('JS profile never fills missing sections or invents supplier/manufacturing conclusions',async()=>{
+  const base={...sample,content:{title:'Company sample',text:'This company offers industrial equipment.'}};
+  const empty=await buildJsProfile({run:async()=>({response:{facts:[]}})},base);
+  assert.equal(empty.status,'no_grounded_facts');
+  assert.equal(empty.sections.filter(s=>s.status==='not_found_in_sample').length,9);
+  assert.equal(empty.sections.find(s=>s.code==='JS10').status,'coverage_report');
+  const missing=await buildJsProfile(undefined,base);
+  assert.equal(missing.status,'not_configured');
+  assert.equal(missing.sections.filter(s=>s.status==='not_analysed').length,9);
 });
