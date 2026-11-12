@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "0.0-proposal",
+  "company": {
+    "companyRef": "demo-company-001",
+    "displayName": "Example Test Manufacturer",
+    "website": "https://example.com"
+  },
+  "product": {
+    "productRef": "demo-product-001",
+    "name": "Demonstration Industrial Pump",
+    "companyRef": "demo-company-001"
+  },
+  "components": [
+    {
+      "componentRef": "demo-part-001",
+      "name": "Sample Rotor",
+      "roleClassification": {
+        "value": "rotating_element",
+        "basis": "engineering_hypothesis"
+      },
+      "facts": [
+        {
+          "factRef": "demo-fact-001",
+          "statement": "The example documentation describes a metal rotor.",
+          "reviewStatus": "candidate",
+          "interpretation": "source_explicit",
+          "source": {
+            "url": "https://example.com/products/sample-pump",
+            "quote": "The example documentation describes a metal rotor."
+          }
+        }
+      ]
+    }
+  ]
+}

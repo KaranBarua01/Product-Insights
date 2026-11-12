@@ -1,0 +1,26 @@
+# Root-level guardrails for local-only and confidential material
+.env
+.env.*
+!.env.example
+.dev.vars
+*.pem
+*.key
+*.p12
+node_modules/
+**/node_modules/
+**/dist/
+**/.wrangler/
+.venv/
+**/.venv/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+*.pyc
+*.sqlite
+*.sqlite3
+# Research packages must be reviewed before publishing to this PUBLIC repository
+*.zip
+private/
+**/private/
+secrets/
+**/secrets/

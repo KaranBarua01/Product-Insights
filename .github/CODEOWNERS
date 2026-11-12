@@ -1,0 +1,14 @@
+# Initial ownership. Add Patricio's verified GitHub username after inviting him.
+# CODEOWNERS requests reviews; it does not itself block merging.
+/.github/ @KaranBarua01
+/docs/collaboration/ @KaranBarua01
+/collaboration/ @KaranBarua01
+/scripts/collaboration/ @KaranBarua01
+/contracts/ @KaranBarua01
+/integration/ @KaranBarua01
+/engine/pattern-systems/ @KaranBarua01
+/Scrappers/ @KaranBarua01
+/README.md @KaranBarua01
+/AGENTS.md @KaranBarua01
+# After confirming his account and adding as collaborator:
+# /intelligence/manufacturing/ @<PATRICIO_VERIFIED_GITHUB_LOGIN>
