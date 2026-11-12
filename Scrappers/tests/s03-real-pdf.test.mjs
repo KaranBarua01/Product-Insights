@@ -13,7 +13,7 @@ test('real PDF text extracted through S03 even without a .pdf filename',async()=
     return new Response('Not Found',{status:404,headers:{'content-type':'text/html'}});
   };
   const result=await extract({url:'https://test-machinery.com/technical-data',mode:'auto'}, {fetcher},policy);
-  assert.equal(result.status,'completed');
+  assert.equal(result.status,'completed',result.reason+' '+JSON.stringify(result.warnings));
   assert.equal(result.strategy,'S03');
   assert.deepEqual(result.attempts.map(x=>x.strategy),['S01','S03']);
   assert.match(result.content.text,/Industrial Pump Technical Data Sheet/);

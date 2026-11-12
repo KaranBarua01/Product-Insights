@@ -2,13 +2,13 @@ import type {Dependencies,ExecutionPolicy,PdfParserOutput,ScrapeCore} from './ty
 import {assertAllowed,documentLooksPdf,fetchBounded} from './safety.js';
 export async function unpdfParser(bytes:Uint8Array,maxPages:number):Promise<PdfParserOutput>{
   const {getDocumentProxy,extractText}=await import('unpdf');
-  const doc=await getDocumentProxy(bytes,{maxImageSize:16_777_216});
+  const doc=await getDocumentProxy(new Uint8Array(bytes),{maxImageSize:16_777_216});
   try{
     if(doc.numPages>maxPages)throw new Error(`PDF page budget exceeded: ${doc.numPages} > ${maxPages}`);
     const result=await extractText(doc,{mergePages:false});
     const pages=Array.isArray(result.text)?result.text:[result.text];
     return {pageCount:doc.numPages,pages:pages.map((text:string,i:number)=>({page:i+1,text:String(text||'').slice(0,12_000)}))};
-  }finally{await doc.destroy()}
+  }finally{await (doc as unknown as {destroy?:()=>Promise<unknown>|unknown}).destroy?.()}
 }
 export async function scrapeS03(url:string,dependencies:Dependencies,policy:ExecutionPolicy,maxPages=8):Promise<ScrapeCore>{
   const safe=assertAllowed(url,policy.allowedHosts);
