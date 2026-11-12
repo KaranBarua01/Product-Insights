@@ -105,6 +105,7 @@ async function canFetch(u:URL,fetcher:typeof fetch,timeout:number):Promise<{allo
   if(r.status===404||r.status===410)return {allowed:true,rules:'',reason:'robots absent',host};
   if(r.status!==200)return {allowed:false,rules:'',reason:'robots returned '+r.status+'; conservative stop',host};
   if(!r.type.startsWith('text/')&&!r.type.includes('text'))return {allowed:false,rules:'',reason:'robots response was not text',host};
+  if(!robotsAllowed(r.body,u.pathname+u.search))return {allowed:false,rules:r.body,reason:'robots.txt disallows requested path',host};
   return {allowed:true,rules:r.body,reason:'robots parsed',host};
 }
 function scoreLink(link:{href:string;label:string}):number{
