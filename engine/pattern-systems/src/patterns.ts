@@ -47,8 +47,8 @@ export function classify(pages:PageSignals[],createdAt:string):{assessments:Asse
        const s=lead.signal;
        evidence.push({id:`${p.id}-${evidence.length+1}`,patternId:p.id,sourceUrl:lead.page.url,signal:s.type,locator:s.locator,excerpt:s.excerpt,method:s.type==='pdf_response'?'http-pdf':'http-html',observedAt:createdAt});
       }else if(p.id==='R08'&&pages.some(pg=>pg.contentType==='application/pdf'&&pg.pdfTextChecked)){
-       status='not_observed';note='Text extraction checked on a sampled PDF; no usable text layer was found.';
-     }else if(pages.some(pg=>pg.contentType.includes('html')&&pg.status>=200&&pg.status<400&&!pg.truncated)){
+       status='not_observed';note='No usable text layer observed in the sampled PDF pages; unexamined pages may differ.';
+     }else if(pages.some(pg=>pg.contentType.includes('html')&&pg.status>=200&&pg.status<400&&!pg.truncated&&!pg.signals.some(signal=>signal.type==='challenge'))){
        status='not_observed';note='Not observed in a complete sampled HTML response. Whole-site absence is not established.';
      }
    }
