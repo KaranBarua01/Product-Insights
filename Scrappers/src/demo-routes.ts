@@ -1,6 +1,7 @@
 import {demoHtml,demoStyles,demoScript} from './demo.js';
 import {managementHtml,managementCss,managementJs} from './management-ui.js';
 import {handleInsightsRoutes} from './insights-routes.js';
+import {vibrantThemeCss} from './vibrant-theme.js';
 
 interface DemoEnv {
   AI?:unknown;
@@ -45,7 +46,7 @@ export async function handleDemoRequest(request:Request,env:DemoEnv):Promise<Res
   const path=new URL(request.url).pathname;
   if(path==='/')return new Response(null,{status:302,headers:{...baseHeaders,Location:'/demo'}});
   if(path==='/demo')return new Response(managementHtml,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
-  if(path==='/demo/styles.css')return new Response(managementCss,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
+  if(path==='/demo/styles.css')return new Response(managementCss+'\n'+vibrantThemeCss,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
   if(path==='/demo/app.js')return new Response(managementJs,{headers:{...baseHeaders,'Content-Type':'text/javascript; charset=utf-8'}});
   if(path==='/demo/legacy')return new Response(demoHtml.replaceAll('/demo/styles.css','/demo/legacy/styles.css').replaceAll('/demo/app.js','/demo/legacy/app.js'),{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
   if(path==='/demo/legacy/styles.css')return new Response(demoStyles,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});

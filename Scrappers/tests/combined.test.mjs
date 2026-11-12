@@ -4,6 +4,7 @@ import {publicPilot,handleInsightsRoutes} from '../dist/insights-routes.js';
 import {runEvidenceAi} from '../dist/ai-bridge.js';
 import {managementHtml,managementCss,managementJs} from '../dist/management-ui.js';
 import {pilotSnapshot} from '../dist/patricio-pilot.js';
+import {vibrantThemeCss} from '../dist/vibrant-theme.js';
 
 const origin='https://scrappers.example';
 const req=(path,auth)=>new Request(origin+path,{headers:auth?{Authorization:`Bearer ${auth}`}:{}});
@@ -69,4 +70,16 @@ test('AI never fabricates when unavailable, disabled, or missing site text',asyn
   assert.equal((await runEvidenceAi({run:async()=>({response:{facts:[]}})},sample,true)).status,'no_grounded_facts');
   assert.equal((await runEvidenceAi({run:async()=>{throw Error('GPU down')}},sample,true)).status,'unavailable');
   assert.equal((await runEvidenceAi({run:async()=>({response:{facts:[]}})},{...sample,content:{text:'hey'}},true)).status,'no_extractable_text');
+});
+
+test('Daylight theme upgrades the outcome dashboard without changing its data or auth',async()=>{
+  const style=handleInsightsRoutes(req('/insights/styles.css'),{});
+  assert.equal(style.status,200);
+  const css=await style.text();
+  assert.match(css,/--bg:#f5f7ff/);
+  assert.match(css,/--indigo:#4f46d9/);
+  assert.match(css,/\.drawer\{/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(managementHtml,/color-scheme" content="light"/);
+  assert.equal(css,managementCss+'\\n'+vibrantThemeCss);
 });

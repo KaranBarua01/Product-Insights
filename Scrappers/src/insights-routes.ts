@@ -1,5 +1,6 @@
 import {pilotSnapshot} from './patricio-pilot.js';
 import {managementHtml,managementCss,managementJs} from './management-ui.js';
+import {vibrantThemeCss} from './vibrant-theme.js';
 
 interface DemoEnv {AI?:unknown}
 const baseHeaders={
@@ -34,7 +35,7 @@ export function handleInsightsRoutes(request:Request,env:DemoEnv):Response|undef
   const path=new URL(request.url).pathname;
   if(request.method!=='GET')return undefined;
   if(path==='/insights')return new Response(managementHtml,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp}});
-  if(path==='/insights/styles.css')return new Response(managementCss,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
+  if(path==='/insights/styles.css')return new Response(managementCss+'\n'+vibrantThemeCss,{headers:{...baseHeaders,'Content-Type':'text/css; charset=utf-8'}});
   if(path==='/insights/app.js')return new Response(managementJs,{headers:{...baseHeaders,'Content-Type':'text/javascript; charset=utf-8'}});
   if(path==='/api/insights/pilot')return json(publicPilot());
   if(path==='/api/insights/status')return json({version:'0.1.0',ui:'outcome-first',pilot:'deterministic-handoff-snapshot',dataStatus:'synthetic_test',aiConfigured:!!env.AI,liveBridge:'ai-fact-candidates-require-human-review'});
