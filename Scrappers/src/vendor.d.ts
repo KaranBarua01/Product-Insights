@@ -6,6 +6,6 @@ declare module '@cloudflare/puppeteer' {
   }>};export default puppeteer;
 }
 declare module 'unpdf'{
-  export function getDocumentProxy(bytes:Uint8Array,options?:Record<string,unknown>):Promise<{numPages:number;destroy():Promise<void>}>;
+  export function getDocumentProxy(bytes:Uint8Array,options?:Record<string,unknown>):Promise<{numPages:number;getPage(n:number):Promise<{getTextContent():Promise<{items:Array<{str?:string}>}>}>;destroy?:()=>Promise<void>}>;
   export function extractText(doc:unknown,options?:{mergePages?:boolean}):Promise<{text:string|string[];totalPages:number}>;
 }
