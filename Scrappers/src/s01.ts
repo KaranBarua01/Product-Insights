@@ -16,7 +16,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
   const safe=assertAllowed(url,policy.allowedHosts),maxPages=Math.min(4,Math.max(1,policy.maxHtmlPages??3));
   const maxBytes=Math.min(2_000_000,Math.max(100_000,policy.maxBytesHtml??1_250_000));
   const queue=[safe.href],visited=new Set<string>();
-  const pages:SourcePage[]=[],textParts:string[]=[],links:NonNullable<ExtractedContent['links']>=[],documents:string[]=[],headings:string[]=[],jsonLd:unknown[]=[],appState:unknown[]=[],evidence:ExtractionEvidence[]=[],warnings:string[]=[];
+  const pages:SourcePage[]=[],textParts:string[]=[],sourceSections:NonNullable<ExtractedContent['sourceSections']>=[],links:NonNullable<ExtractedContent['links']>=[],documents:string[]=[],headings:string[]=[],jsonLd:unknown[]=[],appState:unknown[]=[],evidence:ExtractionEvidence[]=[],warnings:string[]=[];
   const linkSeen=new Set<string>(),documentSeen=new Set<string>(),seenText=new Set<string>();
   let firstTitle:string|undefined,firstDescription:string|undefined,firstUrl=safe.href,truncatedCount=0,fetchErrors=0;
   let pdfResponse=false;
@@ -44,7 +44,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
       }
       if(pages.length===0){firstTitle=content.title;firstDescription=content.description;firstUrl=fetched.url}
       const text=(content.text??'').trim();pages.push({url:fetched.url,title:content.title,textChars:text.length,truncated:fetched.truncated});
-      if(text&&!seenText.has(text)){textParts.push(text);seenText.add(text)}
+      if(text&&!seenText.has(text)){textParts.push(text);sourceSections.push({sourceUrl:fetched.url,title:content.title,text:text.slice(0,10_000)});seenText.add(text)}
       else if(text)warnings.push(`Duplicate visible text found at ${fetched.url}; not counted twice`);
       if(fetched.truncated){truncatedCount++;warnings.push(`HTML truncated at ${maxBytes} bytes: ${fetched.url}`)}
       warnings.push(...parsed.warnings);evidence.push(...parsed.evidence);
@@ -68,6 +68,6 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
   const sparse=text.trim().length<180;
   const status:ScrapeCore['status']=allTruncated||text.trim().length<40?'partial':'completed';
   const reason=`Inspected ${pages.length} HTML page(s), ${text.length} text chars, ${truncatedCount} truncated, ${fetchErrors} failed`;
-  const content:ExtractedContent={title:firstTitle,description:firstDescription,text,headings,links,documents,jsonLd,appState,sampledPages:pages};
+  const content:ExtractedContent={title:firstTitle,description:firstDescription,text,headings,links,documents,jsonLd,appState,sampledPages:pages,sourceSections};
   return {strategy:'S01',status,reason,sourceUrl:firstUrl,content,evidence,warnings,...(sparse||allTruncated?{next:'S02' as const}:{})};
 }

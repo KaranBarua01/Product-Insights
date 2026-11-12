@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {publicPilot,handleInsightsRoutes} from '../dist/insights-routes.js';
-import {runEvidenceAi} from '../dist/ai-bridge.js';
+import {runEvidenceAi,selectAiSources} from '../dist/ai-bridge.js';
 import {managementHtml,managementCss,managementJs} from '../dist/management-ui.js';
 import {pilotSnapshot} from '../dist/patricio-pilot.js';
 import {vibrantThemeCss} from '../dist/vibrant-theme.js';
@@ -51,11 +51,11 @@ test('AI can only propose facts with verbatim quotes present in extracted websit
   let calls=0;
   const binding={run:async(model,args)=>{
     calls++;assert.equal(model,'@cf/meta/llama-3.3-70b-instruct-fp8-fast');
-    assert.equal(args.max_tokens,550);
+    assert.equal(args.max_tokens,900);
     return {response:{facts:[
-      {category:'material',claim:'Site mentions stainless steel',quote:'stainless steel industrial pumps'},
-      {category:'component',claim:'Site manufactures titanium rotors',quote:'titanium rotors with 50 micrometer precision'},
-      {category:'secret',claim:'Bad category',quote:'stainless steel industrial pumps'}
+      {category:'material',claim:'Site mentions stainless steel',quote:'stainless steel industrial pumps',sourceId:1},
+      {category:'component',claim:'Site manufactures titanium rotors',quote:'titanium rotors with 50 micrometer precision',sourceId:1},
+      {category:'secret',claim:'Bad category',quote:'stainless steel industrial pumps',sourceId:1}
     ]}};
   }};
   const result=await runEvidenceAi(binding,sample,true);
@@ -82,4 +82,55 @@ test('Daylight theme upgrades the outcome dashboard without changing its data or
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(managementHtml,/color-scheme" content="light"/);
   assert.equal(css,managementCss+String.fromCharCode(10)+vibrantThemeCss);
+});
+
+test('AI receives product-page evidence from all three EPC-style source pages, not just the homepage',async()=>{
+  const home='EPC Power utility scale power conversion and grid solutions. '.repeat(155);
+  const product1='M System Modular Grid-Forming Inverter, one platform engineered for modern grid applications. '.repeat(80);
+  const product2='M Rack liquid-cooled power conversion equipment for AI and grid infrastructure. '.repeat(75);
+  const sources=[
+    {sourceUrl:'https://www.epcpower.com/',title:'EPC Power',text:home},
+    {sourceUrl:'https://www.epcpower.com/products/m-system',title:'M System',text:product1},
+    {sourceUrl:'https://www.epcpower.com/products/m-rack',title:'M Rack',text:product2}
+  ];
+  let prompt;
+  const binding={run:async(_model,input)=>{
+    prompt=input.messages[1].content;
+    assert.match(prompt,/M System Modular Grid-Forming Inverter/);
+    assert.match(prompt,/M Rack liquid-cooled power conversion/);
+    assert.equal((prompt.match(/SOURCE \d\nURL:/g)||[]).length,3);
+    return {response:{facts:[
+      {category:'product',claim:'M System is a grid-forming inverter',quote:'M System Modular Grid-Forming Inverter',sourceId:1},
+      {category:'product',claim:'M Rack uses liquid cooling',quote:'M Rack liquid-cooled power conversion equipment',sourceId:2},
+      {category:'technical_attribute',claim:'A fabricated specification absent from sources',quote:'99.999999 percent efficiency',sourceId:1},
+      {category:'product',claim:'M Rack misattributed to homepage',quote:'M Rack liquid-cooled power conversion equipment',sourceId:3}
+    ]}};
+  }};
+  const result=await runEvidenceAi(binding,{...sample,content:{text:home+'\n\n'+product1+'\n\n'+product2,sourceSections:sources}},true);
+  assert.equal(result.status,'proposed');
+  assert.equal(result.candidates.length,2);
+  assert.equal(result.candidates[0].sourceUrl,sources[1].sourceUrl);
+  assert.equal(result.candidates[1].sourceUrl,sources[2].sourceUrl);
+  assert.equal(result.diagnostics.sourcePagesConsidered,3);
+  assert.equal(result.diagnostics.rejectedSuggestions,2);
+});
+test('AI cites the matching source instead of assigning all product quotes to homepage',async()=>{
+  const source={...sample,content:{text:'The homepage contains generic copy',sourceSections:[
+    {sourceUrl:'https://www.epcpower.com/',title:'Homepage',text:'Power conversion overview and company news.'},
+    {sourceUrl:'https://www.epcpower.com/products/m-rack',title:'M Rack',text:'M Rack is a modular grid forming inverter for industrial applications.'}
+  ]}};
+  const picked=selectAiSources(source);
+  assert.equal(picked[0].sourceUrl,'https://www.epcpower.com/products/m-rack');
+  const binding={run:async()=>({response:{facts:[{category:'product',claim:'M Rack is an inverter',quote:'M Rack is a modular grid forming inverter',sourceId:1}]}})};
+  const result=await runEvidenceAi(binding,source,true);
+  assert.equal(result.status,'proposed');
+  assert.equal(result.candidates[0].sourceUrl,picked[0].sourceUrl);
+});
+test('no grounded facts reports whether model proposed unsupported quotes without inventing fallback claims',async()=>{
+  const result=await runEvidenceAi({run:async()=>({response:{facts:[{category:'product',claim:'Unsupported',quote:'This exact text is nowhere to be found',sourceId:1}]}})},sample,true);
+  assert.equal(result.status,'no_grounded_facts');
+  assert.equal(result.candidates.length,0);
+  assert.equal(result.diagnostics.modelSuggestions,1);
+  assert.equal(result.diagnostics.rejectedSuggestions,1);
+  assert.match(result.detail,/none passed exact quote/);
 });

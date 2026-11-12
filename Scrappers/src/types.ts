@@ -17,6 +17,7 @@ export interface ExtractedContent {
   appState?: unknown[];
   pdfPages?: { page: number; text: string }[];
   sampledPages?: SourcePage[];
+  sourceSections?: { sourceUrl:string; title?:string; text:string }[]; // Per-page text with accurate evidence provenance for AI
 }
 export interface ScrapeAttempt { strategy: Strategy; status: ExtractionStatus; reason: string; durationMs: number }
 export interface ScrapeResult {
