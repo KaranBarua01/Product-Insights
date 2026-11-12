@@ -18,7 +18,7 @@ export interface Signal {
 }
 export interface PageSignals {
   url: string; title: string; status: number; contentType: string;
-  textLength: number; contentHash?: string;
+  textLength: number; contentHash?: string; truncated?: boolean; pdfTextChecked?: boolean;
   links: LinkRecord[]; signals: Signal[];
 }
 export interface Assessment {
@@ -33,7 +33,7 @@ export interface WebsiteAnalysis {
   id: string; companyName?: string; requestedUrl: string; host: string;
   createdAt: string; status: RunStatus; pages: PageSignals[];
   assessments: Assessment[]; candidates: Candidate[];
-  errors: string[]; limits: { maxPages: number; inspectedPages: number };
+  errors: string[]; limits: { maxPages: number; inspectedPages: number; truncatedPages?: number; maxPageBytes?: number; documentPagesInspected?: number };
 }
 export interface FrequencyEntry {
   id: string; name: string; group: PatternGroup;

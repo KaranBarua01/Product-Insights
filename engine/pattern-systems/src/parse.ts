@@ -71,7 +71,7 @@ export function analyzeHtml(html:string,url:string,status=200,contentType='text/
     if(links.some(l=>l.href===href&&l.label===label))continue;
     links.push({href,label,external});
     const clue=(`${label} ${target.pathname}`).toLowerCase();
-    if(/\/products?\b|\/catalog|\/category|\/series|\/famil|\/models?\b|product(s)?\b/i.test(clue))add(signals,'product_link',`${label} → ${target.pathname}`,`a[href="${href}"]`);
+    if(!external && (/\/products?\b|\/catalog|\/category|\/series|\/famil|\/models?\b|product(s)?\b/i.test(clue)||/\b(?:our\s+)?(?:products|product\s+range|catalogue|product\s+portfolio|equipment\s+catalog)\b/i.test(label)))add(signals,'product_link',`${label} → ${target.pathname}`,`a[href="${href}"]`);
     if(/\/products?\/[^/?]+\/[^/?]+/i.test(target.pathname))add(signals,'nested_product_link',`${label} → ${target.pathname}`,`a[href="${href}"]`,'lead');
     if(/\/about|our.company|our.story|who.we.are/i.test(clue))add(signals,'about_link',label||href,`a[href="${href}"]`,'lead');
     if(/capabilit|manufactur|machin|process|molding|casting|fabricat|foundry/i.test(clue))add(signals,'capability_link',label||href,`a[href="${href}"]`,'lead');
@@ -99,12 +99,31 @@ export function analyzeHtml(html:string,url:string,status=200,contentType='text/
   if(/aria-expanded|data-accordion|accordion-item/i.test(html)&&/accordion|collapse|expand/i.test(html))add(signals,'accordion_candidate','Accordion interaction indicated by markup','[aria-expanded]','lead');
   if(/aria-label=["'][^"']*breadcrumb|schema\.org\/BreadcrumbList|class=["'][^"']*breadcrumb/i.test(html))add(signals,'breadcrumb','Breadcrumb markup detected','nav/[itemtype=BreadcrumbList]');
   if(/<nav\b/i.test(html)&&links.some(l=>!l.external))add(signals,'navigation','Navigation and internal links present','nav');
+  // Repeated navigation means shared routes across separate menus, not duplicate anchors in one menu.
+  const navGroups=findTags(html,'nav').slice(0,12).map(nav=>{
+    const urls=new Set<string>();
+    for(const link of nav.inner.matchAll(/<a\b([^>]*)>/gi)){
+      const href=safeLink(attr(link[1]??'','href'),url);if(!href)continue;
+      const u=new URL(href);if(u.hostname!==host||u.pathname==='/')continue;
+      urls.add(u.pathname.replace(/\/$/,'')+u.search);
+    }
+    return urls;
+  });
+  for(let i=0;i<navGroups.length;i++){
+    for(let j=i+1;j<navGroups.length;j++){
+      const shared=[...navGroups[i]!].filter(href=>navGroups[j]!.has(href));
+      if(shared.length>=3){add(signals,'repeated_nav',shared.slice(0,3).join(' · '),'nav blocks '+(i+1)+' and '+(j+1));break;}
+    }
+    if(signals.some(s=>s.type==='repeated_nav'))break;
+  }
   for(const m of html.matchAll(/<link\b([^>]*)>/gi)){
     const a=m[1]??'';if(/alternate/i.test(attr(a,'rel'))&&attr(a,'hreflang'))add(signals,'locale_link',attr(a,'hreflang')+' '+attr(a,'href'),'link[hreflang]');
   }
   if(/iframe\b/i.test(html)&&/catalog|product|configurator|selector/i.test(html))add(signals,'external_embedded_catalog','Embedded catalog/selector iframe candidate','iframe','lead');
   return {url,title,status,contentType,textLength,links:links.slice(0,400),signals};
 }
-export function analyzePdf(url:string,status=200,contentType='application/pdf'):PageSignals{
-  return {url,title:'',status,contentType,textLength:0,links:[],signals:[{type:'pdf_response',excerpt:'PDF content-type observed; document not parsed',locator:'Content-Type',certainty:'observed'}]};
+export function analyzePdf(url:string,status=200,contentType='application/pdf',pdfHasText?:boolean):PageSignals{
+  const signals:Signal[]=[{type:'pdf_response',excerpt:'PDF response observed; text layer independently checked when available',locator:'Content-Type / PDF signature',certainty:'observed'}];
+  if(pdfHasText===true)signals.push({type:'pdf_text',excerpt:'Text extracted from the PDF text layer (not OCR)',locator:'PDF text extraction',certainty:'observed'});
+  return {url,title:'',status,contentType,textLength:0,links:[],signals,pdfTextChecked:pdfHasText!==undefined};
 }

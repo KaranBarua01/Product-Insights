@@ -12,12 +12,12 @@ const RULES:Record<string,{observed?:string[];lead?:string[];mode?:'review'}>={
   N01:{observed:['navigation']}, N02:{observed:['breadcrumb'],lead:['nested_product_link']},
   N03:{observed:['filter_url'],lead:['facet_control']}, N04:{observed:['filter_url']},
   N05:{lead:['cross_host']}, N06:{mode:'review'}, N07:{observed:['locale_link'],lead:['locale_link']},
-  N08:{lead:['pagination']}, N09:{mode:'review'}, N10:{observed:['accordion'],lead:['accordion_candidate']},
+  N08:{lead:['pagination']}, N09:{observed:['repeated_nav']}, N10:{observed:['accordion'],lead:['accordion_candidate']},
   N11:{lead:['load_more']}, N12:{observed:['search_form'],lead:['search_form']},
   R01:{observed:['readable_html']},R02:{observed:['jsonld'],lead:['jsonld_invalid']},
   R03:{observed:['app_state'],lead:['app_state_marker']},R04:{lead:['sparse_shell']},
   R05:{observed:['pdf_response']},R06:{observed:['challenge']},
-  R07:{lead:['hydration']},R08:{mode:'review'},R09:{lead:['error_body']},
+  R07:{lead:['hydration']},R08:{observed:['pdf_text']},R09:{lead:['error_body']},
   T01:{lead:['wordpress']},T02:{lead:['webflow']},T03:{lead:['drupal']},
   T04:{lead:['nextjs']},T05:{lead:['react']},T06:{lead:['shopify']}
 };
@@ -46,9 +46,10 @@ export function classify(pages:PageSignals[],createdAt:string):{assessments:Asse
        note=found?'Observed in a sampled response; does not establish whole-site coverage.':'Candidate signal only; behavior not verified.';
        const s=lead.signal;
        evidence.push({id:`${p.id}-${evidence.length+1}`,patternId:p.id,sourceUrl:lead.page.url,signal:s.type,locator:s.locator,excerpt:s.excerpt,method:s.type==='pdf_response'?'http-pdf':'http-html',observedAt:createdAt});
-     }else if(pages.some(pg=>pg.contentType.includes('html'))){
-       // Limited negative: sampled HTML pages only. Never infer absent across unvisited templates.
-       status='not_observed';note='No matching signal in sampled HTML; absence on the entire website is NOT established.';
+      }else if(p.id==='R08'&&pages.some(pg=>pg.contentType==='application/pdf'&&pg.pdfTextChecked)){
+       status='not_observed';note='Text extraction checked on a sampled PDF; no usable text layer was found.';
+     }else if(pages.some(pg=>pg.contentType.includes('html')&&pg.status>=200&&pg.status<400&&!pg.truncated)){
+       status='not_observed';note='Not observed in a complete sampled HTML response. Whole-site absence is not established.';
      }
    }
    assessments.push({patternId:p.id,status,evidence,note});

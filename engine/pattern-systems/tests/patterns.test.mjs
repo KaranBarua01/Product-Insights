@@ -14,7 +14,7 @@ test('parser identifies catalog, JSON-LD, docs, pagination, search and details',
 });
 test('classifier distinguishes observations, leads and review-only patterns',()=>{
  const p=analyzeHtml(html,base);const result=classify([p],at);const map=Object.fromEntries(result.assessments.map(x=>[x.patternId,x]));
- assert.equal(map.I02.status,'observed');assert.equal(map.R02.status,'observed');assert.equal(map.N11.status,'lead');assert.equal(map.N09.status,'not_assessed');assert.equal(map.N12.status,'observed');
+ assert.equal(map.I02.status,'observed');assert.equal(map.R02.status,'observed');assert.equal(map.N11.status,'lead');assert.equal(map.N09.status,'not_observed');assert.equal(map.N12.status,'observed');
  assert.equal(map.I02.evidence[0].sourceUrl,base);assert.equal(map.M01,undefined);
 });
 test('invalid, private, credentialed and nonstandard ports rejected',()=>{
@@ -61,4 +61,17 @@ test('detects pagination as untested lead, not confirmed iteration',()=>{
 test('review candidates are not silently added to canonical patterns',()=>{
  const p=analyzeHtml('<html><body><iframe src="https://vendor.com/catalog" title="Product configurator"></iframe></body></html>',base);
  const result=classify([p],at);assert.equal(result.candidates[0]?.status,'review_required');assert.equal(LIBRARY.length,50);
+});
+
+test('N09 requires repeated routes in separate navigation menus',()=>{
+ const menu='<a href="/products">Products</a><a href="/catalog">Catalog</a><a href="/about">About</a>';
+ const duplicateMenus=analyzeHtml('<html><nav>'+menu+'</nav><nav class="mobile">'+menu+'</nav></html>',base);
+ const oneMenu=analyzeHtml('<html><nav>'+menu+menu+'</nav></html>',base);
+ const status=(page)=>classify([page],at).assessments.find(x=>x.patternId==='N09')?.status;
+ assert.equal(status(duplicateMenus),'observed');
+ assert.equal(status(oneMenu),'not_observed');
+});
+test('R08 cannot be observed merely because a PDF link exists',()=>{
+ const page=analyzeHtml('<html><a href="/datasheet.pdf">Datasheet</a></html>',base);
+ assert.notEqual(classify([page],at).assessments.find(x=>x.patternId==='R08').status,'observed');
 });
