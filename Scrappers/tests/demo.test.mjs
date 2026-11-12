@@ -4,9 +4,11 @@ import worker from '../dist/worker.js';
 import {demoHtml,demoStyles,demoScript} from '../dist/demo.js';
 import {managementHtml,managementCss,managementJs} from '../dist/management-ui.js';
 import {vibrantThemeCss} from '../dist/vibrant-theme.js';
+import {demoCompanies} from '../dist/demo-companies.js';
+import {readFileSync} from 'node:fs';
 const origin='https://product-insights-scrappers-prototype.example';
 const req=(path)=>new Request(origin+path);
-const env={SCRAPPERS_API_TOKEN:'super-secret-test-token',ALLOWED_HOSTS:'www.saginawcontrol.com,www.dometic.com',PATTERN_API_TOKEN:'private-pattern-token'};
+const env={SCRAPPERS_API_TOKEN:'super-secret-test-token',ALLOWED_HOSTS:demoCompanies.map(c=>c.url.split('/')[2]).join(','),PATTERN_API_TOKEN:'private-pattern-token'};
 
 test('company demo has a standalone responsive UI and never embeds runtime secrets',async()=>{
   const homepage=await worker.fetch(req('/'),env);
@@ -74,4 +76,16 @@ test('demo does not relax extraction authentication or allowlist',async()=>{
   assert.equal(disallowed.status,400);
   const missing=await worker.fetch(req('/api/pattern-catalog'),{});
   assert.equal(missing.status,503);
+});
+
+test('14 approved demo companies exactly match the production host allowlist',async()=>{
+  const config=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
+  const hosts=demoCompanies.map(c=>new URL(c.url).hostname);
+  assert.equal(demoCompanies.length,14);
+  assert.equal(new Set(hosts).size,14);
+  assert.deepEqual(config.vars.ALLOWED_HOSTS.split(',').sort(),hosts.slice().sort());
+  const markup=await (await worker.fetch(req('/demo'),env)).text();
+  for(const c of demoCompanies)assert.ok(markup.includes('value="'+c.url+'"'),c.url+' missing from demo');
+  assert.match(markup,/site-reference/);
+  assert.match(managementJs,/updateSiteReference/);
 });

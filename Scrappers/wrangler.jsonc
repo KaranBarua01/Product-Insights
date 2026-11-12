@@ -17,7 +17,7 @@
     }
   ],
   "vars": {
-    "ALLOWED_HOSTS": "www.saginawcontrol.com,www.dometic.com",
+    "ALLOWED_HOSTS": "www.saginawcontrol.com,www.dometic.com,pushcorp.com,www.proenergyservices.com,www.moog.com,www.generalkinematics.com,hennigworldwide.com,www.pentictonfoundry.com,vestil.com,bluerobotics.com,hytrol.com,whitedriveproducts.com,www.filamatic.com,www.epcpower.com",
     "PATTERN_API_URL": "https://insidejob-pattern-systems.injindiaops.workers.dev"
   },
   "ai": {
