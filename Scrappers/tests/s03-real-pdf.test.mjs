@@ -30,3 +30,16 @@ test('browser route is tested independently of HTTP route',async()=>{
   assert.equal(result.routing.strategy,'S02');assert.equal(result.attempts.length,1);
   assert.match(result.content.text,/Real rendered supplier product data/);
 });
+
+test('S03 returns bounded partial evidence for long PDFs instead of rejecting the whole document',async()=>{
+ const fetcher=async(url)=>{
+   if(new URL(String(url)).pathname==='/robots.txt')return new Response('',{status:404});
+   return new Response(pdf,{headers:{'content-type':'application/pdf'}});
+ };
+ const pdfParser=async(_bytes,limit)=>({pageCount:limit,totalPages:54,truncated:true,pages:[{page:1,text:'Pump engineering specifications for industrial manufacturing.'}]});
+ const result=await extract({url:'https://test-machinery.com/brochure',mode:'S03',maxPdfPages:8},{fetcher,pdfParser},policy);
+ assert.equal(result.status,'partial');
+ assert.match(result.reason,/first 8 of 54/);
+ assert.ok(result.evidence.some(x=>x.locator==='PDF page 1'));
+ assert.ok(result.warnings.some(w=>/remaining pages not inspected/.test(w)));
+});

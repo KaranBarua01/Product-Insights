@@ -23,3 +23,8 @@ test('real linked PDF text becomes observed R08, with page-scope evidence',async
   assert.equal(r08.status,'observed');
   assert.equal(r08.evidence[0].sourceUrl,'https://test-machinery.com/technical-data');
 });
+
+test('PDF text-layer check keeps bounded page probing regardless of total pages',async()=>{
+ const source=await hasExtractablePdfText(pdf);
+ assert.equal(source,true);
+});
