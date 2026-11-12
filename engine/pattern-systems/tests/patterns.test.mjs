@@ -40,7 +40,7 @@ test('bounded website inspection with mock HTTP and evidence',async()=>{
 });
 test('blocked robots halts retrieval',async()=>{
  let requests=0;const fetcher=async()=>{requests++;return new Response('User-agent: *\nDisallow: /',{status:200,headers:{'content-type':'text/plain'}});};
- const r=await inspectWebsite(base,{fetcher});assert.equal(r.pages.length,0);assert.equal(r.status,'failed');assert.equal(requests,1);
+ const r=await inspectWebsite(base,{fetcher});assert.equal(r.pages.length,0);assert.equal(r.status,'blocked');assert.equal(requests,1);
 });
 test('worker reports health, patterns and protects analysis endpoint',async()=>{
  const health=await worker.fetch(new Request('https://patterns.workers.dev/health'),{});assert.equal(health.status,200);
@@ -74,4 +74,56 @@ test('N09 requires repeated routes in separate navigation menus',()=>{
 test('R08 cannot be observed merely because a PDF link exists',()=>{
  const page=analyzeHtml('<html><a href="/datasheet.pdf">Datasheet</a></html>',base);
  assert.notEqual(classify([page],at).assessments.find(x=>x.patternId==='R08').status,'observed');
+});
+
+test('2 MB streaming HTML cap retains signals and records partial results',async()=>{
+ const huge='<html><body><nav><a href="/products">Products</a></nav><main>'+('Industrial pump information. '.repeat(120000));
+ const fetcher=async(u)=>String(u).endsWith('/robots.txt')?new Response('',{status:404}):new Response(huge,{headers:{'content-type':'text/html','content-length':String(new TextEncoder().encode(huge).length)}});
+ const r=await inspectWebsite(base,{fetcher,maxPages:1,now:at});
+ assert.equal(r.status,'partial');assert.equal(r.pages.length,1);assert.equal(r.pages[0].truncated,true);
+ assert.equal(r.limits.truncatedPages,1);assert.equal(r.assessments.find(p=>p.patternId==='I02').status,'observed');
+ assert.equal(r.assessments.find(p=>p.patternId==='I05').status,'not_assessed');
+});
+test('oversized robots stays fail-closed',async()=>{
+ let hits=0;const fetcher=async()=>{hits++;return new Response('User-agent: *\nAllow: /\n'+('x'.repeat(90000)),{headers:{'content-type':'text/plain'}})};
+ const r=await inspectWebsite(base,{fetcher,maxPages:1});
+ assert.equal(r.status,'blocked');assert.equal(hits,1);
+});
+test('www alias robots redirects use canonical host for page sampling',async()=>{
+ const hits=[];const fetcher=async(u)=>{
+   const p=new URL(String(u));hits.push(p.hostname+p.pathname);
+   if(p.hostname==='acme-machinery.com'&&p.pathname==='/robots.txt')return new Response('',{status:302,headers:{location:'https://www.acme-machinery.com/robots.txt'}});
+   if(p.pathname==='/robots.txt')return new Response('User-agent: *\nAllow: /\n',{headers:{'content-type':'text/plain'}});
+   return new Response('<html><body><a href="/products">Our Products</a></body></html>',{headers:{'content-type':'text/html'}});
+ };
+ const r=await inspectWebsite(base,{fetcher,maxPages:1});
+ assert.equal(r.status,'completed');assert.equal(r.pages[0].url,'https://www.acme-machinery.com/');
+ assert.ok(hits.includes('www.acme-machinery.com/robots.txt'));assert.ok(!hits.includes('acme-machinery.com/'));
+});
+test('main-page canonical alias redirect requires alias-specific robots permission',async()=>{
+ const hits=[];const fetcher=async(u)=>{
+   const p=new URL(String(u));hits.push(p.hostname+p.pathname);
+   if(p.hostname==='acme-machinery.com'&&p.pathname==='/')return new Response('',{status:301,headers:{location:'https://www.acme-machinery.com/products'}});
+   if(p.pathname==='/robots.txt')return new Response('User-agent: *\nDisallow: /products\n',{headers:{'content-type':'text/plain'}});
+   throw Error('Disallowed content must not be retrieved');
+ };
+ const r=await inspectWebsite(base,{fetcher,maxPages:1});
+ assert.equal(r.status,'blocked');assert.ok(!hits.includes('www.acme-machinery.com/products'));
+});
+test('R08 is assessed using the PDF text probe, not the PDF filename',async()=>{
+ const html='<html><body><a href="/catalog/pumps.pdf">Pump datasheet</a></body></html>';
+ const seen=[];const fetcher=async(u)=>{
+   const p=new URL(String(u)).pathname;seen.push(p);
+   if(p==='/robots.txt')return new Response('',{status:404});
+   if(p.endsWith('.pdf'))return new Response(new TextEncoder().encode('%PDF-1.4\nfixture'),{headers:{'content-type':'application/pdf'}});
+   return new Response(html,{headers:{'content-type':'text/html'}});
+ };
+ const r=await inspectWebsite(base,{fetcher,maxPages:1,pdfTextProbe:async()=>true});
+ assert.equal(r.assessments.find(x=>x.patternId==='R08').status,'observed');
+ assert.equal(r.limits.documentPagesInspected,1);assert.ok(seen.includes('/catalog/pumps.pdf'));
+});
+test('403 is blocked and does not produce negative HTML pattern assessments',async()=>{
+ const fetcher=async(u)=>String(u).endsWith('/robots.txt')?new Response('',{status:404}):new Response('<html><h1>Access denied</h1></html>',{status:403,headers:{'content-type':'text/html'}});
+ const r=await inspectWebsite(base,{fetcher,maxPages:1});
+ assert.equal(r.status,'blocked');assert.equal(r.assessments.find(p=>p.patternId==='I02').status,'not_assessed');
 });
