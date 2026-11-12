@@ -81,5 +81,5 @@ test('Daylight theme upgrades the outcome dashboard without changing its data or
   assert.match(css,/\.drawer\{/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(managementHtml,/color-scheme" content="light"/);
-  assert.equal(css,managementCss+'\\n'+vibrantThemeCss);
+  assert.equal(css,managementCss+String.fromCharCode(10)+vibrantThemeCss);
 });
