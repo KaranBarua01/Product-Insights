@@ -201,7 +201,8 @@ export async function inspectWebsite(value:string,opts:InspectOptions={}):Promis
   }
   result.limits.inspectedPages=result.pages.length;
   result.limits.truncatedPages=result.pages.filter(p=>p.truncated).length;
-  const useful=result.pages.some(p=>p.status>=200&&p.status<400);
+  const useful=result.pages.some(p=>p.status>=200&&p.status<400&&!p.signals.some(signal=>signal.type==='challenge'));
+
   result.status=!useful&&blockedCount?'blocked':useful?(result.errors.length||result.limits.truncatedPages?'partial':'completed'):'failed';
   return {...result,...classify(result.pages,started)};
 }
