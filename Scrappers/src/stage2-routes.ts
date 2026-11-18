@@ -93,6 +93,7 @@ async function analyze(body:JsonObject,env:Stage2Env){
     const v=item as JsonObject,id=v.sourceId;
     if(!Number.isInteger(id)||Number(id)<1||Number(id)>Math.min(pages.length,6))continue;
     const p=pages[Number(id)-1],name=clean(v.name,140).trim(),quote=clean(v.quote,240).trim();
+    if(!p)continue;
     if(!name||name.length<4||quote.length<12||!norm(p.text.slice(0,3400)).includes(norm(quote))||
       !['product_model','product_family'].includes(String(v.kind)))continue;
     if(/^(?:products?|about|home|catalog|contact|services?|industries|application)$/i.test(name))continue;
