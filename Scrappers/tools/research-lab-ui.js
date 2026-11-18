@@ -59,7 +59,36 @@
       if(mapping.status==='not_loaded')append(detail,'p','Load taxonomy before running research to see possible codes.','small');
       else if(mapping.suggestions.length){append(detail,'p','Candidate codes — NOT validated:');
         for(const m of mapping.suggestions){append(detail,'div',`${m.path} | ${m.code} | lexical score ${m.score}`,'small');}
-      }else append(detail,'p','Taxonomy gap or insufficient evidence — do not force a code.','warn');
+      }else{
+        append(detail,'p','Taxonomy gap or insufficient evidence — do not force a code.','warn');
+        if(p.leadId){
+          const manual=append(detail,'button','Propose missing category manually');manual.type='button';
+          manual.addEventListener('click',async()=>{
+            manual.disabled=true;
+            try{
+              const data=await api('/api/stage2/parents');
+              const box=append(detail,'div');
+              append(box,'label','New category label');const label=append(box,'input');label.type='text';label.value=p.name;label.maxLength=150;
+              append(box,'label','Existing parent taxonomy category (choose carefully)');
+              const select=append(box,'select');
+              const empty=append(select,'option','Select a parent category');empty.value='';
+              for(const n of data.parents||[]){const opt=append(select,'option','L'+n.level+' · '+n.path);opt.value=n.code;}
+              append(box,'label','Why does this category need to exist?');
+              const reason=append(box,'input');reason.type='text';reason.maxLength=500;reason.placeholder='Explain why no existing classification fits this product';
+              const save=append(box,'button','Add to approval queue');save.type='button';save.className='primary';
+              save.addEventListener('click',async()=>{
+                save.disabled=true;
+                try{
+                  const out=await api('/api/stage2/manual-proposal',{method:'POST',body:JSON.stringify({
+                    leadId:p.leadId,kind:'new_node',label:label.value,parentCode:select.value,reason:reason.value})});
+                  $('stage2-status').textContent=out.added?'Manual proposal queued for review.':'This taxonomy proposal already exists in the queue.';
+                  await loadProposals();
+                }catch(e){$('stage2-status').textContent='Manual proposal refused: '+e.message;save.disabled=false;}
+              });
+            }catch(e){$('stage2-status').textContent='Unable to load taxonomy parents: '+e.message;manual.disabled=false;}
+          });
+        }
+      }
     }
     if(report.stage2){
       append(root,'h3','Stage 2 research intelligence');

@@ -57,7 +57,7 @@ export async function enqueueTaxonomyProposals(items,{path=STAGE2_PROPOSALS_PATH
       existingCode:p.kind==='alias'?p.existingCode:null,reason:p.reason.trim().slice(0,500),
       productName:p.productName.trim(),sourceUrl:p.sourceUrl,quote:p.quote.trim(),
       baseNodeHash:baseNodeHash||null,createdAt:new Date().toISOString(),status:'pending',
-      attribution:'Cloudflare AI suggestion from user-researched website; not independently verified',
+      attribution:p.source==='manual_presenter_proposal'?'Manual presenter proposal from sampled website evidence; not independently verified':'Cloudflare AI suggestion from user-researched website; not independently verified',
       approval:null,publishedVersion:null});
   }
   if(added)await writeJson(path,queue);
