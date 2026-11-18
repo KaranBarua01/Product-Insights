@@ -68,3 +68,5 @@ Tests cover local Stage 2 evidence, candidate mapping, review and publication, m
 Success for this Stage 2 **prototype source PR** means: offline gap → manual proposal → approval → versioned working edition → reload/export, plus testable optional Cloudflare AI planner/JS profile/product proposal/taxonomy enrichment API. It does **not** imply full OS integration or completed 10-company real-world accuracy.
 
 For UI demonstration purposes, the human-reviewed local edition is deliberately labeled **not canonical**. PR validation runs in the source repository; only approved releases of the existing Worker through the development-controller may activate Cloudflare inference.
+
+A localhost smoke test also starts the real Node Lab with a temporary fixture taxonomy and verifies health, initialization, taxonomy-parent lookup, empty review queue, and that unauthorized mutation is denied. This does not replace real-site or live Workers AI acceptance testing.
