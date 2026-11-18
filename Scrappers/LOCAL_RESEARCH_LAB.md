@@ -74,3 +74,19 @@ If the detector is unavailable, the lab continues with the existing conservative
 ## November 18 live QA findings (not yet fixed in this taxonomy-install change)
 
 Independent local browser QA reported 67/67 Scrappers tests and 24/24 Pattern Systems tests passing, but only one JSON-LD product lead across the ten four-page website runs. Significant research limitations remain: JSON-LD-only product discovery, some canonical redirects failing exact-host allowlists, PDFs being opened with S02 rather than routed to S03 under forced browser mode, and irrelevant links consuming page budget. Site robots 403/non-text errors are access-policy blocks, **not proof** that a robots Disallow rule applies. Taxonomy auto-installation fixes repeat manual upload and provenance visibility only; it does not repair these extraction or completeness failures. Keep the Manuel demo labeled experimental until live site results are revalidated.
+
+### Updating an already-running Windows lab
+
+The existing Research Lab process will not automatically replace its running code when a GitHub branch changes. Stop it with **Ctrl+C**, then:
+
+```powershell
+cd "$HOME\Projects\Product-Insights"
+git switch feat/acquisition-local-research-lab
+git pull --ff-only
+cd Scrappers
+npm.cmd run lab
+```
+
+The updated taxonomy panel shows **Checking installed taxonomy on this PC**, then the **actual** validated node count and a checksum. If you used the old memory-only upload before this update, install the explorer **one final time** using the expandable one-time installation control. After that, the normalized taxonomy is stored in gitignored `local-data/installed-taxonomy.json` and loaded on every restart. The UI demonstrates authentic local initialization, not a simulated upload to Cloudflare.
+
+The local research app's full browser integration is still a prototype; a successful taxonomy initialization does not establish company research accuracy.
