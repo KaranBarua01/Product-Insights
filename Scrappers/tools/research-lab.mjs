@@ -150,9 +150,9 @@ async function handler(req,res){
     const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&(
       [String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])]
         .some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' ')))||
-      (p.structuredProducts||[]).some(found=>(product.members||[]).some(m=>m.name.toLowerCase()===found.name.toLowerCase()))
+      (p.structuredProducts||[]).some(found=>found.name.toLowerCase().replace(/\s+/g,' ').trim()===String(product.quote).toLowerCase().replace(/\s+/g,' ').trim())
     ));
-    if(!supported&&product.evidenceType!=='published_json_ld_unverified')
+    if(!supported)
       return json(res,{error:'Evidence quote cannot be located on the sampled source page'},400);
     const proposed={kind,label,reason,productName:product.name,sourceUrl:product.sourceUrl,quote:product.quote,
       parentCode:kind==='new_node'?node.code:null,existingCode:kind==='alias'?node.code:null,source:'manual_presenter_proposal'};
