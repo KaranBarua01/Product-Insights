@@ -70,3 +70,5 @@ Use PowerShell or Windows Credential Manager to load the real secret privately; 
 A green QA report validates source-code tests, localhost operation and export. It **does not validate** full catalog coverage or correctness of OEM/manufacturer classifications. The original 1,213-node taxonomy is **not** in this public repository and must be separately installed on each PC. Taxonomy expansion must group models/variants into reusable product families before being treated as a real taxonomy change; the current Stage 2 candidate logic can still overcount SKU gaps. The existing PDF S02 routing, host canonicalization and browser asset issues also remain.
 
 The CI does not have a local Windows laptop or access to the user's private taxonomy. Independent laptop and actual taxonomy acceptance are separate checks.
+
+**Review boundary:** The GitHub Actions QA workflow is a PLATFORM/ACQUISITION cross-lane change. Both owners must review PR #10 before it is merged. No live manufacturer correctness test is triggered by source CI.
