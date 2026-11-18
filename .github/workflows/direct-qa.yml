@@ -1,0 +1,41 @@
+name: Direct QA - Product Insights (offline, source-only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "Scrappers/**"
+      - ".github/workflows/direct-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-direct-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Scrappers without browser packages
+        working-directory: Scrappers
+        run: npm install --omit=optional --no-audit --no-fund
+      - name: Run tests and real local Lab smoke check
+        working-directory: Scrappers
+        run: npm run qa:direct -- --mode offline --out qa-results
+      - name: Attach inspectable HTML and JSON reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-insights-direct-qa
+          path: Scrappers/qa-results/
+          if-no-files-found: warn
+          retention-days: 14
+# Intentionally no external website crawling, secrets or Cloudflare deployments.
