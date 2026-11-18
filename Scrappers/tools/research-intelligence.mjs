@@ -49,6 +49,12 @@ export function identifyCompanyRole(pages,rootUrl){
   const evidence=[];
   for(const page of pages||[]){
     if(!['completed','partial'].includes(page.status))continue;
+    // First-person statements copied into seller product descriptions can
+    // belong to the manufacturer of the product, not the researched host.
+    // Only the site's homepage and its own identity/about pages are eligible.
+    let path;
+    try{const u=new URL(page.url);if(u.hostname!==new URL(rootUrl).hostname)continue;path=u.pathname;}catch{continue;}
+    if(!/^\/$|(?:^|\/)(?:about(?:-us)?|company(?:history)?|our-(?:story|company)|who-we-are)(?:\b|\/|\.)/i.test(path))continue;
     const sourceUrl=page.url,text=pageText(page).slice(0,5500);
     if(!text)continue;
     for(const [role,patterns,signal] of candidates){
@@ -72,6 +78,11 @@ export function identifyCompanyRole(pages,rootUrl){
 
 function familyKey(product){
   const name=String(product.name||'');
+  // Normalise acronym-plus-surname model labels such as "RC Allen 2610":
+  // RC + Allen -> RCA2610, equivalent to "RC Allen RCA2610" or "RCA 2610".
+  // This is a provisional family hint, never a verified entity relationship.
+  const acronym=name.match(/^([A-Z]{2})\s+([A-Z][a-z]{2,})\s+(\d{3,6}[a-z]?)\b/);
+  if(acronym)return 'model:'+acronym[1].toLowerCase()+acronym[2][0].toLowerCase()+acronym[3].toLowerCase();
   const model=name.match(/\b([a-z]{2,8})[\s-]?(\d{2,6}[a-z]?)\b/i);
   if(model)return 'model:'+model[1].toLowerCase()+model[2].toLowerCase();
   // Small numeric version such as "Zulu 3" requires distinct brand+family pair.
