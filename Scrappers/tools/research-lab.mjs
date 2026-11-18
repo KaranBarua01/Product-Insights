@@ -10,13 +10,16 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
+import {stage2Analyze,callStage2,stage2Config} from './research-stage2.mjs';
+import {listTaxonomyProposals,enqueueTaxonomyProposals,reviewTaxonomyProposal,publishApprovedTaxonomy,loadWorkingTaxonomy} from './research-stage2-store.mjs';
 import {assertPublicDns} from './research-lab-security.mjs';
 
 const port=Number(process.env.RESEARCH_LAB_PORT||8790),host='127.0.0.1';
 if(!Number.isInteger(port)||port<1024||port>65535)throw Error('RESEARCH_LAB_PORT must be between 1024 and 65535');
 const token=randomBytes(32).toString('hex');
 const BASE=dirname(fileURLToPath(import.meta.url));
-let taxonomyNodes=[],taxonomySource='not_loaded',taxonomyManifest=null;
+let taxonomyNodes=[],taxonomySource='not_loaded',taxonomyManifest=null,masterTaxonomy=null,taxonomyAliases=[],workingEdition=null;
+const aiSettings=stage2Config();
 const state={busy:false,cancel:false,events:[],report:null,lastError:null,phase:'idle'};
 const CSP="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-ancestors 'none'";
 const common={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
@@ -47,18 +50,30 @@ function html(){return `<!doctype html><html lang="en"><head><meta charset="utf-
 <header><h1>InsideJob · Local Research Lab</h1><p>PC prototype · Real public websites · Chromium inspection · Evidence-first product research</p></header><main>
 <div class="grid"><section class="card"><h2>Live company investigation</h2><form id="run-form"><label for="site">Company website</label><input id="site" type="url" required placeholder="https://manufacturer.example.com" value="https://www.hoshizakiamerica.com/" maxlength="2048"><div class="formgrid"><div><label for="pages">Page budget</label><input id="pages" type="number" min="1" max="${MAX_PAGES}" value="7"></div><div><label for="strategy">Extraction strategy</label><select id="strategy"><option value="auto">Auto: HTML → Browser</option><option value="S02">Chromium on every page</option><option value="S01">HTML only</option></select></div><div><label for="browser">Chromium display</label><select id="browser"><option value="headless">Background browser</option><option value="visible">Visible Chrome window</option><option value="none">Disabled</option></select></div></div><div class="actions"><button class="primary" id="start" type="submit">Research website</button><button type="button" id="cancel" disabled>Stop after current page</button><a id="export" href="/api/export" hidden download>Download evidence JSON</a></div></form></section>
 <section class="card"><h2>OEM Taxonomy · Installed Reference</h2><p id="taxonomy-status" class="small" aria-live="polite">Checking installed taxonomy on this PC…</p><div id="taxonomy-details" class="small"></div><details id="taxonomy-install-panel"><summary>Install or replace taxonomy (one time per PC)</summary><p class="small">Choose the existing OEM Industry Taxonomy Explorer HTML or JSON once. The lab validates and stores normalized nodes on this PC, automatically reloads them on later starts, and never sends them to Cloudflare or commits them to the public repository.</p><label for="taxonomy-file">Local taxonomy file</label><input type="file" id="taxonomy-file" accept=".html,.json,.txt"></details><p class="small">The displayed initialization is real: loading an installed reference and validating its integrity. Mapping results are unverified suggestions; enrichment will require separate review.</p></section></div>
+<section class="card" id="stage2-card"><h2>Stage 2 · AI Research &amp; Taxonomy Enrichment</h2><p id="stage2-status" class="small">Checking available research intelligence...</p><div class="actions"><button type="button" id="stage2-refresh">Refresh proposals</button><button type="button" class="primary" id="stage2-publish">Publish approved working edition</button><a id="stage2-taxonomy-export" href="/api/stage2/taxonomy/export" download="insidejob-taxonomy-working-edition.json">Export working taxonomy JSON</a></div><div id="stage2-proposals"></div><p class="small">AI-generated taxonomy suggestions require a review decision. Publishing changes only a local, versioned working edition; the original master taxonomy is never rewritten and Cloudflare is not automatically updated.</p></section>
 <section class="card"><h2>Live execution</h2><p id="status" class="small">Ready. No website requests have been made.</p><div id="events" class="events" role="log" aria-live="polite"></div></section>
 <section id="result-card" class="card" hidden><h2>Evidence report</h2><div id="summary" class="stats"></div><div id="results"></div></section>
 <p class="small">Safety: Runs locally on 127.0.0.1 only. Websites must resolve to public addresses; robots.txt, access restrictions, rate limits and exact-host boundaries are respected. Preflight DNS is not a pinned-egress sandbox: never expose this prototype to remote users or untrusted networks. No CAPTCHA bypass is attempted. No manufacturing or supplier qualification is inferred.</p></main><script src="/app.js" defer></script></body></html>`;}
+async function activateWorkingTaxonomy(){
+  if(!masterTaxonomy)return;
+  try{
+    const active=await loadWorkingTaxonomy(masterTaxonomy);
+    taxonomyNodes=active.nodes;taxonomyAliases=active.aliases;workingEdition=active.edition;taxonomyManifest=active.manifest;
+    taxonomySource=workingEdition?'local_reviewed_working_edition':taxonomySource;
+  }catch(e){
+    taxonomyNodes=masterTaxonomy.nodes;taxonomyAliases=[];workingEdition=null;taxonomyManifest=masterTaxonomy.manifest;
+    logEvent({status:'taxonomy_warning',reason:String(e.message||e).slice(0,180)});
+  }
+}
 async function loadOptionalTaxonomy(){
   const input=process.env.RESEARCH_LAB_TAXONOMY_FILE;
   if(!input){
     const stored=await loadInstalledTaxonomy();
-    if(stored){taxonomyNodes=stored.nodes;taxonomyManifest=stored.manifest;taxonomySource='installed_local_file';}
+    if(stored){masterTaxonomy=stored;taxonomyNodes=stored.nodes;taxonomyManifest=stored.manifest;taxonomySource='installed_local_file';await activateWorkingTaxonomy();}
     return;
   }
   const data=await readFile(resolve(input),'utf8');
-  taxonomyNodes=parseTaxonomy(data);taxonomySource='configured_file';taxonomyManifest=makeManifest(taxonomyNodes,{sourceName:input,sourceHash:null,installedAt:null});
+  taxonomyNodes=parseTaxonomy(data);taxonomySource='configured_file';taxonomyManifest=makeManifest(taxonomyNodes,{sourceName:input,sourceHash:null,installedAt:null});masterTaxonomy={nodes:taxonomyNodes,manifest:taxonomyManifest};await activateWorkingTaxonomy();
 }
 async function runJob(body){
   const u=validatePublicUrl(body.url);
@@ -87,23 +102,57 @@ async function runJob(body){
     return fetch(input,init);
   };
   const report=await runResearch({url:u.href,maxPages,delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
+    prioritizeLinks:aiSettings.configured?async({rootUrl,page,links})=>{
+      const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
+      return (planned.prioritizedIds||[]).map(id=>links[id-1]?.url).filter(Boolean);
+    }:null,
     onProgress:logEvent,extractPage:async target=>{
       await assertPublicDns(u.hostname);
       return extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
     }});
-  return {...report,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest}};
+  const enriched=await stage2Analyze(report,{nodes:taxonomyNodes,aliases:taxonomyAliases,
+    client:(action,payload)=>callStage2(action,payload,{config:aiSettings}),onProgress:logEvent});
+  if(masterTaxonomy&&enriched.stage2.proposals.length){
+    try{enriched.stage2.queue=await enqueueTaxonomyProposals(enriched.stage2.proposals,{baseNodeHash:masterTaxonomy.manifest.nodeHash});}
+    catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
+  }
+  return {...enriched,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
+    taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest,
+    localEditionVersion:workingEdition?.version||0,stage2AiConfigured:aiSettings.configured}};
 }
 async function handler(req,res){
   if(!validRequest(req,req.method)){return json(res,{error:'Local-only request rejected'},403);}
   const u=new URL(req.url||'/',`http://${host}:${port}`),path=u.pathname;
   if(req.method==='GET'&&path==='/')return send(res,html(),200,{'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':CSP});
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
-  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest});
-  if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest});
+  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/report')return json(res,state.report||{error:'No finished research run'},state.report?200:404);
   if(req.method==='GET'&&path==='/api/export'){
     if(!state.report)return json(res,{error:'No research report yet'},404);
     return send(res,JSON.stringify(state.report,null,2),200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="insidejob-local-research.json"'});
+  }
+  if(req.method==='GET'&&path==='/api/stage2/proposals')return json(res,{...(await listTaxonomyProposals()),
+    aiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0,
+    taxonomySource,taxonomyNodeCount:taxonomyNodes.length});
+  if(req.method==='GET'&&path==='/api/stage2/taxonomy/export'){
+    if(!workingEdition)return json(res,{error:'No locally published working edition yet'},404);
+    return send(res,JSON.stringify(workingEdition,null,2),200,{'Content-Type':'application/json; charset=utf-8',
+      'Content-Disposition':'attachment; filename="insidejob-taxonomy-working-edition.json"'});
+  }
+  if(req.method==='POST'&&path==='/api/stage2/review'){
+    if(state.busy)return json(res,{error:'Cannot approve taxonomy during research'},409);
+    const body=JSON.parse(await readBody(req,3000));
+    const reviewed=await reviewTaxonomyProposal({id:body.id,decision:body.decision,reason:body.reason||''});
+    return json(res,{ok:true,proposal:reviewed});
+  }
+  if(req.method==='POST'&&path==='/api/stage2/publish'){
+    if(state.busy)return json(res,{error:'Cannot publish taxonomy during research'},409);
+    if(!masterTaxonomy)return json(res,{error:'Install the original taxonomy first'},409);
+    const result=await publishApprovedTaxonomy(masterTaxonomy);
+    await activateWorkingTaxonomy();
+    state.report=null;
+    return json(res,{ok:true,...result});
   }
   if(req.method==='GET'&&path==='/api/taxonomy/manifest')return json(res,{loaded:taxonomyNodes.length>0,source:taxonomySource,manifest:taxonomyManifest});
   if(req.method==='GET'&&path==='/api/taxonomy'){
@@ -115,7 +164,7 @@ async function handler(req,res){
     if(!String(req.headers['content-type']||'').startsWith('text/plain'))return json(res,{error:'Expected plain-text taxonomy file'},415);
     const content=await readBody(req,7_000_000);
     const {nodes,manifest}=await installTaxonomy(content,{fileName:req.headers['x-taxonomy-name']});
-    taxonomyNodes=nodes;taxonomyManifest=manifest;taxonomySource='installed_local_file';
+    taxonomyNodes=nodes;taxonomyManifest=manifest;taxonomySource='installed_local_file';masterTaxonomy={nodes,manifest};await activateWorkingTaxonomy();
     state.report=null;
     return json(res,{ok:true,nodeCount:taxonomyNodes.length,source:taxonomySource,manifest});
   }

@@ -1,7 +1,7 @@
 /** Bounded research orchestration over the existing Scrappers extract() implementation.
  * This module does not fetch pages or infer manufacturing processes itself.
  */
-const BAD=/(?:\/(?:cart|checkout|login|register|account|privacy|terms|cookies|careers|jobs|blog\/tag|wp-admin|feed)(?:\/|$)|\.(?:jpg|jpeg|png|gif|webp|svg|zip|docx?|xlsx?|mp4)(?:$|\?))/i;
+const BAD=/(?:\/(?:cart|checkout|login|register|account|privacy|terms|cookies|careers|jobs|job-application|recruit(?:ment|ing)?|blog\/tag|wp-admin|feed)(?:\/|$)|\.(?:jpg|jpeg|png|gif|webp|svg|zip|docx?|xlsx?|mp4)(?:$|\?))/i;
 const GOOD=/(?:products?|categories|collections|catalog|specification|datasheet|downloads?|manuals?|documentation|capabilities|manufactur|applications?|industries|about|technology|services)/i;
 const BUY=/(?:products?|categories|collections|catalog|specification|datasheet)/i;
 const STOP=new Set('a an the and or for with from into of by on to in is are product products series model models system systems assembly assemblies kit kits genuine new company solutions equipment industrial usa inc ltd'.split(' '));
@@ -20,7 +20,7 @@ export function rankResearchLink(link,rootHost){
   const u=new URL(url),path=u.pathname.toLowerCase(),text=path+' '+String(link?.label||'').toLowerCase();
   const depth=path.split('/').filter(Boolean).length;
   if(depth>8)return null;
-  if(/\.pdf$/i.test(path))return {url,score:6,reason:'PDF technical document'};
+  if(/\.pdf$/i.test(path))return {url,score:6,reason:'PDF technical document',label:String(link?.label||'Technical document').slice(0,120)};
   const strong=BUY.test(text),relevant=GOOD.test(text);
   if(!relevant)return null;
   let score=strong?12:6;
@@ -28,7 +28,7 @@ export function rankResearchLink(link,rootHost){
   if(/capabilit|manufactur|about/i.test(text))score+=1;
   if(depth>=1&&depth<=4)score+=2;
   if(u.search)score-=2;
-  return {url,score,reason:strong?'Product or catalog lead':'Company or technical evidence lead'};
+  return {url,score,reason:strong?'Product or catalog lead':'Company or technical evidence lead',label:String(link?.label||'').slice(0,120)};
 }
 export function extractStructuredProducts(data,sourceUrl){
   const out=[],seen=new Set(),stack=[...(Array.isArray(data)?data:[data])];let examined=0;
@@ -116,7 +116,7 @@ export function mapProductCandidates(products,nodes){
     return {...product,taxonomy:{status:scored.length?'candidate_requires_review':'gap_or_insufficient_evidence',suggestions:scored.slice(0,3)}};
   });
 }
-export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},delayMs=0,shouldContinue=()=>true,taxonomyNodes=[]}){
+export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},delayMs=0,shouldContinue=()=>true,taxonomyNodes=[],prioritizeLinks=null}){
   if(!Number.isInteger(maxPages)||maxPages<1||maxPages>MAX_PAGES)throw Error(`maxPages must be 1-${MAX_PAGES}`);
   if(typeof extractPage!=='function')throw Error('extractPage callback required');
   const root=new URL(url).hostname,start=new Date().toISOString();
@@ -133,7 +133,7 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
     const structured=extractStructuredProducts(content.jsonLd||[],sourceUrl);
     for(const p of structured)productIndex.set((p.name+'|'+(p.sku||'')).toLowerCase(),p);
     const page={url:sourceUrl,status:result.status||'failed',strategy:result.strategy||'none',title:content.title||'',reason:result.reason||'',textChars:(content.text||'').length,
-      snippet:(content.text||'').slice(0,1300),headings:(content.headings||[]).slice(0,12),
+      snippet:(content.text||'').slice(0,1300),aiText:(content.text||'').slice(0,4800),headings:(content.headings||[]).slice(0,12),
       evidence:(result.evidence||[]).slice(0,7),structuredProducts:structured,
       warnings:(result.warnings||[]).slice(0,10),lead:next.reason};
     pages.push(page);
@@ -142,6 +142,13 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
     if(['completed','partial'].includes(page.status)){
       const candidates=[...(content.links||[]),...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
         .map(x=>rankResearchLink(x,root)).filter(Boolean);
+      if(pages.length===1&&typeof prioritizeLinks==='function'){
+        try{
+          const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
+          const picks=new Set(Array.isArray(preferred)?preferred.slice(0,8):[]);
+          for(const c of candidates)if(picks.has(c.url))c.score+=18;
+        }catch(e){warnings.push('Stage 2 link planning was unavailable; deterministic ranking retained: '+String(e?.message||e).slice(0,120));}
+      }
       for(const c of candidates){if(!seen.has(c.url)&&!queued.some(x=>x.url===c.url)){queued.push(c);discovered++;}}
       queued.sort((a,b)=>b.score-a.score);if(queued.length>70)queued.length=70;
     }
