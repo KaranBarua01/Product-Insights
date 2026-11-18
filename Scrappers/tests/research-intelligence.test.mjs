@@ -117,3 +117,21 @@ test('4-page research prioritizes identity evidence without moving a 2-page prod
   await runResearch({url,maxPages:2,extractPage});
   assert.equal(visited[1],url+'products/widget');
 });
+
+test('a fabricated family quote cannot become an AI taxonomy proposal merely because a product name is present',async()=>{
+  const site='https://1up-usa.com/products/quik-rack';
+  const report={requestedUrl:'https://1up-usa.com/',pages:[{
+    url:site,status:'completed',title:'Quik Rack',aiText:'Quik Rack is a hitch bicycle rack.',
+    headings:['Quik Rack'],structuredProducts:[{name:'Quik Rack',sourceUrl:site}]
+  }],products:[{name:'Quik Rack',quote:'A fabricated product statement not present on this page.',
+    kind:'product_family',sourceUrl:site,evidenceType:'ai_quote_in_sample_unverified'}],
+  coverage:{visitedPages:1},warnings:[],limitations:[]};
+  const nodes=parseTaxonomy(JSON.stringify([{code:'industry',label:'Industry',children:[
+    {code:'materials',label:'Materials',children:[{code:'adhesives',label:'Adhesives'}]}]}]));
+  const actions=[];
+  const result=await stage2Analyze(report,{nodes,client:async(action)=>{
+    actions.push(action);return {schemaVersion:'insidejob-stage2/1',status:'not_configured',proposals:[],aiProducts:[]};
+  }});
+  assert.equal(result.coverage.taxonomyGaps,1,'unmapped is a provisional mapping issue');
+  assert.equal(actions.includes('propose'),false,'never ask AI for a taxonomy node without page-supported quote');
+});
