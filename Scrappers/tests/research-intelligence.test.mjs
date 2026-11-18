@@ -11,7 +11,7 @@ const mk=(name,i,url='https://aircraftspruce.com/products/aviation/')=>({
 function variants(){
   const items=[];
   for(let i=0;i<6;i++)items.push(mk(i%2?'GARMIN GTX 345 Transponder Option '+i:'Garmin GTX-345 ADS-B Transponder '+i,i));
-  for(let i=0;i<14;i++)items.push(mk(i%2?'RC Allen RCA2610 Digital Attitude Indicator '+i:'RCA 2610 Electric Indicator '+i,6+i));
+  for(let i=0;i<14;i++)items.push(mk(i===3||i===7?'RC Allen 2610 Digital Attitude Indicator '+i:i%2?'RC Allen RCA2610 Digital Attitude Indicator '+i:'RCA 2610 Electric Indicator '+i,6+i));
   for(let i=0;i<3;i++)items.push(mk('Lightspeed Zulu 3 Aviation Headset Variant '+i,20+i));
   items.push(mk('David Clark DC One-X Aviation Headset',23));
   items.push(mk('Private Pilot Handbook',24));
@@ -134,4 +134,27 @@ test('a fabricated family quote cannot become an AI taxonomy proposal merely bec
   }});
   assert.equal(result.coverage.taxonomyGaps,1,'unmapped is a provisional mapping issue');
   assert.equal(actions.includes('propose'),false,'never ask AI for a taxonomy node without page-supported quote');
+});
+
+test('retailer product listing cannot turn a quoted vendor self-description into the retailer role',()=>{
+  const pages=[
+    {url:'https://aircraftspruce.com/catalog/avpages/model.php',status:'completed',
+     aiText:'We manufacture the world’s best aviation transponders. Buy from Aircraft Spruce.'},
+    {url:'https://aircraftspruce.com/catalog/stpages/companyhistory.php',status:'completed',
+     title:'Aircraft Spruce | History',aiText:'Aircraft Spruce is a distributor of aviation equipment.'}
+  ];
+  const company=identifyCompanyRole(pages,'https://aircraftspruce.com/');
+  assert.equal(company.primaryRole,'distributor');
+  assert.deepEqual(company.roles,['distributor']);
+  assert.equal(company.evidence.length,1);
+});
+test('RC Allen numeric-only and RCA-alphanumeric spellings group under one provisional model family',()=>{
+  const rows=[
+    mk('RC Allen 2610 3P Digital Attitude Indicator',1),
+    mk('RC Allen RCA2610-3P Digital Attitude Indicator',2),
+    mk('RCA 2610-3 Series Digital Attitude Indicators',3)
+  ];
+  const groups=groupProductFamilies(rows);
+  assert.equal(groups.length,1);
+  assert.equal(groups[0].memberCount,3);
 });
