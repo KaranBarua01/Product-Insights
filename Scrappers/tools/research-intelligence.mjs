@@ -54,12 +54,15 @@ export function identifyCompanyRole(pages,rootUrl){
     // Only the site's homepage and its own identity/about pages are eligible.
     let path;
     try{const u=new URL(page.url);if(u.hostname!==new URL(rootUrl).hostname)continue;path=u.pathname;}catch{continue;}
-    if(!/^\/$|(?:^|\/)(?:about(?:-us)?|company(?:history)?|our-(?:story|company)|who-we-are)(?:\b|\/|\.)/i.test(path))continue;
+    const isIdentityPage=/^\/$|(?:^|\/)(?:about(?:-us)?|company(?:history)?|our-(?:story|company)|who-we-are)(?:\b|\/|\.)/i.test(path);
     const sourceUrl=page.url,text=pageText(page).slice(0,5500);
     if(!text)continue;
     for(const [role,patterns,signal] of candidates){
       if(evidence.some(x=>x.role===role&&x.sourceUrl===sourceUrl))continue;
-      for(const re of patterns){
+      // On product pages only accept a third-person description naming
+      // this website's own company. Vendor "we manufacture" copy is excluded.
+      const eligiblePatterns=isIdentityPage?patterns:branded?patterns.slice(-1):[];
+      for(const re of eligiblePatterns){
         re.lastIndex=0;const m=re.exec(text);if(!m)continue;
         const quote=text.slice(Math.max(0,m.index-55),Math.min(text.length,m.index+m[0].length+95))
           .replace(/\s+/g,' ').trim();
