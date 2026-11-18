@@ -8,3 +8,5 @@ benchmark/results/
 benchmark/approved-hosts.txt
 benchmark/labels.csv
 benchmark/sites.first3.csv
+# Imported proprietary/user-supplied taxonomy; never publish to the public source repository
+local-data/

@@ -16,7 +16,17 @@
     const data=await api('/api/status');
     events.textContent=(data.events||[]).slice(-45).map(e=>`${e.time.slice(11,19)} | ${e.status.padEnd(10)} | ${e.url||''} ${e.chars!==undefined?'('+e.chars+' chars)':''}`).join('\n');
     if(!data.busy&&timer){clearInterval(timer);timer=null;}
-    if(data.taxonomyNodes) $('taxonomy-status').textContent=`${data.taxonomyNodes} taxonomy nodes loaded (${data.taxonomySource}).`;
+    showInstalledTaxonomy(data);
+  }
+  function showInstalledTaxonomy(data){
+    const manifest=data.taxonomyManifest,loaded=Number(data.taxonomyNodes||0)>0;
+    const status=$('taxonomy-status'),details=$('taxonomy-details');details.replaceChildren();
+    if(!loaded){status.textContent='No local taxonomy installed. Install it once using the section below.';return;}
+    status.textContent=`Ready · ${manifest?.totalNodes||data.taxonomyNodes} verified-format nodes loaded from this PC.`;
+    append(details,'div',`Reference: ${manifest?.sourceName||'Local file'} · ${data.taxonomySource||'local source'}`);
+    if(manifest?.levelCounts)append(details,'div',Object.entries(manifest.levelCounts).map(([key,value])=>`${key}: ${value}`).join(' · '));
+    if(manifest?.nodeHash)append(details,'div',`Installed version (SHA-256): ${manifest.nodeHash.slice(0,16)}…`);
+    append(details,'div','File structure validated; classification accuracy not certified.','small');
   }
   function render(report){
     const root=$('results');root.replaceChildren();$('result-card').hidden=false;exportLink.hidden=false;
@@ -57,7 +67,13 @@
     const file=ev.target.files?.[0];if(!file)return;
     if(file.size>7_000_000){$('taxonomy-status').textContent='File exceeds 7 MB limit.';return;}
     $('taxonomy-status').textContent='Reading taxonomy locally...';
-    try{const body=await file.text();const r=await api('/api/taxonomy',{method:'POST',body,type:'text/plain; charset=utf-8'});$('taxonomy-status').textContent=`Loaded ${r.nodeCount} valid taxonomy entries. Run research to generate suggestions.`;}
+    try{
+      const body=await file.text();
+      const response=await fetch('/api/taxonomy',{method:'POST',headers:{'x-lab-token':token,'Content-Type':'text/plain; charset=utf-8','x-taxonomy-name':file.name.replace(/[^a-zA-Z0-9. ()_\-]/g,'').slice(0,100)},body,cache:'no-store'});
+      const r=await response.json();if(!response.ok)throw Error(r.error||'Installation failed');
+      showInstalledTaxonomy({taxonomyNodes:r.nodeCount,taxonomySource:r.source,taxonomyManifest:r.manifest});
+      $('taxonomy-install-panel').open=false;
+    }
     catch(e){$('taxonomy-status').textContent='Taxonomy rejected: '+e.message;}
   });
   $('run-form').addEventListener('submit',async ev=>{
