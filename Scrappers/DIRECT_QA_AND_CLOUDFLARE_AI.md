@@ -72,3 +72,13 @@ A green QA report validates source-code tests, localhost operation and export. I
 The CI does not have a local Windows laptop or access to the user's private taxonomy. Independent laptop and actual taxonomy acceptance are separate checks.
 
 **Review boundary:** The GitHub Actions QA workflow is a PLATFORM/ACQUISITION cross-lane change. Both owners must review PR #10 before it is merged. No live manufacturer correctness test is triggered by source CI.
+
+## Company intelligence output-quality correction
+
+The Lab now displays a provisional **company role** only when its sampled page contains an explicit self-description; otherwise it reports `unknown`. Source quotes and URLs remain visible, and manufacturer/distributor claims require human review.
+
+Product/SKU leads are preserved, but grouping by exact product name or distinctive model number yields provisional **product families**. Taxonomy candidates and unresolved mappings are now counted per family, not per SKU. A gap remains `gap_or_insufficient_evidence`, never a certified missing category. AI or manual taxonomy proposals now operate on one provisional family with page evidence. The dashboard presents this summary before raw evidence; expand a family to inspect every underlying lead.
+
+The new `research-intelligence.test.mjs` contains deterministic regressions for Aircraft Spruce distribution, 1UP manufacturer evidence, third-party manufacturer exclusion, 25 variants vs five provisional family groups, and website identity-page prioritization. These synthetic tests do **not** replace a real-site, reviewed precision/recall benchmark.
+
+To check laptop intelligence quality, run `npm.cmd run qa:direct -- --mode local --site https://1up-usa.com/ --out qa-results`. The HTML/JSON now include `COMPANY_ROLE`, `FAMILY_GROUPING`, `familyNames` and unresolved family mapping counts. A `PARTIAL` means extracted but **not human validated**.
