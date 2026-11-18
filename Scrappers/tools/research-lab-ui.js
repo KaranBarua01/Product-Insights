@@ -32,8 +32,77 @@
   function render(report){
     const root=$('results');root.replaceChildren();$('result-card').hidden=false;exportLink.hidden=false;
     const summ=$('summary');summ.replaceChildren();
-    for(const [name,value] of Object.entries({ 'Pages visited':report.coverage.visitedPages,'Links discovered':report.coverage.discoveredLeads,'Product/model/category leads':report.coverage.productLeads??report.coverage.structuredProducts,'Taxonomy candidates':report.coverage.taxonomyCandidates,'Unmapped products':report.coverage.taxonomyGaps}))append(summ,'span',`${value} ${name.toLowerCase()}`);
-    append(root,'p',`Research status: ${report.status}. Source text and taxonomy suggestions require human review.`,'small');
+    for(const [name,value] of Object.entries({
+      'Pages sampled':report.coverage.visitedPages,
+      'Product / SKU leads':report.coverage.productLeads??report.coverage.structuredProducts,
+      'Candidate product families':report.coverage.productFamilies??0,
+      'Unresolved FAMILY mappings':report.coverage.taxonomyGaps??0
+    }))append(summ,'span',value+' '+name.toLowerCase());
+    append(root,'p','PROVISIONAL research sample. Counts are not verified catalog coverage, manufacturing qualifications, or confirmed taxonomy gaps.','warn');
+    append(root,'h3','Company role — website statements only');
+    const role=report.companyRole;
+    if(!role||role.status==='unknown')append(root,'p','Unknown: sampled pages contain no explicit self-description. Do not assume this website manufactures products.','warn');
+    else{
+      append(root,'p','Candidate: '+role.primaryRole.replace(/_/g,' ')+' · human review required.');
+      for(const evidence of role.evidence||[]){
+        const item=append(root,'details');
+        append(item,'summary',evidence.role+' · quoted website statement');
+        append(item,'p',evidence.quote,'small');
+        append(item,'p').append(urlLink(evidence.sourceUrl,'Open source'));
+      }
+    }
+    append(root,'h3','Candidate product families (grouped before taxonomy)');
+    const groups=report.families||[];
+    if(!groups.length)append(root,'p','No defensible product families in this bounded sample. This does not mean the company has no products.','warn');
+    for(const p of groups){
+      const detail=append(root,'details');
+      append(detail,'summary',p.name+' · '+p.memberCount+' lead(s)');
+      append(detail,'p','Provisional family, grouped by name or model. '+p.uniqueSkus+' unique explicit SKU(s), '+p.sourceUrls.length+' source page(s).','small');
+      if(p.quote)append(detail,'p','Source excerpt: '+p.quote,'small');
+      append(detail,'p').append(urlLink(p.sourceUrl,'Open family source'));
+      const mapping=p.taxonomy||{status:'not_loaded',suggestions:[]};
+      if(mapping.status==='not_loaded')append(detail,'p','Taxonomy not loaded. This is NOT a gap.','warn');
+      else if(mapping.suggestions?.length){
+        append(detail,'p','Unverified candidate taxonomy classifications:');
+        for(const m of mapping.suggestions)append(detail,'div',m.path+' | '+m.code+' | lexical score '+m.score,'small');
+      }else{
+        append(detail,'p','Unresolved mapping or insufficient evidence — NOT a confirmed missing category.','warn');
+        if(p.leadId){
+          const manual=append(detail,'button','Propose a reusable taxonomy category');manual.type='button';
+          manual.addEventListener('click',async()=>{
+            manual.disabled=true;
+            try{
+              const data=await api('/api/stage2/parents');
+              const box=append(detail,'div');
+              append(box,'label','Reusable class label (NOT a SKU or model)');
+              const label=append(box,'input');label.type='text';label.placeholder='e.g. Bicycle Hitch Racks';label.maxLength=150;
+              append(box,'label','Existing taxonomy parent (select only after reviewing taxonomy)');
+              const select=append(box,'select'),empty=append(select,'option','Select parent');empty.value='';
+              for(const n of data.parents||[]){const opt=append(select,'option','L'+n.level+' · '+n.path);opt.value=n.code;}
+              append(box,'label','Evidence-based explanation for missing category');
+              const reason=append(box,'input');reason.type='text';reason.maxLength=500;reason.placeholder='Explain why existing categories cannot classify this family';
+              const save=append(box,'button','Queue proposal for human review');save.type='button';save.className='primary';
+              save.addEventListener('click',async()=>{
+                save.disabled=true;
+                try{
+                  const out=await api('/api/stage2/manual-proposal',{method:'POST',body:JSON.stringify({
+                    leadId:p.leadId,kind:'new_node',label:label.value,parentCode:select.value,reason:reason.value})});
+                  $('stage2-status').textContent=out.added?'Family-level proposal queued.':'A matching proposal is already in the queue.';
+                  await loadProposals();
+                }catch(e){$('stage2-status').textContent='Proposal refused: '+e.message;save.disabled=false;}
+              });
+            }catch(e){$('stage2-status').textContent='Cannot load taxonomy parents: '+e.message;manual.disabled=false;}
+          });
+        }
+      }
+      const members=append(detail,'details');
+      append(members,'summary','Expand '+p.memberCount+' underlying product/model records');
+      for(const m of p.members||[]){
+        const line=append(members,'p');
+        line.append(urlLink(m.sourceUrl,m.name+(m.sku?' · '+m.sku:'')));
+        if(m.evidenceType)append(line,'span',' · '+m.evidenceType,'small');
+      }
+    }
     append(root,'h3','Visited source pages');
     const sc=append(root,'div',undefined,'scroll'),table=append(sc,'table'),thead=append(table,'thead'),hdr=append(thead,'tr');
     for(const name of ['Website page','Strategy','Status','Text chars','Evidence'])append(hdr,'th',name);
@@ -41,54 +110,11 @@
     for(const page of report.pages){
       const row=append(tbody,'tr'),c=append(row,'td');c.append(urlLink(page.url,page.title||page.url));append(c,'div',page.url,'small');
       append(row,'td',page.strategy);append(row,'td',page.status);append(row,'td',page.textChars);
-      const evidenceCell=append(row,'td');
-      const detail=append(evidenceCell,'details'),title=append(detail,'summary',`${page.evidence.length} evidence records · view excerpt`);
+      const evidenceCell=append(row,'td'),detail=append(evidenceCell,'details');
+      append(detail,'summary',page.evidence.length+' evidence records · view excerpt');
       append(detail,'p',page.snippet||'No extractable page text','small');
-      for(const finding of page.evidence.slice(0,6))append(detail,'p',`${finding.locator}: ${finding.excerpt}`,'small');
+      for(const finding of page.evidence.slice(0,6))append(detail,'p',finding.locator+': '+finding.excerpt,'small');
       for(const w of page.warnings.slice(0,3))append(detail,'p',w,'warn');
-    }
-    append(root,'h3','Evidence-backed product and product-family leads');
-    if(!report.products.length)append(root,'p','No product or product-family candidates found in this bounded sample. This is not proof the company has no products.','warn');
-    else for(const p of report.products){
-      const detail=append(root,'details'),sum=append(detail,'summary',p.name+(p.sku?' · '+p.sku:''));
-      append(detail,'div',(p.evidenceType||'Unspecified evidence')+' · '+(p.kind||'product_model')+' · requires human verification','small');
-      if(p.quote)append(detail,'p','Published page excerpt: '+p.quote,'small');
-      const row=append(detail,'p');row.append(urlLink(p.sourceUrl,'Open product source'));
-      if(p.material)append(detail,'p','Published material: '+p.material);
-      const mapping=p.taxonomy;
-      if(mapping.status==='not_loaded')append(detail,'p','Load taxonomy before running research to see possible codes.','small');
-      else if(mapping.suggestions.length){append(detail,'p','Candidate codes — NOT validated:');
-        for(const m of mapping.suggestions){append(detail,'div',`${m.path} | ${m.code} | lexical score ${m.score}`,'small');}
-      }else{
-        append(detail,'p','Taxonomy gap or insufficient evidence — do not force a code.','warn');
-        if(p.leadId){
-          const manual=append(detail,'button','Propose missing category manually');manual.type='button';
-          manual.addEventListener('click',async()=>{
-            manual.disabled=true;
-            try{
-              const data=await api('/api/stage2/parents');
-              const box=append(detail,'div');
-              append(box,'label','New category label');const label=append(box,'input');label.type='text';label.value=p.name;label.maxLength=150;
-              append(box,'label','Existing parent taxonomy category (choose carefully)');
-              const select=append(box,'select');
-              const empty=append(select,'option','Select a parent category');empty.value='';
-              for(const n of data.parents||[]){const opt=append(select,'option','L'+n.level+' · '+n.path);opt.value=n.code;}
-              append(box,'label','Why does this category need to exist?');
-              const reason=append(box,'input');reason.type='text';reason.maxLength=500;reason.placeholder='Explain why no existing classification fits this product';
-              const save=append(box,'button','Add to approval queue');save.type='button';save.className='primary';
-              save.addEventListener('click',async()=>{
-                save.disabled=true;
-                try{
-                  const out=await api('/api/stage2/manual-proposal',{method:'POST',body:JSON.stringify({
-                    leadId:p.leadId,kind:'new_node',label:label.value,parentCode:select.value,reason:reason.value})});
-                  $('stage2-status').textContent=out.added?'Manual proposal queued for review.':'This taxonomy proposal already exists in the queue.';
-                  await loadProposals();
-                }catch(e){$('stage2-status').textContent='Manual proposal refused: '+e.message;save.disabled=false;}
-              });
-            }catch(e){$('stage2-status').textContent='Unable to load taxonomy parents: '+e.message;manual.disabled=false;}
-          });
-        }
-      }
     }
     if(report.stage2){
       append(root,'h3','Stage 2 research intelligence');

@@ -133,6 +133,11 @@ async function local(){
   const pages=report.pages.map(p=>({url:p.url,status:p.status,strategy:p.strategy,textChars:p.textChars}));
   result.measurements.live={requestedUrl:report.requestedUrl,status:report.status,
     pagesVisited:coverage.visitedPages,products:coverage.productLeads??coverage.structuredProducts,
+    candidateFamilies:coverage.productFamilies||0,
+    unmappedProductRecords:coverage.unmappedProductRecords||0,
+    companyRole:report.companyRole||{status:'unknown',primaryRole:'unknown',evidence:[]},
+    familyNames:(report.families||[]).slice(0,30).map(f=>({name:f.name,leadCount:f.memberCount,taxonomyStatus:f.taxonomy?.status,
+      sourceUrls:f.sourceUrls?.slice(0,4)||[]})),
     taxonomyAssessed:coverage.taxonomyAssessed??false,
     taxonomyCandidates:coverage.taxonomyCandidates,taxonomyGaps:coverage.taxonomyGaps,
     aiStatus:stage2.aiStatus||'not_available',proposalStatus:stage2.taxonomyProposalStatus||'not_available',
@@ -142,6 +147,11 @@ async function local(){
     pages.length+' page(s) processed; bounded extraction is not catalog verification');
   record('PRODUCT_LEADS',coverage.productLeads>0?'PARTIAL':'NOT_ASSESSED',
     String(coverage.productLeads??0)+' candidate leads; no independent precision label');
+  const familyCount=report.families?.length||0;
+  record('FAMILY_GROUPING',familyCount>0&&familyCount<=report.products?.length?'PARTIAL':'NOT_ASSESSED',
+    familyCount+' provisional families from '+String(report.products?.length||0)+' candidate product records; not human validated');
+  record('COMPANY_ROLE',report.companyRole?.status==='candidate_requires_review'?'PARTIAL':'NOT_ASSESSED',
+    'Role: '+String(report.companyRole?.primaryRole||'unknown')+'; evidence quotes: '+String(report.companyRole?.evidence?.length||0));
   record('TAXONOMY_MAPPING',coverage.taxonomyAssessed?'PARTIAL':'NOT_ASSESSED',
     'Mapping and gap counts must not be interpreted as validated categories');
   if(health.stage2AiConfigured)record('CLOUDFLARE_EXECUTION',stage2.aiStatus==='proposed'?'PARTIAL':'NOT_VERIFIED',

@@ -139,17 +139,19 @@ async function handler(req,res){
     if(state.busy)return json(res,{error:'Cannot propose taxonomy edits during research'},409);
     if(!masterTaxonomy||!state.report)return json(res,{error:'Install a taxonomy and research a company first'},409);
     const body=JSON.parse(await readBody(req,3000));
-    const product=state.report.products.find(p=>p.leadId===body.leadId);
-    if(!product||product.taxonomy.status!=='gap_or_insufficient_evidence')return json(res,{error:'Select an unmapped product from the latest research report'},400);
+    const product=(state.report.families||[]).find(p=>p.leadId===body.leadId);
+    if(!product||product.taxonomy.status!=='gap_or_insufficient_evidence')return json(res,{error:'Select an unmapped product FAMILY from the latest research report'},400);
     const kind=body.kind==='alias'?'alias':'new_node',label=String(body.label||'').trim();
     const reason=String(body.reason||'').trim();
     if(label.length<4||label.length>150||reason.length<15||reason.length>500)return json(res,{error:'Label must be 4-150 characters, and rationale 15-500'},400);
     if(!product.quote||String(product.quote).length<12)return json(res,{error:'No sufficient quoted source evidence for this gap'},400);
     const node=taxonomyNodes.find(n=>n.code===(kind==='alias'?body.existingCode:body.parentCode));
     if(!node||(kind==='alias'?node.level<2:node.level>2))return json(res,{error:'Choose a valid existing parent (L0-L2) or alias target (L2-L3)'},400);
-    const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&[
-      String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])
-    ].some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' '))));
+    const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&(
+      [String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])]
+        .some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' ')))||
+      (p.structuredProducts||[]).some(found=>(product.members||[]).some(m=>m.name.toLowerCase()===found.name.toLowerCase()))
+    ));
     if(!supported&&product.evidenceType!=='published_json_ld_unverified')
       return json(res,{error:'Evidence quote cannot be located on the sampled source page'},400);
     const proposed={kind,label,reason,productName:product.name,sourceUrl:product.sourceUrl,quote:product.quote,

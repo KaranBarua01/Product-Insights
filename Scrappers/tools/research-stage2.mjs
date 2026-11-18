@@ -5,6 +5,7 @@
  */
 import {createHash} from 'node:crypto';
 import {mapProductCandidates,tokens} from './research-planner.mjs';
+import {groupProductFamilies,identifyCompanyRole} from './research-intelligence.mjs';
 
 const MAX_PAGES_TO_AI=8;
 const dedup=s=>[...new Set(s)];
@@ -48,7 +49,9 @@ export function offlineProductLeads(pages){
     const heading=(page.headings||[]).find(x=>typeof x==='string'&&x.trim().length>=5&&x.length<135);
     const title=String(page.title||'').split(/\s+(?:\||—|–)\s+/)[0].trim();
     const name=(heading||title).replace(/\s+/g,' ').trim();
-    if(name.length<5||name.length>135||/^(?:products?|catalog|home|shop|about|category)$/i.test(name))continue;
+    const siteName=new URL(page.url).hostname.replace(/^www\./,'').split('.')[0].replace(/[^a-z0-9]/gi,'').toLowerCase();
+    if(name.length<5||name.length>135||name.toLowerCase().replace(/[^a-z0-9]/g,'')===siteName||
+      /^(?:products?|catalog|home|shop|about|category)$/i.test(name))continue;
     const evidence=String(heading||page.title||'').trim();
     const at=pageText.toLowerCase().indexOf(name.toLowerCase());
     const quote=at>=0?pageText.slice(Math.max(0,at-20),at+Math.min(175,name.length+125)).trim():evidence.slice(0,200);
@@ -86,11 +89,15 @@ export function validateAiProducts(items,pages){
   return result;
 }
 export function combineProductLeads(existing,offline,ai){
-  const result=[],keys=new Set();
+  const result=[],exactKeys=new Set(),seenNameSources=new Set();
   for(const p of [...(existing||[]),...(ai||[]),...(offline||[])]){
     const name=String(p.name||'').trim();if(!name||!p.sourceUrl)continue;
-    const key=norm(name)+'|'+p.sourceUrl;
-    if(keys.has(key))continue;keys.add(key);
+    const base=norm(name)+'|'+p.sourceUrl,sku=norm(p.sku||'');
+    const key=base+'|'+sku;
+    // Distinct published SKU variants survive, but a generic AI/heading name
+    // on the same page is not a second copy of a structured product.
+    if(exactKeys.has(key)||(!sku&&seenNameSources.has(base)))continue;
+    exactKeys.add(key);seenNameSources.add(base);
     result.push({...p,kind:p.kind||'product_model',reviewStatus:'requires_human_verification',
       quote:p.quote||p.name,leadId:hash(key).slice(0,16)});
     if(result.length>=100)break;
@@ -110,6 +117,16 @@ export function mapStage2Products(products,nodes,aliases=[]){
         score:1,method:'approved_local_alias_not_independently_verified'}]}};
   });
 }
+function groupEvidenceIsPresent(group,pages){
+  const quote=norm(group.quote);
+  if(!quote||quote.length<8)return false;
+  return pages.some(page=>page.url===group.sourceUrl&&(
+    [page.aiText||page.snippet||'',page.title||'',...(page.headings||[])].some(t=>norm(t).includes(quote))||
+    // Product names explicitly embedded in published JSON-LD may not be
+    // duplicated in the truncated visible text; retain that provenance.
+    (page.structuredProducts||[]).some(p=>group.members.some(m=>norm(m.name)===norm(p.name)))
+  ));
+}
 export async function stage2Analyze(report,{nodes=[],aliases=[],client=callStage2,onProgress=()=>{}}={}){
   const pages=(report.pages||[]).filter(p=>['completed','partial'].includes(p.status)).slice(0,MAX_PAGES_TO_AI);
   const offline=offlineProductLeads(pages);
@@ -121,7 +138,11 @@ export async function stage2Analyze(report,{nodes=[],aliases=[],client=callStage
   catch(e){aiError=String(e.message||e).slice(0,200);analysis={status:'unavailable'};}
   const ai=validateAiProducts(analysis.aiProducts,pages);
   const products=mapStage2Products(combineProductLeads(report.products,offline,ai),nodes,aliases);
-  const gaps=products.filter(p=>p.taxonomy.status==='gap_or_insufficient_evidence'&&p.quote?.length>=12).slice(0,10);
+  const families=groupProductFamilies(products);
+  const companyRole=identifyCompanyRole(pages,report.requestedUrl);
+  // Unmapped SKU variations are not separate taxonomy gaps.
+  // Every proposal uses one family with evidence on its own sampled page.
+  const gaps=families.filter(g=>g.taxonomy.status==='gap_or_insufficient_evidence'&&groupEvidenceIsPresent(g,pages)).slice(0,10);
   let enrichment={status:'not_requested',proposals:[]},proposalError=null;
   if(gaps.length&&nodes.length){
     try{
@@ -146,16 +167,19 @@ export async function stage2Analyze(report,{nodes=[],aliases=[],client=callStage
       reviewStatus:'pending',source:'cloudflare_ai_proposal_unverified'});
     if(proposals.length>=10)break;
   }
-  return {...report,products,coverage:{...report.coverage,productLeads:products.length,
+  return {...report,products,families,companyRole,coverage:{...report.coverage,productLeads:products.length,
       productModels:products.filter(p=>p.kind==='product_model').length,
-      productFamilies:products.filter(p=>p.kind==='product_family').length,
-      taxonomyCandidates:products.filter(p=>p.taxonomy.status==='candidate_requires_review').length,
-      taxonomyGaps:products.filter(p=>p.taxonomy.status==='gap_or_insufficient_evidence').length,
-      taxonomyAssessed:products.length>0&&nodes.length>0},
+      productFamilies:families.length,
+      productFamilyLeads:products.filter(p=>p.kind==='product_family').length,
+      taxonomyCandidates:families.filter(g=>g.taxonomy.status==='candidate_requires_review').length,
+      taxonomyGaps:families.filter(g=>g.taxonomy.status==='gap_or_insufficient_evidence').length,
+      unmappedProductRecords:products.filter(p=>p.taxonomy.status==='gap_or_insufficient_evidence').length,
+      taxonomyAssessed:families.length>0&&nodes.length>0},
     stage2:{schemaVersion:'insidejob-local-stage2/1',aiStatus:analysis.status,
       companyProfile:analysis.jsProfile||null,offlineCandidates:offline.length,aiProductCandidates:ai.length,
       taxonomyProposalStatus:enrichment.status,proposals,
-      limitations:['All candidate products, facts, and classification proposals require review.',
+      limitations:['Family counts use conservative model/name grouping and are not validated distinct product families.',
+        'All candidate products, facts, and classification proposals require review.',
         'No confirmed supplier capabilities, RFQs, manufacturing inference, or final OS classifications are created.'],
       errors:[aiError,proposalError].filter(Boolean)}};
 }

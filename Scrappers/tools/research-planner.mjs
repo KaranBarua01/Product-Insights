@@ -142,6 +142,12 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
     if(['completed','partial'].includes(page.status)){
       const candidates=[...(content.links||[]),...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
         .map(x=>rankResearchLink(x,root)).filter(Boolean);
+      // On a >=4-page investigation, reserve one early page for the
+      // company's own About/identity evidence; product pages still follow.
+      if(pages.length===1&&maxPages>=4){
+        const about=candidates.find(c=>/\/(?:about|about-us|our-company|our-story|who-we-are)(?:\/|$)/i.test(new URL(c.url).pathname));
+        if(about)about.score=Math.max(about.score,17);
+      }
       if(pages.length===1&&typeof prioritizeLinks==='function'){
         try{
           const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
