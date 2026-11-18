@@ -124,7 +124,7 @@ function groupEvidenceIsPresent(group,pages){
     [page.aiText||page.snippet||'',page.title||'',...(page.headings||[])].some(t=>norm(t).includes(quote))||
     // Product names explicitly embedded in published JSON-LD may not be
     // duplicated in the truncated visible text; retain that provenance.
-    (page.structuredProducts||[]).some(p=>group.members.some(m=>norm(m.name)===norm(p.name)))
+    (page.structuredProducts||[]).some(p=>norm(p.name)===quote)
   ));
 }
 export async function stage2Analyze(report,{nodes=[],aliases=[],client=callStage2,onProgress=()=>{}}={}){
