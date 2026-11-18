@@ -82,6 +82,8 @@ function validateEdition(edition,base){
     codes.add(n.code);
   }
   if(edition.manifest?.nodeHash!==hash(JSON.stringify(edition.nodes)))throw Error('Working taxonomy checksum mismatch');
+  if(edition.aliasHash!==hash(JSON.stringify(edition.aliases)))throw Error('Working taxonomy alias checksum mismatch');
+  if(edition.aliases.some(a=>!a||typeof a.alias!=='string'||!codes.has(a.existingCode)))throw Error('Invalid working taxonomy alias target');
   return edition;
 }
 export async function loadWorkingTaxonomy(base,{path=STAGE2_WORKING_PATH}={}){
@@ -129,7 +131,7 @@ export async function publishApprovedTaxonomy(base,{queuePath=STAGE2_PROPOSALS_P
   const manifest=makeManifest(nodes,{sourceName:'LOCAL working edition '+version,
     sourceHash:base.manifest.sourceSha256,installedAt:new Date().toISOString()});
   const edition={schemaVersion:'insidejob-local-taxonomy-edition/1',version,
-    baseNodeHash:base.manifest.nodeHash,manifest,nodes,aliases,
+    baseNodeHash:base.manifest.nodeHash,manifest,nodes,aliases,aliasHash:hash(JSON.stringify(aliases)),
     publishedAt:new Date().toISOString(),status:'locally_published_not_canonical',
     approvedProposalIds:[...(prior.edition?.approvedProposalIds||[]),...applied]};
   // Retain an immutable edition snapshot before swapping the current working copy.
