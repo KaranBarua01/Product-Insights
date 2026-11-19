@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,writeFile,readFile,rm,symlink} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,readFile,rm,symlink,realpath} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {parseQueueRepo,parseJob,JOB_SCHEMA,QUEUE_LABEL,sanitizeOutput} from '../tools/pi-local-agent/policy.mjs';
@@ -45,21 +45,23 @@ test('secret scrubbing hides GitHub token variants and truncates output',()=>{
 test('workspace is explicit; realpath confinement blocks symlink escape',async()=>{
   await fixture(async root=>{
     const resolved=await workspaceRoot(root);
-    assert.equal(resolved,root);
-    assert.equal(inside(root,join(root,'tools','research-planner.mjs')),true);
-    assert.equal(inside(root,join(root,'..','elsewhere')),false);
+    // Windows may create an 8.3 temp path (KARANB~1), while realpath expands it.
+    // Test the normalized workspace, not the display spelling of the same path.
+    assert.equal(resolved,await realpath(root));
+    assert.equal(inside(resolved,join(resolved,'tools','research-planner.mjs')),true);
+    assert.equal(inside(resolved,join(resolved,'..','elsewhere')),false);
     await assert.rejects(()=>workspaceRoot('relative'),/ABSOLUTE/);
-    const file=await confinedExisting(root,'tools/research-planner.mjs');
-    assert.equal(file,join(root,'tools','research-planner.mjs'));
-    await assert.rejects(()=>confinedExisting(root,'../some-other-file'),/Disallowed/);
-    const out=await confinedOutputDir(root);
-    assert.ok(inside(root,out));
+    const file=await confinedExisting(resolved,'tools/research-planner.mjs');
+    assert.equal(file,await realpath(join(resolved,'tools','research-planner.mjs')));
+    await assert.rejects(()=>confinedExisting(resolved,'../some-other-file'),/Disallowed/);
+    const out=await confinedOutputDir(resolved);
+    assert.ok(inside(resolved,out));
     const outside=await mkdtemp(join(tmpdir(),'pi-agent-outside-'));
     try{
       await writeFile(join(outside,'private.txt'),'never read');
       try{
-        await symlink(join(outside,'private.txt'),join(root,'tools','linked-secret.txt'),'file');
-        await assert.rejects(()=>confinedExisting(root,'tools/linked-secret.txt'),/outside/);
+        await symlink(join(outside,'private.txt'),join(resolved,'tools','linked-secret.txt'),'file');
+        await assert.rejects(()=>confinedExisting(resolved,'tools/linked-secret.txt'),/outside/);
       }catch(e){if(!['EPERM','EACCES','ENOTSUP'].includes(e.code))throw e;}
     }finally{await rm(outside,{recursive:true,force:true});}
   });
@@ -74,6 +76,7 @@ test('health returns no private local path, needs no GitHub or AI calls',async()
 });
 test('taxonomy probe calls ONLY fixed local paths and returns bounded review candidates',async()=>{
   await fixture(async root=>{
+    const resolved=await workspaceRoot(root);
     await mkdir(join(root,'local-data','pi-local-agent','inputs'),{recursive:true});
     await writeFile(join(root,'tools','taxonomy-benchmark.mjs'),'// synthetic runner');
     await writeFile(join(root,'local-data','pi-local-agent','inputs','taxonomy.html'),'private taxonomy');
@@ -81,11 +84,11 @@ test('taxonomy probe calls ONLY fixed local paths and returns bounded review can
     let launched=0;
     const result=await executeAction('taxonomy_1up',{workspace:root,jobId:'safe_job_1234',run:async(exe,args,opts)=>{
       launched++;
-      assert.equal(exe,process.execPath);assert.equal(opts.cwd,root);
-      assert.equal(args[0],join(root,'tools','taxonomy-benchmark.mjs'));
+      assert.equal(exe,process.execPath);assert.equal(opts.cwd,resolved);
+      assert.equal(args[0],await realpath(join(resolved,'tools','taxonomy-benchmark.mjs')));
       assert.ok(!args.includes('--command')&&!args.includes('-Command'));
       const output=args[args.indexOf('--out')+1];
-      assert.ok(inside(root,output));
+      assert.ok(inside(resolved,output));
       await writeFile(output,JSON.stringify({status:'unlabeled_retrieval_probe_not_accuracy',
         taxonomyNodes:1213,searchableNodes:1175,products:1,candidateProducts:1,abstentions:0,
         results:[{product:'Test Rack',topCategory:'Cargo racks & boxes',topCode:'demo-only',
