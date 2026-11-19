@@ -1,0 +1,32 @@
+# Candidate exact hosts for independent U30 holdout, frozen in manifest; robots and access rules enforced.
+# Domain selection does not grant permission to disregard website restrictions.
+freeflysystems.com
+www.dronenerds.com
+aerotec.com
+www.intuitive.com
+www.medline.com
+phillipsmedisize.com
+enphase.com
+www.rexelusa.com
+www.jabil.com
+www.grundfos.com
+www.motion.com
+pumpman.com
+www.analog.com
+www.digikey.com
+www.pcbway.com
+www.certainteed.com
+www.abcsupply.com
+www.oldcastleapg.com
+www.vollrathfoodservice.com
+www.webstaurantstore.com
+www.trimarkusa.com
+www.curtmfg.com
+www.tirerack.com
+www.xometry.com
+landpride.com
+www.tractorsupply.com
+www.greatplainsag.com
+www.agilent.com
+www.fishersci.com
+www.labconco.com
