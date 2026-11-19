@@ -135,3 +135,25 @@ test('unsupported body text cannot create invented components or assumed enginee
   assert.deepEqual(result.products[0].components,[]);
   assert.deepEqual(result.products[0].specifications,[]);
 });
+
+test('explicit material label supports stainless steel but unrelated generic copy does not',()=>{
+  const url=BASE+'product/industrial-mixer';
+  const raw='Industrial Mixer\nMaterial: stainless steel\nThe shop also sells aluminum plates.';
+  const p=extractProductIntelligence({companyName:'Mixer Co',rootUrl:BASE,pages:[
+    page(url,raw,'Industrial Mixer')]}).products[0];
+  assert.ok(p.materials.some(x=>x.material==='stainless steel'));
+  assert.ok(!p.materials.some(x=>x.material==='aluminum'));
+  assert.ok(p.materials.every(x=>raw.includes(x.evidence.quote)));
+});
+test('long multi-attribute specifications retain the exact quoted field even past the first 240 characters',()=>{
+  const url=BASE+'product/industrial-refrigerator';
+  const long='Product A\n'+('Industrial details and installation guidance, '.repeat(7))+
+    ' Voltage Range: 104 – 126V, Power: 250 W';
+  const p=extractProductIntelligence({companyName:'Cooling Co',rootUrl:BASE,pages:[
+    page(url,long,'Product A')]}).products[0];
+  assert.ok(p.specifications.some(x=>x.attribute==='voltage_range'));
+  for(const x of p.specifications){
+    assert.ok(long.includes(x.evidence.quote));
+    assert.ok(x.evidence.quote.includes(x.value),'value must be supported by displayed quote');
+  }
+});
