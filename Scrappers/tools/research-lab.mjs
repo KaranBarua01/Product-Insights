@@ -10,6 +10,8 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
+import {buildBusinessView,normalizeOsSnapshot,osSnapshotTemplate} from './lab-business.mjs';
+import {businessCss,businessMarkup} from './lab-business-shell.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
 import {stage2Analyze,callStage2,stage2Config} from './research-stage2.mjs';
 import {listTaxonomyProposals,enqueueTaxonomyProposals,reviewTaxonomyProposal,publishApprovedTaxonomy,loadWorkingTaxonomy} from './research-stage2-store.mjs';
@@ -21,7 +23,7 @@ const token=randomBytes(32).toString('hex');
 const BASE=dirname(fileURLToPath(import.meta.url));
 let taxonomyNodes=[],taxonomySource='not_loaded',taxonomyManifest=null,masterTaxonomy=null,taxonomyAliases=[],workingEdition=null;
 const aiSettings=stage2Config();
-const state={busy:false,cancel:false,events:[],report:null,lastError:null,phase:'idle'};
+const state={busy:false,cancel:false,events:[],report:null,osSnapshot:null,lastError:null,phase:'idle'};
 const CSP="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-ancestors 'none'";
 const common={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
 function send(res,body,status=200,headers={}){res.writeHead(status,{...common,...headers});res.end(body);}
@@ -47,14 +49,14 @@ function validRequest(req,method){
   return true;
 }
 function html(){return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="lab-token" content="${token}"><title>InsideJob · Local Research Lab</title><style>
-:root{--ink:#243146;--sub:#66778a;--accent:#097b86;--border:#dbe3eb;--surface:#fff;--bg:#f3f6fa}*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#16283e;color:white;padding:24px max(20px,calc((100vw - 1180px)/2));border-bottom:4px solid #087e85}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#bbd1e0}main{max-width:1200px;margin:auto;padding:24px 20px 60px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 3px 15px #24314608}h2{font-size:17px;margin:0 0 10px}label{display:block;font-weight:650;font-size:12px;color:#526277;margin:10px 0 5px}input,select,button{font:inherit}input[type=url],input[type=number],input[type=text],select{border:1px solid #bac8d6;border-radius:7px;padding:10px 9px;background:white;color:var(--ink);width:100%}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}button{border:1px solid #bccad7;border-radius:7px;background:#fff;padding:9px 12px;cursor:pointer;font-weight:650}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eff3f8;color:#526277;margin-right:6px}.warn{background:#fff6e9;color:#865b27;border:1px solid #f2daba;padding:9px;border-radius:7px;margin:8px 0}.ok{color:#087c5a}.small{color:var(--sub);font-size:12px}.stats{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.stats span{border:1px solid var(--border);background:#f7f9fb;border-radius:8px;padding:8px 12px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:12px}th{color:var(--sub);background:#f8fafc}a{color:#056b9b;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#456070;font-size:12px}.events{max-height:170px;overflow:auto;white-space:pre-wrap;background:#f7f9fb;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace}details{margin:7px 0;padding:10px;border:1px solid var(--border);border-radius:7px}summary{cursor:pointer;font-weight:650}input[type=file]{max-width:100%}@media(max-width:850px){.grid,.formgrid{grid-template-columns:1fr}} </style></head><body>
-<header><h1>InsideJob · Local Research Lab</h1><p>PC prototype · Real public websites · Chromium inspection · Evidence-first product research</p></header><main>
+:root{--ink:#243146;--sub:#66778a;--accent:#097b86;--border:#dbe3eb;--surface:#fff;--bg:#f3f6fa}*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#16283e;color:white;padding:24px max(20px,calc((100vw - 1180px)/2));border-bottom:4px solid #087e85}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#bbd1e0}main{max-width:1200px;margin:auto;padding:24px 20px 60px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 3px 15px #24314608}h2{font-size:17px;margin:0 0 10px}label{display:block;font-weight:650;font-size:12px;color:#526277;margin:10px 0 5px}input,select,button{font:inherit}input[type=url],input[type=number],input[type=text],select{border:1px solid #bac8d6;border-radius:7px;padding:10px 9px;background:white;color:var(--ink);width:100%}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}button{border:1px solid #bccad7;border-radius:7px;background:#fff;padding:9px 12px;cursor:pointer;font-weight:650}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eff3f8;color:#526277;margin-right:6px}.warn{background:#fff6e9;color:#865b27;border:1px solid #f2daba;padding:9px;border-radius:7px;margin:8px 0}.ok{color:#087c5a}.small{color:var(--sub);font-size:12px}.stats{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.stats span{border:1px solid var(--border);background:#f7f9fb;border-radius:8px;padding:8px 12px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:12px}th{color:var(--sub);background:#f8fafc}a{color:#056b9b;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#456070;font-size:12px}.events{max-height:170px;overflow:auto;white-space:pre-wrap;background:#f7f9fb;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace}details{margin:7px 0;padding:10px;border:1px solid var(--border);border-radius:7px}summary{cursor:pointer;font-weight:650}input[type=file]{max-width:100%}@media(max-width:850px){.grid,.formgrid{grid-template-columns:1fr}} ${businessCss}</style></head><body>
+<header><div class="header-row"><div><h1>Product Insights · Intelligence Lab</h1><p>One real research engine · Two audience-specific views</p></div><nav class="mode-switch" aria-label="Choose intelligence display"><button type="button" id="mode-business" class="is-active" aria-pressed="true">Product Insights · Manuel</button><button type="button" id="mode-technical" aria-pressed="false">Technical View · Engineering</button></nav></div></header><main>${businessMarkup}<section id="technical-view" hidden aria-label="Technical investigation and evidence console">
 <div class="grid"><section class="card"><h2>Live company investigation</h2><form id="run-form"><label for="site">Company website</label><input id="site" type="url" required placeholder="https://manufacturer.example.com" value="https://www.hoshizakiamerica.com/" maxlength="2048"><div class="formgrid"><div><label for="pages">Page budget</label><input id="pages" type="number" min="1" max="${MAX_PAGES}" value="7"></div><div><label for="strategy">Extraction strategy</label><select id="strategy"><option value="auto">Auto: HTML → Browser</option><option value="S02">Chromium on every page</option><option value="S01">HTML only</option></select></div><div><label for="browser">Chromium display</label><select id="browser"><option value="headless">Background browser</option><option value="visible">Visible Chrome window</option><option value="none">Disabled</option></select></div></div><div class="actions"><button class="primary" id="start" type="submit">Research website</button><button type="button" id="cancel" disabled>Stop after current page</button><a id="export" href="/api/export" hidden download>Download evidence JSON</a></div></form></section>
 <section class="card"><h2>OEM Taxonomy · Installed Reference</h2><p id="taxonomy-status" class="small" aria-live="polite">Checking installed taxonomy on this PC…</p><div id="taxonomy-details" class="small"></div><details id="taxonomy-install-panel"><summary>Install or replace taxonomy (one time per PC)</summary><p class="small">Choose the existing OEM Industry Taxonomy Explorer HTML or JSON once. The lab validates and stores normalized nodes on this PC, automatically reloads them on later starts, and never sends them to Cloudflare or commits them to the public repository.</p><label for="taxonomy-file">Local taxonomy file</label><input type="file" id="taxonomy-file" accept=".html,.json,.txt"></details><p class="small">The displayed initialization is real: loading an installed reference and validating its integrity. Mapping results are unverified suggestions; enrichment will require separate review.</p></section></div>
 <section class="card" id="stage2-card"><h2>Stage 2 · AI Research &amp; Taxonomy Enrichment</h2><p id="stage2-status" class="small">Checking available research intelligence...</p><div class="actions"><button type="button" id="stage2-refresh">Refresh proposals</button><button type="button" class="primary" id="stage2-publish">Publish approved working edition</button><a id="stage2-taxonomy-export" href="/api/stage2/taxonomy/export" download="insidejob-taxonomy-working-edition.json">Export working taxonomy JSON</a></div><div id="stage2-proposals"></div><p class="small">AI-generated taxonomy suggestions require a review decision. Publishing changes only a local, versioned working edition; the original master taxonomy is never rewritten and Cloudflare is not automatically updated.</p></section>
 <section class="card"><h2>Live execution</h2><p id="status" class="small">Ready. No website requests have been made.</p><div id="events" class="events" role="log" aria-live="polite"></div></section>
 <section id="result-card" class="card" hidden><h2>Evidence report</h2><div id="summary" class="stats"></div><div id="results"></div></section>
-<p class="small">Safety: Runs locally on 127.0.0.1 only. Websites must resolve to public addresses; robots.txt, access restrictions, rate limits and exact-host boundaries are respected. Preflight DNS is not a pinned-egress sandbox: never expose this prototype to remote users or untrusted networks. No CAPTCHA bypass is attempted. No manufacturing or supplier qualification is inferred.</p></main><script src="/app.js" defer></script></body></html>`;}
+</section><p class="small">Safety: Runs locally on 127.0.0.1 only. Websites must resolve to public addresses; robots.txt, access restrictions, rate limits and exact-host boundaries are respected. Preflight DNS is not a pinned-egress sandbox: never expose this prototype to remote users or untrusted networks. No CAPTCHA bypass is attempted. No manufacturing or supplier qualification is inferred.</p></main><script src="/app.js" defer></script></body></html>`;}
 async function activateWorkingTaxonomy(){
   if(!masterTaxonomy)return;
   try{
@@ -133,6 +135,34 @@ async function handler(req,res){
   if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/report')return json(res,state.report||{error:'No finished research run'},state.report?200:404);
+  if(req.method==='GET'&&path==='/api/business')
+    return json(res,{business:state.report?buildBusinessView(state.report,state.osSnapshot):null,
+      osSnapshot:state.osSnapshot?{company:state.osSnapshot.company,source:state.osSnapshot.source}:null});
+  if(req.method==='GET'&&path==='/api/os/template')
+    return send(res,JSON.stringify(osSnapshotTemplate(),null,2),200,{
+      'Content-Type':'application/json; charset=utf-8',
+      'Content-Disposition':'attachment; filename="os-snapshot-template.json"'});
+  if(req.method==='GET'&&path==='/api/os/handoff'){
+    if(!state.report)return json(res,{error:'No research handoff is available yet'},404);
+    return send(res,JSON.stringify(buildBusinessView(state.report).handoff,null,2),200,{
+      'Content-Type':'application/json; charset=utf-8',
+      'Content-Disposition':'attachment; filename="product-insights-os-candidates.json"'});
+  }
+  if(req.method==='POST'&&path==='/api/os/snapshot'){
+    if(state.busy)return json(res,{error:'Cannot change OS snapshot during research'},409);
+    if(!String(req.headers['content-type']||'').startsWith('application/json'))
+      return json(res,{error:'Expected JSON company export'},415);
+    const next=normalizeOsSnapshot(JSON.parse(await readBody(req,180000)));
+    state.osSnapshot=next;
+    return json(res,{ok:true,osSnapshot:{company:next.company,source:next.source},
+      business:state.report?buildBusinessView(state.report,state.osSnapshot):null});
+  }
+  if(req.method==='POST'&&path==='/api/os/clear'){
+    if(state.busy)return json(res,{error:'Cannot change OS snapshot during research'},409);
+    state.osSnapshot=null;
+    return json(res,{ok:true,osSnapshot:null,
+      business:state.report?buildBusinessView(state.report):null});
+  }
   if(req.method==='GET'&&path==='/api/export'){
     if(!state.report)return json(res,{error:'No research report yet'},404);
     return send(res,JSON.stringify(state.report,null,2),200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="insidejob-local-research.json"'});
@@ -211,7 +241,7 @@ async function handler(req,res){
     state.busy=true;state.phase='researching';state.cancel=false;state.lastError=null;state.report=null;state.events=[];
     try{
       const report=await runJob(body);state.report=report;state.phase=report.status;
-      return json(res,{ok:true,report});
+      return json(res,{ok:true,report,business:buildBusinessView(report,state.osSnapshot)});
     }catch(e){state.lastError=String(e?.message||e);state.phase='failed';return json(res,{error:state.lastError},400);}
     finally{state.busy=false;}
   }
