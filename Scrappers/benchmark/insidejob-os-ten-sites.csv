@@ -1,0 +1,11 @@
+site_id,company_name,url,note
+OS10-001,Aircraft Spruce,https://www.aircraftspruce.com/,Original OS baseline - distributor role
+OS10-002,3M,https://www.3m.com/,Original OS baseline - diversified manufacturer
+OS10-003,Hoshizaki America,https://www.hoshizakiamerica.com/,Original OS baseline - equipment manufacturer
+OS10-004,AC Pro,https://www.acpro.com/,Original OS baseline - distributor and own manufacturing
+OS10-005,Abbott Tool Inc.,https://www.abbotttool.com/,Original OS baseline - manufacturing services
+OS10-006,1UP USA,https://1up-usa.com/,Original OS baseline - bike rack manufacturer
+OS10-007,Baja Designs,https://www.bajadesigns.com/,Original OS baseline - lighting manufacturer
+OS10-008,Flagstone Pavers,https://flagstonepavers.com/,Original OS baseline - paver manufacturer
+OS10-009,Flow Control Inc.,https://www.flowcontrolinc.com/,Original OS baseline - valve distributor and service
+OS10-010,CMC Supply Inc.,https://www.cmcsupply.com/,Original OS baseline - supply distributor

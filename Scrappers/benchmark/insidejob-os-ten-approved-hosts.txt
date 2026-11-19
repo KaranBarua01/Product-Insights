@@ -1,0 +1,11 @@
+# Exact user-authorized InsideJob OS 10-company benchmark hosts; no subdomain wildcards.
+www.aircraftspruce.com
+www.3m.com
+www.hoshizakiamerica.com
+www.acpro.com
+www.abbotttool.com
+1up-usa.com
+www.bajadesigns.com
+flagstonepavers.com
+www.flowcontrolinc.com
+www.cmcsupply.com

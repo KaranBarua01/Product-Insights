@@ -84,3 +84,7 @@ The four allowed action values are health, run_tests, taxonomy_1up, taxonomy_cro
 - A local interruption does not replay a running operation; inspect the local output and issue a new fresh job.
 - Taxonomy labels are proposals requiring review. The agent does not verify OEM category correctness.
 - Passwords/tokens do not belong in the public source repository, local evidence JSON, job bodies, or chat messages.
+
+## Opt-in fixed ten-company reality-check benchmark
+
+`benchmark_10` is an additional, explicitly gated operation. It loads `benchmark/insidejob-os-ten-sites.csv` and its ten exact approved hosts and runs the existing `tools/benchmark.mjs` locally, respecting robots.txt, bounded HTML fetch, rate limits and maximum 10 sites. Enable only with `PI_AGENT_ALLOW_LIVE_10=1` in the agent's own Windows session. There are NO parameters for choosing external URLs, changing scripts, introducing model prompts, or publishing results. Site-level statuses, text/evidence counts, and reasons are posted back to the private queue; full artifacts remain in gitignored `local-data/pi-local-agent/outputs/<job-id>-os10` on the PC. It deliberately uses `--pattern-mode none --browser none`, so it measures first-pass local HTML extraction only; this is NOT a full Product Insights end-to-end run, nor a product-accuracy benchmark.
