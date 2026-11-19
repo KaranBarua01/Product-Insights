@@ -103,7 +103,9 @@ test('Cloudflare Workers AI call returns normalized proposals and no approval cl
  const result=await runEnrichment({AI:ai},facts());
  assert.equal(result.status,'completed');
  assert.ok(input.model.startsWith('@cf/meta/'));
- assert.equal(input.parameters.response_format.type,'json_object');
+ assert.equal(input.parameters.response_format.type,'json_schema');
+ assert.ok(input.parameters.response_format.json_schema.properties.items);
+ assert.ok(input.model.includes('llama-3.3-70b'));
  assert.equal(result.noHumanApprovalRequiredForWorkingOverlay,true);
  assert.equal(result.workingTaxonomy.originalTaxonomyModified,false);
 });
