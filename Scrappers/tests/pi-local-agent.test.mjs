@@ -26,7 +26,7 @@ test('private queue configuration rejects public Product-Insights and malicious 
 });
 test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.equal(parseJob(job(),{owner}).action,'health');
-  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7'])
+  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7','u30_a','u30_b','u30_c','u30_d','u30_e'])
     assert.equal(parseJob(job(name),{owner}).action,name);
   assert.throws(()=>parseJob({...job(),user:{login:'other'}},{owner}),/author/);
   assert.throws(()=>parseJob({...job(),labels:[]},{owner}),/queue/);
@@ -252,5 +252,69 @@ test('product-intelligence job is fixed to seven permitted sites and bounded loc
     assert.equal(result.rows[0].companyRoleCandidate,'manufacturer');
     assert.equal(result.rows[0].categories[0].name,'Industrial Tools');
     await assert.rejects(()=>executeAction('products_7',{workspace:root,jobId:'product_job_1234'}),/already exists/);
+  });
+});
+
+test('U30 pilot job cannot choose URLs, scripts, commands or non-frozen batches',async()=>{
+  await fixture(async root=>{
+    await mkdir(join(root,'benchmark','universal-v1'),{recursive:true});
+    await mkdir(join(root,'benchmark'),{recursive:true});
+    for(const path of [
+      'tools/universal-benchmark.mjs','tools/universal-validation.mjs',
+      'tools/product-intelligence.mjs','benchmark/universal-v1/cohort.csv',
+      'benchmark/universal-v1/hosts.txt','benchmark/universal-v1/cohort-lock.json',
+      'benchmark/insidejob-os-ten-sites.csv','benchmark/sites.example.csv']){
+      await writeFile(join(root,path),'synthetic only');
+    }
+    let calls=0;
+    const result=await executeAction('u30_a',{workspace:root,jobId:'u30_fake_job_123',
+      run:async(executable,args,options)=>{
+        calls++;
+        assert.equal(executable,process.execPath);
+        assert.equal(options.cwd,await realpath(root));
+        assert.deepEqual(args.slice(0,3),[
+          await realpath(join(root,'tools','universal-benchmark.mjs')),'--batch','A']);
+        assert.equal(args[3],'--out');
+        assert.match(args[4],/u30_fake_job_123-u30A$/);
+        assert.equal(args.length,5);
+        assert.equal(options.timeoutMs,600000);
+        assert.ok(!args.some(x=>['--url','--site','--command','--secret','--script'].includes(x)));
+        const dir=join(root,args[4]);
+        await mkdir(dir,{recursive:true});
+        const cov={pagesUsable:3,products:1,categories:2,
+          productsWithSpecifications:1,productsWithComponents:0,
+          productsWithMaterials:0,specifications:2,components:0,materials:0,
+          unlinkedProducts:1};
+        await writeFile(join(dir,'summary.json'),JSON.stringify({
+          schemaVersion:'pi-universal-holdout/v1',batch:'A',siteCount:6,
+          baseline3:cov,depth12:cov,sourceSignals:{claims:6,matched:5,unmatched:1},
+          reviewTemplateRows:4,frozenLockPins:{'product-intelligence.mjs':'frozenSHA'}}));
+        const row={
+          siteId:'U30-001',company:'Synthetic Universal Host',industry:'industrial_tools',
+          roleStratum:'oem_candidate',runStatus:'sampled',pagesAttempted:3,
+          stoppingReason:'frontier_exhausted',
+          baseline3:{coverage:cov},depth12:{coverage:cov,
+            categories:[{name:'Pumps',sourceUrl:'https://sample.example.org/categories/pumps'}],
+            products:[{name:'Pump A',sourceUrl:'https://sample.example.org/product/pump-a',
+              specifications:[{attribute:'pressure',value:'20 bar',
+                evidence:{quote:'Pressure: 20 bar'}}]}]},
+          traceability:{claimCount:6,matched:5,missingSource:1,missingQuote:0},
+          duplicateSignals:{samePageNormalizedNameGroups:0},pageStatuses:[],errors:[]};
+        await writeFile(join(dir,'results.json'),JSON.stringify({
+          schemaVersion:'pi-universal-holdout/v1',batch:'A',
+          rows:Array.from({length:6},(_,i)=>({...row,siteId:'U30-'+String(i+1).padStart(3,'0')}))}));
+        await writeFile(join(dir,'manual-review.csv'),'row_id,claim_type\nREV-00001,product\n');
+        return{exitCode:0,timeout:false,output:'synthetic'};
+      }});
+    assert.equal(calls,1);
+    assert.equal(result.status,'completed');
+    assert.equal(result.batch,'A');
+    assert.equal(result.siteCount,6);
+    assert.equal(result.depth12.products,1);
+    assert.equal(result.rows[0].productSamples[0].specifications[0].value,'20 bar');
+    assert.equal(result.frozenExtractorGitBlobSha,'frozenSHA');
+    assert.match(result.caveat,/not accuracy/);
+    await assert.rejects(()=>executeAction('u30_a',{workspace:root,jobId:'u30_fake_job_123'}),
+      /already exist/);
   });
 });
