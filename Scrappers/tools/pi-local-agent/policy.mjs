@@ -2,7 +2,7 @@
 export const JOB_SCHEMA='pi-local-agent/job-v1';
 export const RESULT_SCHEMA='pi-local-agent/result-v1';
 export const QUEUE_LABEL='pi-local-agent-job';
-export const ALLOWED_ACTIONS=Object.freeze(['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7']);
+export const ALLOWED_ACTIONS=Object.freeze(['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7','u30_a','u30_b','u30_c','u30_d','u30_e']);
 const MAX_JOB_AGE_MS=15*60*1000;
 
 export function parseQueueRepo(value){
