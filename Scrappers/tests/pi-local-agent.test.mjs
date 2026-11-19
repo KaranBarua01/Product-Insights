@@ -26,7 +26,7 @@ test('private queue configuration rejects public Product-Insights and malicious 
 });
 test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.equal(parseJob(job(),{owner}).action,'health');
-  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross'])
+  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10'])
     assert.equal(parseJob(job(name),{owner}).action,name);
   assert.throws(()=>parseJob({...job(),user:{login:'other'}},{owner}),/author/);
   assert.throws(()=>parseJob({...job(),labels:[]},{owner}),/queue/);
@@ -105,5 +105,46 @@ test('taxonomy probe calls ONLY fixed local paths and returns bounded review can
 test('unknown operation never executes a process',async()=>{
   await fixture(async root=>{
     await assert.rejects(()=>executeAction('powershell',{workspace:root,run:()=>{throw Error('should never be called');}}),/Unsupported/);
+  });
+});
+
+test('ten-company benchmark uses only fixed approved sites, exact hosts, and bounded results',async()=>{
+  await fixture(async root=>{
+    await mkdir(join(root,'benchmark'),{recursive:true});
+    await writeFile(join(root,'tools','benchmark.mjs'),'// synthetic test runner');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-sites.csv'),'site_id,company_name,url\n');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-approved-hosts.txt'),'example.org\n');
+    const expectedNames=Array.from({length:10},(_,i)=>'Company '+i);
+    let launched=0;
+    const result=await executeAction('benchmark_10',{workspace:root,jobId:'private_job_10',
+      run:async(exe,args,opts)=>{
+        launched++;
+        assert.equal(exe,process.execPath);
+        assert.equal(opts.cwd,await realpath(root));
+        assert.equal(args[0],await realpath(join(root,'tools','benchmark.mjs')));
+        for(const flag of ['--sites','--allow-hosts','--pattern-mode','--browser','--max-sites']){
+          assert.ok(args.includes(flag));
+        }
+        assert.equal(args[args.indexOf('--pattern-mode')+1],'none');
+        assert.equal(args[args.indexOf('--browser')+1],'none');
+        assert.equal(args[args.indexOf('--max-sites')+1],'10');
+        assert.ok(!args.includes('--extract-api')&&!args.includes('--pattern-api'));
+        assert.ok(!args.includes('--token')&&!args.includes('--command'));
+        const dir=join(root,args[args.indexOf('--out')+1]);
+        await mkdir(dir,{recursive:true});
+        await writeFile(join(dir,'summary.json'),JSON.stringify({totalSites:10,
+          statusCounts:{completed:10},quality:{usable:10,usableEligible:10,eligible:10,usableRatePct:100}}));
+        await writeFile(join(dir,'results.json'),JSON.stringify({results:expectedNames.map((company,i)=>({
+          siteId:'OS10-'+i,companyName:company,status:'completed',usable:true,textChars:400,
+          evidenceCount:2,firstStrategy:'S01',finalStrategy:'S01',reason:''}))}));
+        return {exitCode:0,timeout:false,output:'ten simulated sites complete'};
+      }});
+    assert.equal(launched,1);
+    assert.equal(result.status,'completed');
+    assert.equal(result.rows.length,10);
+    assert.equal(result.rows[0].company,'Company 0');
+    assert.match(result.caveat,/Real retrieval benchmark only/);
+    await assert.rejects(()=>executeAction('benchmark_10',{workspace:root,jobId:'private_job_10'}),
+      /already exists/);
   });
 });
