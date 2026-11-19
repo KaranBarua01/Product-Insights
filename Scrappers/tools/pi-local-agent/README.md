@@ -88,3 +88,16 @@ The four allowed action values are health, run_tests, taxonomy_1up, taxonomy_cro
 ## Opt-in fixed ten-company reality-check benchmark
 
 `benchmark_10` is an additional, explicitly gated operation. It loads `benchmark/insidejob-os-ten-sites.csv` and its ten exact approved hosts and runs the existing `tools/benchmark.mjs` locally, respecting robots.txt, bounded HTML fetch, rate limits and maximum 10 sites. Enable only with `PI_AGENT_ALLOW_LIVE_10=1` in the agent's own Windows session. There are NO parameters for choosing external URLs, changing scripts, introducing model prompts, or publishing results. Site-level statuses, text/evidence counts, and reasons are posted back to the private queue; full artifacts remain in gitignored `local-data/pi-local-agent/outputs/<job-id>-os10` on the PC. It deliberately uses `--pattern-mode none --browser none`, so it measures first-pass local HTML extraction only; this is NOT a full Product Insights end-to-end run, nor a product-accuracy benchmark.
+
+## Explicit opt-in: 3-page versus 12-page source-coverage comparison
+
+Operation `depth_7` is separately disabled unless the Windows agent session sets `PI_AGENT_ALLOW_DEPTH_7=1`. It uses exactly the seven accessible hosts from the first real ten-company InsideJob benchmark: Aircraft Spruce, Hoshizaki America, Abbott Tool, 1UP USA, Flagstone Pavers, Flow Control and CMC Supply. The three blocked hosts are not retried or bypassed.
+
+- One deterministic maximum-12-page `runResearch` trace per site, with the **first three pages of the same trace** forming the comparable baseline.
+- Prioritizes identity, relevant product/category links and a same-host technical PDF if discovered. Respects robots, 403/429 access blocks, bounded downloads and rate limits.
+- S01 is primary; optional S02 Playwright escalation is attempted only for sparse HTML where the browser is installed, without relaxing access policies. S03 reads permitted PDFs (up to eight pages and 3 MB per PDF).
+- Measures unique source pages, on-page product/category leads, published JSON-LD product records, observed technical lines, PDFs discovered/read and retrieved evidence records. These are **not validated product families or specifications**.
+- Artifacts stay private under `local-data/pi-local-agent/outputs/<job-id>-depth7/`; the private issue receives a bounded comparison.
+- No AI API requests, manufacturing-process inference, supplier matching, unbounded web crawling, remote PowerShell commands or private-taxonomy publication.
+
+Install the branch update on the local Scrappers checkout, opt in via environment variable and restart the agent. Do not place tokens in issue bodies, chat, console histories or public git.

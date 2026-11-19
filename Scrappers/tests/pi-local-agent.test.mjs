@@ -26,7 +26,7 @@ test('private queue configuration rejects public Product-Insights and malicious 
 });
 test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.equal(parseJob(job(),{owner}).action,'health');
-  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10'])
+  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7'])
     assert.equal(parseJob(job(name),{owner}).action,name);
   assert.throws(()=>parseJob({...job(),user:{login:'other'}},{owner}),/author/);
   assert.throws(()=>parseJob({...job(),labels:[]},{owner}),/queue/);
@@ -145,6 +145,61 @@ test('ten-company benchmark uses only fixed approved sites, exact hosts, and bou
     assert.equal(result.rows[0].company,'Company 0');
     assert.match(result.caveat,/Real retrieval benchmark only/);
     await assert.rejects(()=>executeAction('benchmark_10',{workspace:root,jobId:'private_job_10'}),
+      /already exists/);
+  });
+});
+
+test('fixed seven-site depth action only calls the predeclared script and returns bounded summaries',async()=>{
+  await fixture(async root=>{
+    await mkdir(join(root,'benchmark'),{recursive:true});
+    await writeFile(join(root,'tools','depth-benchmark.mjs'),'// synthetic benchmark runner');
+    await writeFile(join(root,'tools','depth-coverage.mjs'),'// synthetic coverage');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-sites.csv'),'site_id,company_name,url\n');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-approved-hosts.txt'),'example.org\n');
+    let calls=0;
+    const value=await executeAction('depth_7',{workspace:root,jobId:'depth_demo_1234',
+      run:async(exe,args,options)=>{
+        calls++;
+        assert.equal(exe,process.execPath);
+        assert.equal(options.cwd,await realpath(root));
+        assert.equal(args.length,3);
+        assert.equal(args[0],await realpath(join(root,'tools','depth-benchmark.mjs')));
+        assert.equal(args[1],'--out');
+        assert.match(args[2],/depth_demo_1234-depth7$/);
+        assert.ok(!args.some(a=>a==='--command'||a==='--site'||a==='--url'||a==='--token'));
+        assert.ok(options.timeoutMs<=700000);
+        const dir=join(root,args[2]);
+        await mkdir(dir,{recursive:true});
+        const metric={attemptedPages:3,usablePages:3,uniqueSuccessfulSourceUrls:3,
+          textChars:600,evidenceRecords:5,jsonLdProductRecords:2,technicalLineSignals:2};
+        const deep={...metric,attemptedPages:12,usablePages:10,textChars:2400,
+          evidenceRecords:21,jsonLdProductRecords:5,technicalLineSignals:9};
+        const delta={attemptedPages:9,usablePages:7,textChars:1800,
+          evidenceRecords:16,jsonLdProductRecords:3,technicalLineSignals:7};
+        await writeFile(join(dir,'summary.json'),JSON.stringify({
+          schemaVersion:'pi-depth-benchmark/v1',siteCount:7,baseline3:metric,depth12:deep,gain:delta}));
+        await writeFile(join(dir,'results.json'),JSON.stringify({
+          schemaVersion:'pi-depth-benchmark/v1',
+          rows:Array.from({length:7},(_,i)=>({siteId:'OS10-00'+i,company:'Synthetic '+i,
+            status:'sampled',durationMs:750,stoppingReason:'page_budget',remainingLeads:7,
+            baseline3:metric,depth12:{...deep,
+              productSamples:[{name:'Widget',sku:'W1'}],
+              technicalExamples:[{sourceUrl:'https://example.org/product',quote:'Pressure: 20 bar'}],
+              sourcePages:[{url:'https://example.org/products/1',kind:'product_detail_lead',status:'completed'}]},
+            gain:delta,errors:[]}))}));
+        return {exitCode:0,timeout:false,output:'ok'};
+      }});
+    assert.equal(calls,1);
+    assert.equal(value.status,'completed');
+    assert.equal(value.siteCount,7);
+    assert.equal(value.baseline3.usablePages,3);
+    assert.equal(value.depth12.usablePages,10);
+    assert.equal(value.gain.usablePages,7);
+    assert.equal(value.rows.length,7);
+    assert.deepEqual(value.rows[0].sampleProducts,['Widget']);
+    assert.equal(value.rows[0].visitedPages.length,1);
+    assert.match(value.caveat,/unverified/);
+    await assert.rejects(()=>executeAction('depth_7',{workspace:root,jobId:'depth_demo_1234'}),
       /already exists/);
   });
 });
