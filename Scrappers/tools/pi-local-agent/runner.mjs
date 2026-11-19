@@ -105,10 +105,13 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
         durationMs:r.durationMs,stoppingReason:r.stoppingReason,remainingLeads:r.remainingLeads,
         baseline3:pack(r.baseline3),depth12:pack(r.depth12),gain:pack(r.gain),
         sampleProducts:(r.depth12?.productSamples||[]).slice(0,5).map(x=>x.name),
+        categoryExamples:(r.depth12?.categorySamples||[]).slice(0,6).map(x=>({
+          label:String(x.label||'').slice(0,110),url:String(x.url||'').slice(0,230)})),
         technicalExamples:(r.depth12?.technicalExamples||[]).slice(0,2).map(x=>({
           sourceUrl:String(x.sourceUrl||'').slice(0,230),quote:String(x.quote||'').slice(0,210)})),
         visitedPages:(r.depth12?.sourcePages||[]).slice(0,12).map(x=>({
-          url:String(x.url||'').slice(0,230),kind:x.kind,status:x.status})),
+          url:String(x.url||'').slice(0,230),kind:x.kind,status:x.status,
+          heading:String(x.heading||'').slice(0,130)})),
         errors:(r.errors||[]).slice(0,2)})),
       outputLocal:join(DATA,'outputs',folder),
       caveat:'Controlled 3-vs-12 page acquisition test. Structured product records and technical lines are unverified leads, not catalog completeness or engineering facts. Browser fallback only where available; no policy bypass.'};
