@@ -200,12 +200,16 @@ export function compareWithOs(os,business){
   for(const p of business.products){
     const key=normalizeName(p.name),old=osNames.get(key);
     if(old)matches.push({researchProduct:p.name,osProduct:old.name,
+      osParts:old.parts.slice(0,10),osManufacturingProcesses:old.manufacturingProcesses.slice(0,10),
       matchKind:'same_normalized_name_candidate_requires_review'});
     else researchOnly.push(p.name);
   }
   return{status:'comparable_imported_snapshot',osSource:os.source,
     message:'Compared names against an imported OS snapshot. Differences are candidate leads, not confirmed missing OS records.',
-    osCompany:os.company,osCounts,productMatches:matches.slice(0,60),
+    osCompany:os.company,osCounts,
+    osProductSamples:os.products.slice(0,20).map(p=>({name:p.name,category:p.category,
+      parts:p.parts.slice(0,12),manufacturingProcesses:p.manufacturingProcesses.slice(0,12)})),
+    productMatches:matches.slice(0,60),
     researchOnlyCandidates:researchOnly.slice(0,60),
     osOnlyRecords:os.products.filter(p=>!findings.has(normalizeName(p.name)))
       .slice(0,60).map(p=>p.name)};
