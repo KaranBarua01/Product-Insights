@@ -9,6 +9,7 @@ import {extract,limitedPatternAnalysis} from '../dist/engine.js';
 import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
+import {extractProductIntelligence} from './product-intelligence.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
 import {stage2Analyze,callStage2,stage2Config} from './research-stage2.mjs';
 import {listTaxonomyProposals,enqueueTaxonomyProposals,reviewTaxonomyProposal,publishApprovedTaxonomy,loadWorkingTaxonomy} from './research-stage2-store.mjs';
@@ -101,6 +102,7 @@ async function runJob(body){
     await assertPublicDns(target.hostname);
     return fetch(input,init);
   };
+  const rawProductEvidence=[];
   const report=await runResearch({url:u.href,maxPages,delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
     prioritizeLinks:aiSettings.configured?async({rootUrl,page,links})=>{
       const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
@@ -108,7 +110,9 @@ async function runJob(body){
     }:null,
     onProgress:logEvent,extractPage:async target=>{
       await assertPublicDns(u.hostname);
-      return extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
+      const extracted=await extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
+      rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});
+      return extracted;
     }});
   const enriched=await stage2Analyze(report,{nodes:taxonomyNodes,aliases:taxonomyAliases,
     client:(action,payload)=>callStage2(action,payload,{config:aiSettings}),onProgress:logEvent});
@@ -116,7 +120,8 @@ async function runJob(body){
     try{enriched.stage2.queue=await enqueueTaxonomyProposals(enriched.stage2.proposals,{baseNodeHash:masterTaxonomy.manifest.nodeHash});}
     catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
   }
-  return {...enriched,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
+  const productIntelligence=extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
+  return {...enriched,productIntelligence,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
     taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest,
     localEditionVersion:workingEdition?.version||0,stage2AiConfigured:aiSettings.configured}};
 }
