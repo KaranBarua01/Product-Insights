@@ -1,0 +1,39 @@
+name: AI Working Taxonomy Live Lab QA
+on:
+  push:
+    branches:
+      - feat/ai-working-taxonomy-live-v1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ai-taxonomy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install hosted Lab dependencies
+        working-directory: live-lab
+        run: npm install --no-audit --no-fund
+      - name: Test Workers AI proposal boundaries, original taxonomy immutability, and JS1-JS10
+        working-directory: live-lab
+        run: npm run check
+      - name: Confirm real Cloudflare Worker bundling with Workers AI and Durable Object bindings
+        working-directory: live-lab
+        run: npm run build:check
+      - name: Check Windows outbound bridge syntax
+        working-directory: Scrappers
+        run: node --check tools/live-lab-bridge.mjs
+      - name: Build frozen Scrappers source
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm run build
+      - name: Verify original independent benchmark remains frozen
+        working-directory: Scrappers
+        run: node tools/universal-benchmark.mjs --dry-run
