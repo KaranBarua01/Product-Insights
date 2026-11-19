@@ -34,6 +34,9 @@ jobs:
         run: |
           npm install --omit=optional --no-audit --no-fund
           npm run build
+      - name: Test real local Lab master-taxonomy preview with session authorization
+        working-directory: Scrappers
+        run: node --test tests/stage2-lab-integration.test.mjs
       - name: Verify original independent benchmark remains frozen
         working-directory: Scrappers
         run: node tools/universal-benchmark.mjs --dry-run
