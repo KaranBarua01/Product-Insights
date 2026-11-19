@@ -150,6 +150,15 @@ export function normalizeOsSnapshot(data){
   const website=safeUrl(c.website);
   if(!website||!hostname(website))throw Error('OS snapshot requires an explicit company.website');
   if(!c.name||typeof c.name!=='string')throw Error('OS snapshot requires a company.name');
+  for(const [key,max] of [['products',500],['categories',300],['parts',300],['manufacturingProcesses',200]]){
+    if(data[key]!==undefined&&!Array.isArray(data[key]))throw Error('OS snapshot '+key+' must be an array');
+    if(data[key]?.length>max)throw Error('OS snapshot '+key+' exceeds local comparison limit; no partial baseline permitted');
+  }
+  for(const p of data.products||[]){
+    if(!p||typeof p!=='object'||Array.isArray(p))throw Error('OS snapshot products must be objects');
+    if((p.parts?.length||0)>50||(p.manufacturingProcesses?.length||0)>30)
+      throw Error('OS snapshot product part/process relationships exceed local comparison limit');
+  }
   const products=arr(data.products,500).map(p=>{
     if(!p||typeof p!=='object'||Array.isArray(p)||typeof p.name!=='string')return null;
     const name=limit(p.name,170);if(!name)return null;
