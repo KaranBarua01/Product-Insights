@@ -10,13 +10,16 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
+import {stage2Analyze,callStage2,stage2Config} from './research-stage2.mjs';
+import {listTaxonomyProposals,enqueueTaxonomyProposals,reviewTaxonomyProposal,publishApprovedTaxonomy,loadWorkingTaxonomy} from './research-stage2-store.mjs';
 import {assertPublicDns} from './research-lab-security.mjs';
 
 const port=Number(process.env.RESEARCH_LAB_PORT||8790),host='127.0.0.1';
 if(!Number.isInteger(port)||port<1024||port>65535)throw Error('RESEARCH_LAB_PORT must be between 1024 and 65535');
 const token=randomBytes(32).toString('hex');
 const BASE=dirname(fileURLToPath(import.meta.url));
-let taxonomyNodes=[],taxonomySource='not_loaded',taxonomyManifest=null;
+let taxonomyNodes=[],taxonomySource='not_loaded',taxonomyManifest=null,masterTaxonomy=null,taxonomyAliases=[],workingEdition=null;
+const aiSettings=stage2Config();
 const state={busy:false,cancel:false,events:[],report:null,lastError:null,phase:'idle'};
 const CSP="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-ancestors 'none'";
 const common={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
@@ -43,22 +46,34 @@ function validRequest(req,method){
   return true;
 }
 function html(){return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="lab-token" content="${token}"><title>InsideJob · Local Research Lab</title><style>
-:root{--ink:#243146;--sub:#66778a;--accent:#097b86;--border:#dbe3eb;--surface:#fff;--bg:#f3f6fa}*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#16283e;color:white;padding:24px max(20px,calc((100vw - 1180px)/2));border-bottom:4px solid #087e85}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#bbd1e0}main{max-width:1200px;margin:auto;padding:24px 20px 60px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 3px 15px #24314608}h2{font-size:17px;margin:0 0 10px}label{display:block;font-weight:650;font-size:12px;color:#526277;margin:10px 0 5px}input,select,button{font:inherit}input[type=url],input[type=number],select{border:1px solid #bac8d6;border-radius:7px;padding:10px 9px;background:white;color:var(--ink);width:100%}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}button{border:1px solid #bccad7;border-radius:7px;background:#fff;padding:9px 12px;cursor:pointer;font-weight:650}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eff3f8;color:#526277;margin-right:6px}.warn{background:#fff6e9;color:#865b27;border:1px solid #f2daba;padding:9px;border-radius:7px;margin:8px 0}.ok{color:#087c5a}.small{color:var(--sub);font-size:12px}.stats{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.stats span{border:1px solid var(--border);background:#f7f9fb;border-radius:8px;padding:8px 12px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:12px}th{color:var(--sub);background:#f8fafc}a{color:#056b9b;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#456070;font-size:12px}.events{max-height:170px;overflow:auto;white-space:pre-wrap;background:#f7f9fb;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace}details{margin:7px 0;padding:10px;border:1px solid var(--border);border-radius:7px}summary{cursor:pointer;font-weight:650}input[type=file]{max-width:100%}@media(max-width:850px){.grid,.formgrid{grid-template-columns:1fr}} </style></head><body>
+:root{--ink:#243146;--sub:#66778a;--accent:#097b86;--border:#dbe3eb;--surface:#fff;--bg:#f3f6fa}*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#16283e;color:white;padding:24px max(20px,calc((100vw - 1180px)/2));border-bottom:4px solid #087e85}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#bbd1e0}main{max-width:1200px;margin:auto;padding:24px 20px 60px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 3px 15px #24314608}h2{font-size:17px;margin:0 0 10px}label{display:block;font-weight:650;font-size:12px;color:#526277;margin:10px 0 5px}input,select,button{font:inherit}input[type=url],input[type=number],input[type=text],select{border:1px solid #bac8d6;border-radius:7px;padding:10px 9px;background:white;color:var(--ink);width:100%}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}button{border:1px solid #bccad7;border-radius:7px;background:#fff;padding:9px 12px;cursor:pointer;font-weight:650}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eff3f8;color:#526277;margin-right:6px}.warn{background:#fff6e9;color:#865b27;border:1px solid #f2daba;padding:9px;border-radius:7px;margin:8px 0}.ok{color:#087c5a}.small{color:var(--sub);font-size:12px}.stats{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.stats span{border:1px solid var(--border);background:#f7f9fb;border-radius:8px;padding:8px 12px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:12px}th{color:var(--sub);background:#f8fafc}a{color:#056b9b;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#456070;font-size:12px}.events{max-height:170px;overflow:auto;white-space:pre-wrap;background:#f7f9fb;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace}details{margin:7px 0;padding:10px;border:1px solid var(--border);border-radius:7px}summary{cursor:pointer;font-weight:650}input[type=file]{max-width:100%}@media(max-width:850px){.grid,.formgrid{grid-template-columns:1fr}} </style></head><body>
 <header><h1>InsideJob · Local Research Lab</h1><p>PC prototype · Real public websites · Chromium inspection · Evidence-first product research</p></header><main>
 <div class="grid"><section class="card"><h2>Live company investigation</h2><form id="run-form"><label for="site">Company website</label><input id="site" type="url" required placeholder="https://manufacturer.example.com" value="https://www.hoshizakiamerica.com/" maxlength="2048"><div class="formgrid"><div><label for="pages">Page budget</label><input id="pages" type="number" min="1" max="${MAX_PAGES}" value="7"></div><div><label for="strategy">Extraction strategy</label><select id="strategy"><option value="auto">Auto: HTML → Browser</option><option value="S02">Chromium on every page</option><option value="S01">HTML only</option></select></div><div><label for="browser">Chromium display</label><select id="browser"><option value="headless">Background browser</option><option value="visible">Visible Chrome window</option><option value="none">Disabled</option></select></div></div><div class="actions"><button class="primary" id="start" type="submit">Research website</button><button type="button" id="cancel" disabled>Stop after current page</button><a id="export" href="/api/export" hidden download>Download evidence JSON</a></div></form></section>
 <section class="card"><h2>OEM Taxonomy · Installed Reference</h2><p id="taxonomy-status" class="small" aria-live="polite">Checking installed taxonomy on this PC…</p><div id="taxonomy-details" class="small"></div><details id="taxonomy-install-panel"><summary>Install or replace taxonomy (one time per PC)</summary><p class="small">Choose the existing OEM Industry Taxonomy Explorer HTML or JSON once. The lab validates and stores normalized nodes on this PC, automatically reloads them on later starts, and never sends them to Cloudflare or commits them to the public repository.</p><label for="taxonomy-file">Local taxonomy file</label><input type="file" id="taxonomy-file" accept=".html,.json,.txt"></details><p class="small">The displayed initialization is real: loading an installed reference and validating its integrity. Mapping results are unverified suggestions; enrichment will require separate review.</p></section></div>
+<section class="card" id="stage2-card"><h2>Stage 2 · AI Research &amp; Taxonomy Enrichment</h2><p id="stage2-status" class="small">Checking available research intelligence...</p><div class="actions"><button type="button" id="stage2-refresh">Refresh proposals</button><button type="button" class="primary" id="stage2-publish">Publish approved working edition</button><a id="stage2-taxonomy-export" href="/api/stage2/taxonomy/export" download="insidejob-taxonomy-working-edition.json">Export working taxonomy JSON</a></div><div id="stage2-proposals"></div><p class="small">AI-generated taxonomy suggestions require a review decision. Publishing changes only a local, versioned working edition; the original master taxonomy is never rewritten and Cloudflare is not automatically updated.</p></section>
 <section class="card"><h2>Live execution</h2><p id="status" class="small">Ready. No website requests have been made.</p><div id="events" class="events" role="log" aria-live="polite"></div></section>
 <section id="result-card" class="card" hidden><h2>Evidence report</h2><div id="summary" class="stats"></div><div id="results"></div></section>
 <p class="small">Safety: Runs locally on 127.0.0.1 only. Websites must resolve to public addresses; robots.txt, access restrictions, rate limits and exact-host boundaries are respected. Preflight DNS is not a pinned-egress sandbox: never expose this prototype to remote users or untrusted networks. No CAPTCHA bypass is attempted. No manufacturing or supplier qualification is inferred.</p></main><script src="/app.js" defer></script></body></html>`;}
+async function activateWorkingTaxonomy(){
+  if(!masterTaxonomy)return;
+  try{
+    const active=await loadWorkingTaxonomy(masterTaxonomy);
+    taxonomyNodes=active.nodes;taxonomyAliases=active.aliases;workingEdition=active.edition;taxonomyManifest=active.manifest;
+    taxonomySource=workingEdition?'local_reviewed_working_edition':taxonomySource;
+  }catch(e){
+    taxonomyNodes=masterTaxonomy.nodes;taxonomyAliases=[];workingEdition=null;taxonomyManifest=masterTaxonomy.manifest;
+    logEvent({status:'taxonomy_warning',reason:String(e.message||e).slice(0,180)});
+  }
+}
 async function loadOptionalTaxonomy(){
   const input=process.env.RESEARCH_LAB_TAXONOMY_FILE;
   if(!input){
     const stored=await loadInstalledTaxonomy();
-    if(stored){taxonomyNodes=stored.nodes;taxonomyManifest=stored.manifest;taxonomySource='installed_local_file';}
+    if(stored){masterTaxonomy=stored;taxonomyNodes=stored.nodes;taxonomyManifest=stored.manifest;taxonomySource='installed_local_file';await activateWorkingTaxonomy();}
     return;
   }
   const data=await readFile(resolve(input),'utf8');
-  taxonomyNodes=parseTaxonomy(data);taxonomySource='configured_file';taxonomyManifest=makeManifest(taxonomyNodes,{sourceName:input,sourceHash:null,installedAt:null});
+  taxonomyNodes=parseTaxonomy(data);taxonomySource='configured_file';taxonomyManifest=makeManifest(taxonomyNodes,{sourceName:input,sourceHash:null,installedAt:null});masterTaxonomy={nodes:taxonomyNodes,manifest:taxonomyManifest};await activateWorkingTaxonomy();
 }
 async function runJob(body){
   const u=validatePublicUrl(body.url);
@@ -87,23 +102,82 @@ async function runJob(body){
     return fetch(input,init);
   };
   const report=await runResearch({url:u.href,maxPages,delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
+    prioritizeLinks:aiSettings.configured?async({rootUrl,page,links})=>{
+      const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
+      return (planned.prioritizedIds||[]).map(id=>links[id-1]?.url).filter(Boolean);
+    }:null,
     onProgress:logEvent,extractPage:async target=>{
       await assertPublicDns(u.hostname);
       return extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
     }});
-  return {...report,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest}};
+  const enriched=await stage2Analyze(report,{nodes:taxonomyNodes,aliases:taxonomyAliases,
+    client:(action,payload)=>callStage2(action,payload,{config:aiSettings}),onProgress:logEvent});
+  if(masterTaxonomy&&enriched.stage2.proposals.length){
+    try{enriched.stage2.queue=await enqueueTaxonomyProposals(enriched.stage2.proposals,{baseNodeHash:masterTaxonomy.manifest.nodeHash});}
+    catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
+  }
+  return {...enriched,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
+    taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest,
+    localEditionVersion:workingEdition?.version||0,stage2AiConfigured:aiSettings.configured}};
 }
 async function handler(req,res){
   if(!validRequest(req,req.method)){return json(res,{error:'Local-only request rejected'},403);}
   const u=new URL(req.url||'/',`http://${host}:${port}`),path=u.pathname;
   if(req.method==='GET'&&path==='/')return send(res,html(),200,{'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':CSP});
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
-  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest});
-  if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest});
+  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/report')return json(res,state.report||{error:'No finished research run'},state.report?200:404);
   if(req.method==='GET'&&path==='/api/export'){
     if(!state.report)return json(res,{error:'No research report yet'},404);
     return send(res,JSON.stringify(state.report,null,2),200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="insidejob-local-research.json"'});
+  }
+  if(req.method==='GET'&&path==='/api/stage2/parents'){
+    return json(res,{parents:taxonomyNodes.filter(n=>n.level<=2).map(n=>({code:n.code,label:n.label,path:n.path,level:n.level}))});
+  }
+  if(req.method==='POST'&&path==='/api/stage2/manual-proposal'){
+    if(state.busy)return json(res,{error:'Cannot propose taxonomy edits during research'},409);
+    if(!masterTaxonomy||!state.report)return json(res,{error:'Install a taxonomy and research a company first'},409);
+    const body=JSON.parse(await readBody(req,3000));
+    const product=state.report.products.find(p=>p.leadId===body.leadId);
+    if(!product||product.taxonomy.status!=='gap_or_insufficient_evidence')return json(res,{error:'Select an unmapped product from the latest research report'},400);
+    const kind=body.kind==='alias'?'alias':'new_node',label=String(body.label||'').trim();
+    const reason=String(body.reason||'').trim();
+    if(label.length<4||label.length>150||reason.length<15||reason.length>500)return json(res,{error:'Label must be 4-150 characters, and rationale 15-500'},400);
+    if(!product.quote||String(product.quote).length<12)return json(res,{error:'No sufficient quoted source evidence for this gap'},400);
+    const node=taxonomyNodes.find(n=>n.code===(kind==='alias'?body.existingCode:body.parentCode));
+    if(!node||(kind==='alias'?node.level<2:node.level>2))return json(res,{error:'Choose a valid existing parent (L0-L2) or alias target (L2-L3)'},400);
+    const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&[
+      String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])
+    ].some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' '))));
+    if(!supported&&product.evidenceType!=='published_json_ld_unverified')
+      return json(res,{error:'Evidence quote cannot be located on the sampled source page'},400);
+    const proposed={kind,label,reason,productName:product.name,sourceUrl:product.sourceUrl,quote:product.quote,
+      parentCode:kind==='new_node'?node.code:null,existingCode:kind==='alias'?node.code:null,source:'manual_presenter_proposal'};
+    const result=await enqueueTaxonomyProposals([proposed],{baseNodeHash:masterTaxonomy.manifest.nodeHash});
+    return json(res,{ok:true,...result});
+  }
+  if(req.method==='GET'&&path==='/api/stage2/proposals')return json(res,{...(await listTaxonomyProposals()),
+    aiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0,
+    taxonomySource,taxonomyNodeCount:taxonomyNodes.length});
+  if(req.method==='GET'&&path==='/api/stage2/taxonomy/export'){
+    if(!workingEdition)return json(res,{error:'No locally published working edition yet'},404);
+    return send(res,JSON.stringify(workingEdition,null,2),200,{'Content-Type':'application/json; charset=utf-8',
+      'Content-Disposition':'attachment; filename="insidejob-taxonomy-working-edition.json"'});
+  }
+  if(req.method==='POST'&&path==='/api/stage2/review'){
+    if(state.busy)return json(res,{error:'Cannot approve taxonomy during research'},409);
+    const body=JSON.parse(await readBody(req,3000));
+    const reviewed=await reviewTaxonomyProposal({id:body.id,decision:body.decision,reason:body.reason||''});
+    return json(res,{ok:true,proposal:reviewed});
+  }
+  if(req.method==='POST'&&path==='/api/stage2/publish'){
+    if(state.busy)return json(res,{error:'Cannot publish taxonomy during research'},409);
+    if(!masterTaxonomy)return json(res,{error:'Install the original taxonomy first'},409);
+    const result=await publishApprovedTaxonomy(masterTaxonomy);
+    await activateWorkingTaxonomy();
+    state.report=null;
+    return json(res,{ok:true,...result});
   }
   if(req.method==='GET'&&path==='/api/taxonomy/manifest')return json(res,{loaded:taxonomyNodes.length>0,source:taxonomySource,manifest:taxonomyManifest});
   if(req.method==='GET'&&path==='/api/taxonomy'){
@@ -115,7 +189,7 @@ async function handler(req,res){
     if(!String(req.headers['content-type']||'').startsWith('text/plain'))return json(res,{error:'Expected plain-text taxonomy file'},415);
     const content=await readBody(req,7_000_000);
     const {nodes,manifest}=await installTaxonomy(content,{fileName:req.headers['x-taxonomy-name']});
-    taxonomyNodes=nodes;taxonomyManifest=manifest;taxonomySource='installed_local_file';
+    taxonomyNodes=nodes;taxonomyManifest=manifest;taxonomySource='installed_local_file';masterTaxonomy={nodes,manifest};await activateWorkingTaxonomy();
     state.report=null;
     return json(res,{ok:true,nodeCount:taxonomyNodes.length,source:taxonomySource,manifest});
   }
