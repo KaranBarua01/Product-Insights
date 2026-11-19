@@ -29,6 +29,11 @@ jobs:
       - name: Check outbound-only Windows laptop bridge syntax
         working-directory: Scrappers
         run: node --check tools/live-lab-bridge.mjs
+      - name: Build existing Scrappers engine for frozen evaluation dry-run
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm run build
       - name: Verify frozen independent evaluation source hashes
         working-directory: Scrappers
         run: node tools/universal-benchmark.mjs --dry-run
