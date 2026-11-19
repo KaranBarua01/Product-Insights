@@ -101,3 +101,27 @@ Operation `depth_7` is separately disabled unless the Windows agent session sets
 - No AI API requests, manufacturing-process inference, supplier matching, unbounded web crawling, remote PowerShell commands or private-taxonomy publication.
 
 Install the branch update on the local Scrappers checkout, opt in via environment variable and restart the agent. Do not place tokens in issue bodies, chat, console histories or public git.
+
+## Product Intelligence Extractor pilot (`products_7`)
+
+`products_7` is a new, separately gated fixed operation. Enable only with
+`PI_AGENT_ALLOW_PRODUCTS_7=1` in the Windows agent session and restart that process.
+The queue cannot provide custom URLs, files, flags, model prompts or commands.
+The operation re-retrieves the same seven previously accessible websites, up to 12 same-host
+pages each, respecting robots, exact-host allowlists and bounded time/byte budgets.
+It is necessary to re-fetch because prior depth benchmark files contain only metrics
+and limited snippets, not complete source page content.
+
+The extractor produces explicit `company -> source category -> source product ->
+specifications/components/materials` candidate entities with per-claim quotes and
+source URLs. JSON-LD is marked as published structured metadata, and HTML heading
+products do not require JSON-LD. The category link relationship is emitted only when
+actually observed. Components and materials are not inferred from generic engineering
+knowledge. Every field is provisional; seller listings never prove manufacturing.
+
+Full per-source evidence and the report are stored only under
+`local-data/pi-local-agent/outputs/<jobId>-products7/`. A bounded summary with
+sample candidates, public source URLs and review caveats returns to the PRIVATE
+GitHub issue. No private taxonomy, AI secrets, RFQ data, production OS writes, or
+manufacturing-process assertions are included. Public GitHub receives code and
+synthetic tests only.
