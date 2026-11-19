@@ -102,7 +102,7 @@ test('cloud session accepts one job, forwards to laptop, observes failures and r
    status:'completed',url:'https://1up-usa.com/product/heavy-duty',strategy:'S02'}]})));
  assert.equal(progress.body.cancelRequested,false);
  assert.equal((await json(await session.fetch(request('/cancel',{})))).body.ok,true);
- assert.equal((await json(await session.fetch(request('/progress',{id,events:[]}))).body.cancelRequested,true);
+ assert.equal((await json(await session.fetch(request('/progress',{id,events:[]})))).body.cancelRequested,true);
  const failed=await json(await session.fetch(request('/finish',{id,status:'failed',error:'Access blocked'})));
  assert.equal(failed.status,200);
  const run=await json(await session.fetch(request('/run/'+id)));
