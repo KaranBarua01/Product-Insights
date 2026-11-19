@@ -124,6 +124,18 @@
         (counts.manufacturingProcesses??0)+' standalone process entries',
         (counts.productLinkedProcesses??0)+' product-linked process entries'
       ],'No OS records available.');
+      if(cmp.status==='comparable_imported_snapshot'&&cmp.osProductSamples?.length){
+        const details=append(os,'details');
+        append(details,'summary','Open OS product → part → process records');
+        for(const p of cmp.osProductSamples.slice(0,10)){
+          const item=append(details,'div',undefined,'biz-field');
+          append(item,'strong',p.name+' (imported OS record)');
+          append(item,'p','Product category: '+(p.category||'Not supplied in OS snapshot'),'biz-subtle');
+          append(item,'p','Parts in OS: '+(p.parts?.length?p.parts.join(', '):'Not supplied'),'biz-subtle');
+          append(item,'p','Processes in OS: '+(p.manufacturingProcesses?.length?
+            p.manufacturingProcesses.join(', '):'Not supplied'),'biz-subtle');
+        }
+      }
     }
     const research=append(root,'article');
     append(research,'span','PRODUCT INSIGHTS / WEBSITE','biz-eyebrow');
