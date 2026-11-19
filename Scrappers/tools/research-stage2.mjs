@@ -10,6 +10,7 @@ import {groupProductFamilies,identifyCompanyRole} from './research-intelligence.
 const MAX_PAGES_TO_AI=8;
 const dedup=s=>[...new Set(s)];
 const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+const nameWords=s=>norm(s).replace(/[^\p{L}\p{N}+#]+/gu,' ').trim();
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export function stage2Config(env=process.env){
   const address=env.RESEARCH_LAB_AI_URL||'',token=env.RESEARCH_LAB_AI_TOKEN||'';
@@ -46,7 +47,8 @@ export function offlineProductLeads(pages){
     const model=/(?:^|\/)(?:product|products|model|models)\/[^/]+/.test(path)&&!family;
     if(!family&&!model)continue;
     const pageText=String(page.aiText||page.snippet||'');
-    const heading=(page.headings||[]).find(x=>typeof x==='string'&&x.trim().length>=5&&x.length<135);
+    const heading=(page.headings||[]).find(x=>typeof x==='string'&&x.trim().length>=5&&x.length<135&&
+      !/^(?:videos?(?:\s+(?:hide|show)\s+videos?)*|description|specs?|guides?|reviews?|hide\s+videos?|show\s+videos?)$/i.test(x.trim().replace(/\s+/g,' ')));
     const title=String(page.title||'').split(/\s+(?:\||—|–)\s+/)[0].trim();
     const name=(heading||title).replace(/\s+/g,' ').trim();
     const siteName=new URL(page.url).hostname.replace(/^www\./,'').split('.')[0].replace(/[^a-z0-9]/gi,'').toLowerCase();
@@ -79,7 +81,8 @@ export function validateAiProducts(items,pages){
     const name=String(item.name||'').trim(),quote=String(item.quote||'').trim();
     const text=pageMap.get(item.sourceUrl);
     if(!text||name.length<4||name.length>140||quote.length<12||quote.length>240||!norm(text).includes(norm(quote))||
-      !['product_model','product_family'].includes(item.kind))continue;
+      !['product_model','product_family'].includes(item.kind)||!nameWords(name)||
+      !(' '+nameWords(quote)+' ').includes(' '+nameWords(name)+' '))continue;
     const key=norm(name)+'|'+item.sourceUrl;
     if(seen.has(key))continue;seen.add(key);
     result.push({name,kind:item.kind,sourceUrl:item.sourceUrl,quote,sku:null,material:null,

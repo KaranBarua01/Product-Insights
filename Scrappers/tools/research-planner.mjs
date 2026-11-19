@@ -5,6 +5,9 @@ const BAD=/(?:\/(?:cart|checkout|login|register|account|privacy|terms|cookies|ca
 const GOOD=/(?:products?|categories|collections|catalog|specification|datasheet|downloads?|manuals?|documentation|capabilities|manufactur|applications?|industries|about|technology|services)/i;
 const BUY=/(?:products?|categories|collections|catalog|specification|datasheet)/i;
 const STOP=new Set('a an the and or for with from into of by on to in is are product products series model models system systems assembly assemblies kit kits genuine new company solutions equipment industrial usa inc ltd'.split(' '));
+// Shared modifiers alone do not identify a product class (e.g. a Heavy Duty
+// bike rack is not a heavy-duty transmission).
+const MODIFIERS=new Set('heavy duty super high low premium standard advanced lightweight durable extra'.split(' '));
 export const MAX_PAGES=12;
 export function safeCandidate(raw,rootHost){
   try{
@@ -27,6 +30,8 @@ export function rankResearchLink(link,rootHost){
   if(/specification|datasheet|manual|technical|documentation/i.test(text))score+=3;
   if(/capabilit|manufactur|about/i.test(text))score+=1;
   if(depth>=1&&depth<=4)score+=2;
+  if(/(?:^|\/)(?:products?|models?)\/[^/]+/.test(path)&&
+    !/(?:^|\/)(?:product-category|categories|category|collections)(?:\/|$)/.test(path))score+=2;
   if(u.search)score-=2;
   return {url,score,reason:strong?'Product or catalog lead':'Company or technical evidence lead',label:String(link?.label||'').slice(0,120)};
 }
@@ -104,6 +109,7 @@ export function mapProductCandidates(products,nodes){
     const p=tokens(product.name);const scored=[];
     if(p.length){for(const node of indexed){
       const overlap=node.words.filter(x=>p.includes(x)).length;
+      if(!node.words.some(x=>!MODIFIERS.has(x)&&p.includes(x)))continue;
       // Require at least two matching significant tokens for multiword products.
       // A bike rack must not be suggested as a dishwasher 'Racks' category.
       if(overlap<Math.min(2,p.length))continue;
@@ -142,18 +148,18 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
     if(['completed','partial'].includes(page.status)){
       const candidates=[...(content.links||[]),...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
         .map(x=>rankResearchLink(x,root)).filter(Boolean);
-      // On a >=4-page investigation, reserve one early page for the
-      // company's own About/identity evidence; product pages still follow.
-      if(pages.length===1&&maxPages>=4){
-        const about=candidates.find(c=>/\/(?:about|about-us|our-company|our-story|who-we-are)(?:\/|$)/i.test(new URL(c.url).pathname));
-        if(about)about.score=Math.max(about.score,17);
-      }
       if(pages.length===1&&typeof prioritizeLinks==='function'){
         try{
           const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
           const picks=new Set(Array.isArray(preferred)?preferred.slice(0,8):[]);
           for(const c of candidates)if(picks.has(c.url))c.score+=18;
         }catch(e){warnings.push('Stage 2 link planning was unavailable; deterministic ranking retained: '+String(e?.message||e).slice(0,120));}
+      }
+      // Reserve identity evidence even when technical links or optional AI
+      // planning raise product scores. Product detail pages follow this slot.
+      if(pages.length===1&&maxPages>=4){
+        const about=candidates.find(c=>/\/(?:about|about-us|our-company|our-story|who-we-are)(?:\/|$)/i.test(new URL(c.url).pathname));
+        if(about)about.score=Math.max(17,...candidates.map(c=>c.score+1));
       }
       for(const c of candidates){if(!seen.has(c.url)&&!queued.some(x=>x.url===c.url)){queued.push(c);discovered++;}}
       queued.sort((a,b)=>b.score-a.score);if(queued.length>70)queued.length=70;

@@ -15,6 +15,7 @@ const CODE='insidejob-stage2/1';
 const respond=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const clean=(v:unknown,max:number)=>typeof v==='string'?v.slice(0,max).replace(/\0/g,''):'';
 const norm=(v:string)=>v.replace(/\s+/g,' ').trim().toLowerCase();
+const nameWords=(v:string)=>norm(v).replace(/[^\p{L}\p{N}+#]+/gu,' ').trim();
 function jsonModel(input:unknown):JsonObject{
   let v:unknown=input;
   if(v&&typeof v==='object'&&'response' in v)v=(v as {response:unknown}).response;
@@ -95,7 +96,8 @@ async function analyze(body:JsonObject,env:Stage2Env){
     const p=pages[Number(id)-1],name=clean(v.name,140).trim(),quote=clean(v.quote,240).trim();
     if(!p)continue;
     if(!name||name.length<4||quote.length<12||!norm(p.text.slice(0,3400)).includes(norm(quote))||
-      !['product_model','product_family'].includes(String(v.kind)))continue;
+      !['product_model','product_family'].includes(String(v.kind))||!nameWords(name)||
+      !(' '+nameWords(quote)+' ').includes(' '+nameWords(name)+' '))continue;
     if(/^(?:products?|about|home|catalog|contact|services?|industries|application)$/i.test(name))continue;
     const key=name.toLowerCase()+'|'+p.url;
     if(seen.has(key))continue;
