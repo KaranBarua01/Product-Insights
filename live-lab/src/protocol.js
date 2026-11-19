@@ -57,6 +57,22 @@ function claimList(entries,host,nameKey,valueKey,limit=12){
     return {name:s(x[nameKey]||nameKey,90),value,evidence:e};
   }).filter(Boolean);
 }
+function safeReference(ref){
+  if(!ref||ref.status!=='installed')return {status:'not_loaded',totalNodes:0,nodeHash:null,anchors:[]};
+  const unique=new Set(),anchors=[];
+  for(const n of Array.isArray(ref.anchors)?ref.anchors.slice(0,100):[]){
+    if(!n||typeof n!=='object')continue;
+    const code=s(n.code,160),label=s(n.label,160),path=s(n.path,700),level=Number(n.level);
+    if(!code||!label||!path||!Number.isInteger(level)||level<0||level>4||unique.has(code))continue;
+    unique.add(code);anchors.push({code,label,path,level});
+    if(anchors.length>=80)break;
+  }
+  return {status:'installed',source:'installed_local_original_taxonomy_read_only',
+    totalNodes:Number.isInteger(ref.totalNodes)&&ref.totalNodes>0&&ref.totalNodes<=12000?ref.totalNodes:0,
+    nodeHash:/^[a-f0-9]{64}$/i.test(ref.nodeHash||'')?ref.nodeHash:null,
+    anchors,selectedNodesOnly:true,originalMasterNotModified:true};
+}
+
 export function sanitizeCompleted(data,expectedHost){
   if(!data||typeof data!=='object')throw Error('No local research results to publish');
   const report=data.report||{},business=data.business||{};
@@ -97,6 +113,7 @@ export function sanitizeCompleted(data,expectedHost){
     acquisition:{status:s(report.status,50),pagesVisited:Number(report.coverage?.visitedPages||pages.length),
       pagesUsable:pages.filter(p=>['completed','partial'].includes(p.status)).length,
       pages},
+    taxonomyReference:safeReference(data.taxonomyReference),
     productIntelligence:{categories,products:resultProducts,
       publishedCounts:{products:Number(coverage.products||resultProducts.length),
         categories:Number(coverage.categories||categories.length),

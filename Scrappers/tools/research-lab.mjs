@@ -168,6 +168,22 @@ async function handler(req,res){
     if(!state.report)return json(res,{error:'No research report yet'},404);
     return send(res,JSON.stringify(state.report,null,2),200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="insidejob-local-research.json"'});
   }
+  if(req.method==='POST'&&path==='/api/taxonomy/master-preview'){
+    const data=JSON.parse(await readBody(req,4500));
+    const input=Array.isArray(data?.keywords)?data.keywords.slice(0,15):[];
+    const words=[...new Set(input.map(x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,38))
+      .filter(x=>x.length>=3))];
+    if(!masterTaxonomy?.nodes?.length)return json(res,{status:'not_loaded',totalNodes:0,anchors:[]});
+    const scored=masterTaxonomy.nodes.map(n=>{
+      const label=String(n.label||'').toLowerCase(),path=String(n.path||'').toLowerCase();
+      const points=words.reduce((sum,w)=>sum+(label.includes(w)?3:0)+(path.includes(w)?1:0),0);
+      return {node:n,points};
+    }).filter(x=>x.points>0).sort((a,b)=>b.points-a.points||a.node.level-b.node.level);
+    return json(res,{status:'installed',source:'original_master_local_read_only',
+      totalNodes:masterTaxonomy.manifest.totalNodes,nodeHash:masterTaxonomy.manifest.nodeHash,
+      anchors:scored.slice(0,80).map(({node:n})=>({code:n.code,label:n.label,path:n.path,level:n.level})),
+      selectedOnly:true,masterModified:false});
+  }
   if(req.method==='GET'&&path==='/api/stage2/parents'){
     return json(res,{parents:taxonomyNodes.filter(n=>n.level<=2).map(n=>({code:n.code,label:n.label,path:n.path,level:n.level}))});
   }

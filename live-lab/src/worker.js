@@ -3,6 +3,7 @@
  */
 import {validateStart,hostOf,LIVE_SCHEMA} from './protocol.js';
 import {uiHtml,uiJs,uiCss} from './ui.js';
+import {runEnrichment,SCHEMA as ENRICHMENT_SCHEMA} from './ai-enrichment.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{
   'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -49,11 +50,16 @@ function cleanStale(s,now){
 }
 function publicRun(run,full=false){
   if(!run)return null;
+  const aiTimedOut=run.enrichment?.status==='queued'&&run.finishedAt&&Date.now()-run.finishedAt>100000;
+  const displayedEnrichment=aiTimedOut?{schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
+    reason:'Cloudflare AI enrichment exceeded the demo time limit; raw research remains available'}:run.enrichment;
   const base={id:run.id,url:run.url,status:run.status,createdAt:run.createdAt,
     startedAt:run.startedAt,finishedAt:run.finishedAt,maxPages:run.maxPages,
     browser:'local_headless_browser',error:run.error||null,
-    cancelRequested:!!run.cancelRequested,events:(run.events||[]).slice(-35)};
-  if(full)base.result=run.result||null;
+    cancelRequested:!!run.cancelRequested,events:(run.events||[]).slice(-35),
+    aiStatus:displayedEnrichment?.status||'not_started',
+    taxonomyNodesAdded:displayedEnrichment?.workingTaxonomy?.newWorkingNodes||0};
+  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;}
   return base;
 }
 export class LabSession{
@@ -135,6 +141,24 @@ export class LabSession{
           return json({ok:true,cancelRequested:!!run.cancelRequested});
         });
       }
+      if(path==='/enrichment'){
+        return await this.update(s=>{
+          const run=s.runs.find(x=>x.id===input.id);
+          if(!run||run.status!=='completed'||run.enrichment?.status!=='queued')
+            return json({error:'Enrichment does not match a completed waiting run'},409);
+          const result=input.enrichment;
+          if(!result||result.schemaVersion!==ENRICHMENT_SCHEMA||
+            !['completed','failed','unavailable','insufficient_source_evidence'].includes(result.status))
+            return json({error:'Invalid enrichment state'},400);
+          if(JSON.stringify(result).length>145000)return json({error:'Enrichment result too large'},413);
+          run.enrichment=result;
+          run.events.push({time:new Date().toISOString(),status:'ai_'+result.status,
+            strategy:'Cloudflare Workers AI',url:null,
+            reason:clip(result.reason||result.message||'',180),chars:null});
+          run.events=run.events.slice(-65);
+          return json({ok:true,id:run.id,status:run.enrichment.status});
+        });
+      }
       if(path==='/finish'){
         return await this.update((s,now)=>{
           const run=s.runs.find(r=>r.id===s.active);
@@ -147,6 +171,8 @@ export class LabSession{
             const bytes=JSON.stringify(input.result);
             if(bytes.length>168000)return json({error:'Result too large'},413);
             run.result=input.result;
+            run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',
+              message:'Cloudflare Workers AI is generating an unverified working taxonomy'};
           }else run.error=clip(input.error||'Research failed or source access blocked',230);
           run.status=outcome;run.finishedAt=now;s.active=null;
           return json({ok:true,id:run.id,status:run.status});
@@ -164,8 +190,16 @@ async function doRequest(env,path,method='GET',body=null){
     body:method==='POST'?JSON.stringify(body):undefined
   }));
 }
+async function completeAiEnrichment(env,id,facts){
+  let enrichment;
+  try{enrichment=await runEnrichment(env,facts);}
+  catch(e){enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
+    reason:clip(e?.message||'AI inference failed',200),originalTaxonomyModified:false,osWritePerformed:false};}
+  try{await doRequest(env,'/enrichment','POST',{id,enrichment});}
+  catch(e){console.error('Could not persist AI working edition',String(e?.message||e).slice(0,140));}
+}
 export default {
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url),path=url.pathname,method=request.method;
     const base={'Cache-Control':'no-store'};
     if(method==='GET'&&path==='/')return text(uiHtml,'text/html; charset=utf-8');
@@ -203,7 +237,12 @@ export default {
         }
         if(path==='/api/agent/finish'){
           const data=await parse(request,175000);
-          return doRequest(env,'/finish','POST',data);
+          const stored=await doRequest(env,'/finish','POST',data);
+          if(stored.ok&&data.status==='completed'){
+            if(ctx?.waitUntil)ctx.waitUntil(completeAiEnrichment(env,data.id,data.result));
+            else console.warn('Worker execution context missing; AI enrichment cannot be scheduled');
+          }
+          return stored;
         }
       }
       return notFound();

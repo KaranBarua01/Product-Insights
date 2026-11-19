@@ -25,5 +25,8 @@
   ],
   "vars": {
     "ALLOWED_TEST_HOSTS": "1up-usa.com,hoshizakiamerica.com,labconco.com,cmcsupply.com,phillipsmedisize.com,dronenerds.com"
+  },
+  "ai": {
+    "binding": "AI"
   }
 }

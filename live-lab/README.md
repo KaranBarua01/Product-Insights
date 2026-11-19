@@ -61,3 +61,18 @@ Open the deployed Worker URL from a separate laptop, authenticate with LAB_VIEW_
 ## Limitations
 
 An offline laptop makes new research unavailable. The cloud history is bounded, not an archive. The hosted UI shows technical events during research and business outputs when a run finishes. No process ownership or BOM inference; no current OS company-record API; no independent precision/recall guarantee.
+
+## New: Cloudflare Workers AI autonomous working taxonomy
+
+Once a real laptop investigation finishes, the Cloudflare Worker automatically invokes the configured Workers AI model to infer **possible** product types (only from discovered categories), components, materials and manufacturing-process requirements. The browser waits for the actual inference, then displays a separate growing working overlay plus JS1–JS10 coverage, without a human approval click.
+
+- The original master taxonomy is still read-only on the laptop. The bridge reads its manifest and up to 80 matching original node definitions through the existing localhost taxonomy search API, not the full master file. The cloud UI displays original total count, selected original branches, source-extracted candidates, and AI-inferred provisional nodes.
+- All AI-generated parts, materials, processes, markets, supplier opportunities, and differentiators are marked **hypotheses**. Source-extracted product/category names are also candidates. JS5 possible processes NEVER establish JS6 in-house capabilities. There is no confirmed BOM.
+- Inferences are stored as **run-specific, review-unapproved working nodes** in the Cloudflare Durable Object. The original taxonomy file is not edited, approved working editions on the laptop are not published, and the OS is not written.
+- If the crawler discovers no products or categories, AI refuses to invent a catalog; the UI explicitly reports insufficient evidence. Invalid model JSON or unavailable AI yields visible enrichment failure rather than a fabricated diagram.
+- Worker binding: `ai: { binding: 'AI' }` in `live-lab/wrangler.jsonc`; verified model availability in the connected Cloudflare account. Authentication and laptop bridge requirements from the previous section still apply; a deployed Worker by itself cannot run browser research.
+- CI unit tests use mock model responses. They validate bounded candidate parents, AI-only node provenance, original taxonomy immutability, and unknown JS6 states. A real cross-laptop run and true accuracy assessment require the authenticated bridge and public source access.
+
+## What Manuel should see
+
+After a real run, watch **AI working edition queued** become **generated** in Product Insights. Open the tree to inspect source candidates (green), AI hypotheses (amber), and selected original taxonomy paths (gray). Compare JS1–JS10 statuses and use Technical View to inspect the actual source-page and scraper execution events. An AI-generated impeller/process combination is only a theory until confirmed on a source, not an OS record.

@@ -73,6 +73,22 @@ test('Stage 2 local app serves a real installed taxonomy, review queue and safe 
     assert.equal(blockedOs.status,403);
     const token=html.match(/<meta name="lab-token" content="([0-9a-f]{64})">/)?.[1];
     assert.ok(token,'random local session token exists');
+
+    const unauthorizedMaster=await fetch(origin+'/api/taxonomy/master-preview',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({keywords:['Milling']})});
+    assert.equal(unauthorizedMaster.status,403,'Original taxonomy preview requires local Lab token');
+    const master=await fetch(origin+'/api/taxonomy/master-preview',{
+      method:'POST',headers:{'x-lab-token':token,'Content-Type':'application/json'},
+      body:JSON.stringify({keywords:['Milling','Cutting']})});
+    assert.equal(master.status,200);
+    const masterBody=await master.json();
+    assert.equal(masterBody.status,'installed');
+    assert.equal(masterBody.source,'original_master_local_read_only');
+    assert.equal(masterBody.totalNodes,4);
+    assert.equal(masterBody.masterModified,false);
+    assert.ok(masterBody.anchors.some(n=>n.code==='milling'&&n.label==='Milling Cutters'));
+
     const imported=await fetch(origin+'/api/os/snapshot',{
       method:'POST',headers:{'x-lab-token':token,'Content-Type':'application/json'},
       body:JSON.stringify(os)});

@@ -54,6 +54,25 @@ async function localToken(){
 function lastEvents(events,start,host){
   return sanitizeEvents((Array.isArray(events)?events:[]).slice(start),host).slice(-12);
 }
+async function originalTaxonomyAnchors(report,token){
+  try{
+    const pi=report?.productIntelligence||{};
+    const keywords=[...(pi.products||[]).slice(0,8).map(x=>x.name),
+      ...(pi.categories||[]).slice(0,8).map(x=>x.name)]
+      .join(' ').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ')
+      .filter(x=>x.length>=4&&!['product','products','industrial','company','manufacturing',
+        'systems','components','equipment','heavy','light','duty','shop','made'].includes(x));
+    const selected=[...new Set(keywords)].slice(0,12);
+    const reference=await local('/api/taxonomy/master-preview',{
+      method:'POST',body:{keywords:selected},token,timeoutMs:9000});
+    return reference.status==='installed'?reference:
+      {status:'not_loaded',totalNodes:0,nodeHash:null,anchors:[]};
+  }catch(e){
+    console.warn('Original master taxonomy preview unavailable:',String(e.message).slice(0,150));
+    return {status:'not_loaded',totalNodes:0,nodeHash:null,anchors:[]};
+  }
+}
+
 async function finish(id,status,result=null,error=null){
   let problem=null;
   for(let i=0;i<3;i++){
@@ -100,7 +119,8 @@ async function execute(job){
   }
   const value=await reportPromise;
   if(!value.ok||!value.report)throw Error('Local research did not produce an actual report');
-  const sanitized=sanitizeCompleted(value,target.host);
+  const reference=await originalTaxonomyAnchors(value.report,token);
+  const sanitized=sanitizeCompleted({...value,taxonomyReference:reference},target.host);
   await finish(job.id,'completed',sanitized);
   console.log('Completed real research:',target.host,
     'pages:',sanitized.acquisition.pagesVisited,
