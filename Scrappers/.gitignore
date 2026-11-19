@@ -10,3 +10,5 @@ benchmark/labels.csv
 benchmark/sites.first3.csv
 # Imported proprietary/user-supplied taxonomy; never publish to the public source repository
 local-data/
+# Generated direct-QA outputs (contains website URLs and test data)
+qa-results/
