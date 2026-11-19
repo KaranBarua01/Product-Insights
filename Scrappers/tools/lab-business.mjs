@@ -89,10 +89,11 @@ export function buildBusinessView(report,osSnapshot=null){
     roleStatus:'candidate_not_independently_verified'};
   const cats=arr(pi.categories,45).map(x=>({
     id:limit(x.id,70),name:limit(x.name,160),sourceUrl:safeUrl(x.sourceUrl),
-    reviewStatus:'candidate_requires_human_review'})).filter(x=>x.name&&x.sourceUrl);
+    reviewStatus:'candidate_requires_human_review'})).filter(x=>x.name&&x.sourceUrl&&hostname(x.sourceUrl)===hostname(root));
   const categoryNames=new Map(cats.map(x=>[x.id,x.name]));
   const mapped=taxonomyGroups(report);
-  const products=arr(pi.products,120).map(p=>convertProduct(p,categoryNames,mapped.map)).filter(Boolean);
+  const products=arr(pi.products,120).map(p=>convertProduct(p,categoryNames,mapped.map))
+    .filter(p=>p&&hostname(p.sourceUrl)===hostname(root));
   const processes=processEvidence(report);
   const coverage={pagesVisited:Number(report?.coverage?.visitedPages||0),
     pagesUsable:Number(report?.coverage?.usablePages??0),
@@ -148,7 +149,9 @@ export function normalizeOsSnapshot(data){
   const c=data.company;
   if(!c||typeof c!=='object'||Array.isArray(c))throw Error('OS snapshot requires company object');
   const website=safeUrl(c.website);
-  if(!website||!hostname(website))throw Error('OS snapshot requires an explicit company.website');
+  if(!website||!hostname(website)||!new URL(website).hostname.includes('.')||
+    /(?:^localhost$|\.local$|\.internal$|^127\.|^10\.|^192\.168\.|^172\.(?:1[6-9]|2[0-9]|3[01])\.)/i.test(new URL(website).hostname))
+    throw Error('OS snapshot requires an explicit public company.website');
   if(!c.name||typeof c.name!=='string')throw Error('OS snapshot requires a company.name');
   for(const [key,max] of [['products',500],['categories',300],['parts',300],['manufacturingProcesses',200]]){
     if(data[key]!==undefined&&!Array.isArray(data[key]))throw Error('OS snapshot '+key+' must be an array');
