@@ -132,7 +132,7 @@ export function buildBusinessView(report,osSnapshot=null){
   };
   const output={
     schemaVersion:LAB_BUSINESS_SCHEMA,mode:'real_website_research',
-    company,coverage,categories,products,
+    company,coverage,categories:cats,products,
     processEvidence:processes,taxonomy:mapped.all,
     acquisition:{
       status:report.status||'unknown',pageStatus:arr(report.pages,12).map(p=>({
