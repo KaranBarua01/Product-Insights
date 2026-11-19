@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "product-insights-live-lab",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LAB_STATE",
+        "class_name": "LabSession"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "live-lab-v1-sqlite",
+      "new_sqlite_classes": [
+        "LabSession"
+      ]
+    }
+  ],
+  "vars": {
+    "ALLOWED_TEST_HOSTS": "1up-usa.com,hoshizakiamerica.com,labconco.com,cmcsupply.com,phillipsmedisize.com,dronenerds.com"
+  }
+}

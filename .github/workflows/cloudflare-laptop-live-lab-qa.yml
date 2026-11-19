@@ -1,0 +1,39 @@
+name: Cloudflare + Laptop Live Lab QA
+on:
+  push:
+    branches:
+      - feat/cloudflare-laptop-live-lab-v1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cloud-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install hosted live Lab dependencies
+        working-directory: live-lab
+        run: npm install --no-audit --no-fund
+      - name: Run security, remote-job, source-evidence tests
+        working-directory: live-lab
+        run: npm run check
+      - name: Bundle Cloudflare Worker with SQLite Durable Object migration (no deployment)
+        working-directory: live-lab
+        run: npm run build:check
+      - name: Check outbound-only Windows laptop bridge syntax
+        working-directory: Scrappers
+        run: node --check tools/live-lab-bridge.mjs
+      - name: Build existing Scrappers engine for frozen evaluation dry-run
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm run build
+      - name: Verify frozen independent evaluation source hashes
+        working-directory: Scrappers
+        run: node tools/universal-benchmark.mjs --dry-run
