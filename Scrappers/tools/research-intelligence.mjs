@@ -72,7 +72,11 @@ export function identifyCompanyRole(pages,rootUrl){
           const sentence=text.slice(m.index).split(/[.!?\n]/)[0];
           if(/\b(?:by\s+(?!us\b|our\s+(?:company|team)\b)|outsourc\w*|not|never)\b/i.test(sentence))continue;
         }
-        const quote=text.slice(Math.max(0,m.index-55),Math.min(text.length,m.index+m[0].length+95))
+        // Keep the complete bounded source paragraph. A fixed character window
+        // can start/end mid-word and lose the attribution or manufacturing verb.
+        const paragraphStart=text.lastIndexOf('\n',m.index)+1;
+        const paragraphEnd=text.indexOf('\n',m.index+m[0].length);
+        const quote=text.slice(paragraphStart,paragraphEnd<0?text.length:paragraphEnd)
           .replace(/\s+/g,' ').trim();
         evidence.push({role,sourceUrl,quote,signal,reviewStatus:'requires_human_verification'});
         break;

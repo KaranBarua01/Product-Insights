@@ -150,7 +150,7 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
         .map(x=>rankResearchLink(x,root)).filter(Boolean);
       if(pages.length===1&&typeof prioritizeLinks==='function'){
         try{
-          const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
+          const preferred=await prioritizeLinks({rootUrl:url,page,links:[...candidates].sort((a,b)=>b.score-a.score).slice(0,35)});
           const picks=new Set(Array.isArray(preferred)?preferred.slice(0,8):[]);
           for(const c of candidates)if(picks.has(c.url))c.score+=18;
         }catch(e){warnings.push('Stage 2 link planning was unavailable; deterministic ranking retained: '+String(e?.message||e).slice(0,120));}

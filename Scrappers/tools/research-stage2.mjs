@@ -17,10 +17,11 @@ export function stage2Config(env=process.env){
   if(!address&&!token)return {configured:false,reason:'Cloudflare AI URL and secret not configured'};
   if(!address||!token)throw Error('Set BOTH RESEARCH_LAB_AI_URL and RESEARCH_LAB_AI_TOKEN');
   const url=new URL(address);
-  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error('RESEARCH_LAB_AI_URL must be a plain HTTPS origin or base path');
+  const localHttp=url.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(url.hostname);
+  if((url.protocol!=='https:'&&!localHttp)||url.username||url.password||url.search||url.hash)throw Error('RESEARCH_LAB_AI_URL must be HTTPS or explicit loopback HTTP, without credentials, query or fragment');
   return {configured:true,url:url.href.replace(/\/$/,''),token};
 }
-export async function callStage2(action,payload,{config=stage2Config(),fetcher=fetch,timeoutMs=28000}={}){
+export async function callStage2(action,payload,{config=stage2Config(),fetcher=fetch,timeoutMs=action==='analyze'?90000:28000}={}){
   if(!['analyze','plan','propose'].includes(action))throw Error('Unknown Stage 2 action');
   if(!config.configured)return {schemaVersion:'insidejob-stage2/1',status:'not_configured'};
   const input=JSON.stringify(payload);

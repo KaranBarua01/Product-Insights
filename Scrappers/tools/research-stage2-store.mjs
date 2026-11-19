@@ -8,7 +8,7 @@ import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {makeManifest} from './research-taxonomy-store.mjs';
 
-const BASE=resolve(dirname(fileURLToPath(import.meta.url)),'..','local-data','stage2');
+const BASE=resolve(process.env.RESEARCH_LAB_STAGE2_DIR||resolve(dirname(fileURLToPath(import.meta.url)),'..','local-data','stage2'));
 export const STAGE2_PROPOSALS_PATH=join(BASE,'proposals.json');
 export const STAGE2_WORKING_PATH=join(BASE,'working-taxonomy.json');
 const hash=s=>createHash('sha256').update(String(s)).digest('hex');
