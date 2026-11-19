@@ -304,6 +304,7 @@ test('U30 pilot job cannot choose URLs, scripts, commands or non-frozen batches'
           schemaVersion:'pi-universal-holdout/v1',batch:'A',
           rows:Array.from({length:6},(_,i)=>({...row,siteId:'U30-'+String(i+1).padStart(3,'0')}))}));
         await writeFile(join(dir,'manual-review.csv'),'row_id,claim_type\nREV-00001,product\n');
+        await writeFile(join(dir,'manual-role-review.csv'),'site_id,reviewer\nU30-001,\n');
         return{exitCode:0,timeout:false,output:'synthetic'};
       }});
     assert.equal(calls,1);
