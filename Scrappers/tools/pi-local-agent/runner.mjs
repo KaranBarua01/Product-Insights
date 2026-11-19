@@ -94,6 +94,7 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
     const summaryPath=await confinedExisting(root,join(DATA,'outputs',folder,'summary.json'));
     const resultsPath=await confinedExisting(root,join(DATA,'outputs',folder,'results.json'));
     const reviewPath=await confinedExisting(root,join(DATA,'outputs',folder,'manual-review.csv'));
+    await confinedExisting(root,join(DATA,'outputs',folder,'manual-role-review.csv'));
     const report=JSON.parse(await readFile(summaryPath,'utf8'));
     const parsed=JSON.parse(await readFile(resultsPath,'utf8'));
     if(!reviewPath||report.schemaVersion!=='pi-universal-holdout/v1'||report.batch!==batch||
