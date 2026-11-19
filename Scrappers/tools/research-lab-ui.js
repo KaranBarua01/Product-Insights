@@ -245,13 +245,13 @@
     catch(e){$('taxonomy-status').textContent='Taxonomy rejected: '+e.message;}
   });
   $('run-form').addEventListener('submit',async ev=>{
-    ev.preventDefault();setBusy(true);$('result-card').hidden=true;exportLink.hidden=true;events.textContent='';status.textContent='Starting research. Website access is subject to robots.txt, DNS safety and server restrictions.';
+    ev.preventDefault();setBusy(true);window.dispatchEvent(new CustomEvent('pi:research-start'));$('result-card').hidden=true;exportLink.hidden=true;events.textContent='';status.textContent='Starting research. Website access is subject to robots.txt, DNS safety and server restrictions.';
     timer=setInterval(()=>refresh().catch(()=>{}),700);
     try{
       const body={url:$('site').value.trim(),maxPages:Number($('pages').value),strategy:$('strategy').value,browser:$('browser').value};
       const response=await api('/api/run',{method:'POST',body:JSON.stringify(body)});
-      render(response.report);loadProposals().catch(()=>{});status.textContent=`Finished ${response.report.coverage.visitedPages} pages. Download JSON for review.`;
-    }catch(e){status.textContent='Research failed: '+e.message;}
+      render(response.report);window.dispatchEvent(new CustomEvent('pi:research-complete',{detail:{business:response.business}}));loadProposals().catch(()=>{});status.textContent=`Finished ${response.report.coverage.visitedPages} pages. Download JSON for review.`;
+    }catch(e){status.textContent='Research failed: '+e.message;window.dispatchEvent(new CustomEvent('pi:research-error',{detail:{error:e.message}}));}
     finally{setBusy(false);if(timer){clearInterval(timer);timer=null;}refresh().catch(()=>{});}
   });
   cancel.addEventListener('click',async()=>{try{await api('/api/cancel',{method:'POST',body:'{}'});status.textContent='Stop requested; finishing current page.';}catch(e){status.textContent=e.message;}});
