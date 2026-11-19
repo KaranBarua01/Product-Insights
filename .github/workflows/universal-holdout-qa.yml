@@ -1,0 +1,34 @@
+name: Independent Universal U30 offline QA
+on:
+  push:
+    branches:
+      - test/universal-holdout-30-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-holdout:
+    name: Lock and source-integrity tests (zero live website requests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Scrappers without optional browser
+        working-directory: Scrappers
+        run: npm install --omit=optional --no-audit --no-fund
+      - name: Full Scrappers suite including U30 frozen cohort validation
+        working-directory: Scrappers
+        run: npm test
+      - name: Confirm source pins and batch design without crawling websites
+        working-directory: Scrappers
+        run: node tools/universal-benchmark.mjs --dry-run
+      - name: Syntax-check independent review scorer
+        working-directory: Scrappers
+        run: node --check tools/universal-review-score.mjs
