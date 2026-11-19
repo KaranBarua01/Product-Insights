@@ -12,6 +12,7 @@
     "test": "npm run build && node --test tests/*.test.mjs",
     "dev": "npm run serve",
     "serve": "npm run build && node tools/node-server.mjs",
+    "lab": "npm run build && node tools/research-lab.mjs",
     "dev:cloudflare": "wrangler dev",
     "deploy:cloudflare": "wrangler deploy",
     "benchmark": "npm run build && node tools/benchmark.mjs",

@@ -4,6 +4,9 @@ import {assertAllowed,robotsAllowed} from '../dist/safety.js';
 export function createPlaywrightBrowserCapture(options={}) {
   const cdpUrl=options.cdpUrl || process.env.PLAYWRIGHT_CDP_URL || '';
   const executablePath=options.executablePath || process.env.PLAYWRIGHT_CHROMIUM_PATH || '';
+  const headless=options.headless!==false;
+  const slowMoMs=Number.isInteger(options.slowMoMs)?Math.max(0,Math.min(500,options.slowMoMs)):0;
+  const inspectHoldMs=Number.isInteger(options.inspectHoldMs)?Math.max(0,Math.min(5000,options.inspectHoldMs)):0;
   return async function capture(raw,allowedHosts,robotsRules='') {
     const target=assertAllowed(raw,allowedHosts);
     let chromium;
@@ -11,7 +14,7 @@ export function createPlaywrightBrowserCapture(options={}) {
     catch {throw new Error('Playwright not installed. Run npm install and npx playwright install chromium (or configure PLAYWRIGHT_CDP_URL).');}
     const browser=cdpUrl
       ? await chromium.connectOverCDP(cdpUrl,{timeout:10_000})
-      : await chromium.launch({headless:true,timeout:10_000,...(executablePath?{executablePath}:{})});
+      : await chromium.launch({headless,slowMo:slowMoMs,timeout:10_000,...(executablePath?{executablePath}:{})});
     try {
       const context=await browser.newContext({userAgent:'InsideJobScrappersPrototype/0.2',viewport:{width:1280,height:900},serviceWorkers:'block',acceptDownloads:false});
       try {
@@ -33,6 +36,7 @@ export function createPlaywrightBrowserCapture(options={}) {
           if(await more.count()){try{await more.click({timeout:1000});await page.waitForTimeout(700)}catch{/* optional single interaction */}}
           const finalUrl=page.url();assertAllowed(finalUrl,allowedHosts,target.hostname);
           const html=await page.content();
+          if(!headless&&inspectHoldMs)await page.waitForTimeout(inspectHoldMs);
           return {url:finalUrl,html:html.slice(0,1_500_000),truncated:html.length>1_500_000};
         }finally{await page.close();}
       }finally{await context.close();}
