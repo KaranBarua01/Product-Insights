@@ -160,27 +160,31 @@ export function createHumanReviewTemplate(rows,{maxProductsPerSite=5,maxAttribut
     const roleEvidence=data?.company?.roleCandidate?.evidence||[];
     for(const e of roleEvidence.slice(0,1))
       write(site,ind,role,'company_role',row.company,'business_role',e.role,e.sourceUrl,e.quote);
-    for(const c of (data?.categories||[]).slice(0,3))
+    const sampledCategories=[...(data?.categories||[])].sort((a,b)=>
+      createHash('sha256').update(site+'|category|'+a.name).digest('hex').localeCompare(
+      createHash('sha256').update(site+'|category|'+b.name).digest('hex'))).slice(0,3);
+    for(const c of sampledCategories)
       write(site,ind,role,'category',c.name,'category_name',c.name,c.sourceUrl,c.evidence?.quote);
-    const seen=new Set();
+    const seen=new Set(),candidates=[];
     for(const p of data?.products||[]){
       const key=(pageKey(p.sourceUrl)||p.sourceUrl)+'|'+nameKey(p);
-      if(seen.has(key))continue;seen.add(key);
-      if(seen.size>maxProductsPerSite)break;
+      if(seen.has(key))continue;seen.add(key);candidates.push(p);
+    }
+    const sampled=candidates.sort((a,b)=>
+      createHash('sha256').update(site+'|product|'+a.sourceUrl+'|'+a.name).digest('hex').localeCompare(
+      createHash('sha256').update(site+'|product|'+b.sourceUrl+'|'+b.name).digest('hex')))
+      .slice(0,maxProductsPerSite);
+    for(const p of sampled){
       write(site,ind,role,'product',p.name,'product_name',p.name,p.sourceUrl,p.evidence?.[0]?.quote);
-      let count=0;
-      for(const [kind,values,attr,field] of [
-        ['specification',p.specifications,'attribute','value'],
-        ['component',p.components,null,'component'],
-        ['material',p.materials,null,'material']
-      ]){
-        for(const v of values||[]){
-          if(count++>=maxAttributesPerProduct)break;
-          write(site,ind,role,kind,p.name,attr?String(v[attr]):kind,
-            String(v[field]),p.sourceUrl,v.evidence?.quote);
-        }
-        if(count>=maxAttributesPerProduct)break;
-      }
+      const attributes=[
+        ...(p.specifications||[]).map(x=>({type:'specification',label:x.attribute,value:x.value,evidence:x.evidence})),
+        ...(p.components||[]).map(x=>({type:'component',label:'component',value:x.component,evidence:x.evidence})),
+        ...(p.materials||[]).map(x=>({type:'material',label:'material',value:x.material,evidence:x.evidence}))
+      ];
+      attributes.sort((a,b)=>createHash('sha256').update(site+'|attr|'+p.name+'|'+a.type+'|'+a.value)
+        .digest('hex').localeCompare(createHash('sha256').update(site+'|attr|'+p.name+'|'+b.type+'|'+b.value).digest('hex')));
+      for(const attr of attributes.slice(0,maxAttributesPerProduct))
+        write(site,ind,role,attr.type,p.name,attr.label,String(attr.value),p.sourceUrl,attr.evidence?.quote);
     }
   }
   return {csv:csvEncode(out),rows:out.length-1,columns:HEADERS};
@@ -216,4 +220,15 @@ export function scoreHumanReviews(csv,referenceTemplateCsv=null){
     }])),
     caveat:'Precision on a selected, reviewed sample; NOT recall, full catalog coverage, or universal performance.'};
   return result;
+}
+
+export function createIndependentRoleTemplate(rows){
+  const headers=['site_id','company_name','industry','source_homepage',
+    'reviewed_manufacturer','reviewed_distributor','reviewed_services',
+    'reviewed_contract_manufacturer','reviewed_mixed','reviewer',
+    'independent_source_url','independent_quote','review_note'];
+  const table=[headers];
+  for(const r of rows)table.push([r.siteId,r.company,r.industry,r.rootUrl,
+    '','','','','','','','','']);
+  return {csv:csvEncode(table),siteCount:rows.length};
 }
