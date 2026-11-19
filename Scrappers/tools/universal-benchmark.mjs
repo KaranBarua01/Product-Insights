@@ -12,7 +12,7 @@ import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {runResearch} from './research-planner.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
 import {validateLockedCohort,traceabilityChecks,productDuplicateSignals,
-  createHumanReviewTemplate,UNIVERSAL_SCHEMA} from './universal-validation.mjs';
+  createHumanReviewTemplate,createIndependentRoleTemplate,UNIVERSAL_SCHEMA} from './universal-validation.mjs';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const DATA='local-data/pi-local-agent/outputs';
@@ -155,12 +155,15 @@ export async function main(argv=process.argv.slice(2)){
   }
   const summary=summarizeHoldout(rows,options.batch,cohort);
   const review=createHumanReviewTemplate(rows,{maxProductsPerSite:5,maxAttributesPerProduct:3});
+  const roleReview=createIndependentRoleTemplate(rows);
   summary.reviewTemplateRows=review.rows;
+  summary.roleReviewTemplateRows=roleReview.siteCount;
   await Promise.all([
     writeFile(join(options.out,'summary.json'),JSON.stringify(summary,null,2)+'\n'),
     writeFile(join(options.out,'results.json'),JSON.stringify({schemaVersion:UNIVERSAL_SCHEMA,
       batch:options.batch,rows},null,2)+'\n'),
-    writeFile(join(options.out,'manual-review.csv'),review.csv)
+    writeFile(join(options.out,'manual-review.csv'),review.csv),
+    writeFile(join(options.out,'manual-role-review.csv'),roleReview.csv)
   ]);
   console.log(JSON.stringify({status:'U30_BATCH_COMPLETED',batch:options.batch,
     reviewRows:review.rows,baseline3:summary.baseline3,depth12:summary.depth12,
