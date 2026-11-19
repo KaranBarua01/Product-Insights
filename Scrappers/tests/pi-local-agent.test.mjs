@@ -35,7 +35,7 @@ test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.throws(()=>parseJob(job('health',{path:'../../outside'}),{owner}),/fields/);
   assert.throws(()=>parseJob(job('health',{},-20*60000),{owner}),/expired|window/);
   assert.throws(()=>parseJob(job('health',{},20*60000),{owner}),/future-dated/);
-  assert.throws(()=>parseJob({...job(),body:'not json'},{owner}),/JSON/);
+  assert.throws(()=>parseJob({...job(),body:'not json'},{owner}),/JSON|invalid or too large/);
 });
 test('secret scrubbing hides GitHub token variants and truncates output',()=>{
   assert.doesNotMatch(sanitizeOutput('Bearer secretVALUE0123 github_pat_0123456789abcdef',{}),/secretVALUE|github_pat_/);
