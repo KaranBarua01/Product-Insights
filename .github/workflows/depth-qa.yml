@@ -1,0 +1,31 @@
+name: Acquisition depth benchmark offline QA
+on:
+  push:
+    branches:
+      - test/acquisition-depth-3-vs-12-seven-sites
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  depth-unit-tests:
+    name: Validate depth benchmark without crawling websites
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install offline dependencies
+        working-directory: Scrappers
+        run: npm install --omit=optional --no-audit --no-fund
+      - name: Compile and test Scrappers
+        working-directory: Scrappers
+        run: npm test
+      - name: Fixed targets and output path validation (zero network)
+        working-directory: Scrappers
+        run: node tools/depth-benchmark.mjs --dry-run
