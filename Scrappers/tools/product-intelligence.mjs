@@ -37,7 +37,7 @@ const FIELDS=[
 ];
 // The only material mentions promoted are explicit product material statements.
 const MATERIALS=/\b(?:stainless steel|carbon fiber|alumin(?:ium|um)|polycarbonate|polypropylene|polyethylene|fiberglass|titanium|concrete|brass|copper|steel|nylon|rubber|plastic|wood|ABS)\b/ig;
-const MATERIAL_STATEMENT=/\b(?:made\s+(?:entirely\s+)?(?:out\s+of|from)|constructed\s+(?:from|of|with)|fabricated\s+from|manufactured\s+from|built\s+(?:from|with)|material(?:s)?\s*[:\-])\b/i;
+const MATERIAL_STATEMENT=/(?:\b(?:made\s+(?:entirely\s+)?(?:out\s+of|from)|constructed\s+(?:from|of|with)|fabricated\s+from|manufactured\s+from|built\s+(?:from|with))\b|\bmaterials?\s*[:\-]\s*)/i;
 const COMPONENT_STATEMENT=/\b(?:includes?|contains?|consists?\s+of|equipped\s+with|comes\s+with|features?)\b/i;
 const COMPONENTS=/\b(?:mounting brackets?|brackets?|cartridges?|filters?|frames?|trays?|arms?|motors?|compressors?|controllers?|sensors?|batter(?:y|ies)|connectors?|cables?|housings?|valves?|hoses?|fans?|wheels?|casters?|receivers?|transmitters?|displays?|probes?)\b/ig;
 const RELATION_REJECT=/\b(?:optional(?:ly)?|sold separately|not included|compatible with|available separately)\b/i;
@@ -101,13 +101,13 @@ function specSignals(lines,sourceUrl){
       const match=FIELDS.find(([,re])=>re.test(name));
       if(match&&value.length<=125&&(!/^(?:N\/A|none|unknown)$/i.test(value))&&
         (TECHNICAL_UNIT.test(value)||/^(?:R\d{3,4}|stainless steel|aluminum|electric|gas)\b/i.test(value)))
-        insert(match[0],value,line);
+        insert(match[0],value,line.slice(Math.max(0,m.index-12),Math.min(line.length,m.index+m[0].length+35)));
       if(found.length>=35)break;
     }
     // Labeled product load in prose. Never convert into an engineering rating.
     if(/\b(?:weight capacity|load capacity|load limit|e-bikes? up to)\b/i.test(line)){
       const m=/(?:up to|capacity(?: of)?|limit(?: of)?)\s*(\d+(?:\.\d+)?\s*(?:lbs?|kg))\b/i.exec(line);
-      if(m)insert('stated_load_limit',m[1],line,'product_copy_capacity');
+      if(m)insert('stated_load_limit',m[1],line.slice(Math.max(0,m.index-110),Math.min(line.length,m.index+m[0].length+65)),'product_copy_capacity');
     }
     if(found.length>=35)break;
   }
@@ -116,16 +116,18 @@ function specSignals(lines,sourceUrl){
 function materialSignals(lines,sourceUrl){
   const found=[],seen=new Set();
   for(const line of lines){
-    if(!MATERIAL_STATEMENT.test(line))continue;
+    const materialTrigger=MATERIAL_STATEMENT.exec(line);
+    if(!materialTrigger)continue;
     // Negative/product-comparison copy is not proof of physical composition.
     if(/\b(?:not made|isn't made|without|avoid|compared with|instead of)\b/i.test(line))continue;
     MATERIALS.lastIndex=0;
     for(const match of line.matchAll(MATERIALS)){
       const value=norm(match[0]).toLowerCase();
+      if(match.index<materialTrigger.index||match.index-materialTrigger.index>150)continue;
       if(seen.has(value))continue;
       seen.add(value);found.push({material:value,
         relationship:'published_product_material_claim',
-        evidence:evidence(sourceUrl,line.slice(0,240),'primary page text')});
+        evidence:evidence(sourceUrl,line.slice(Math.max(0,materialTrigger.index-35),Math.min(line.length,match.index+match[0].length+55)),'primary page text')});
       if(found.length>=10)break;
     }
     if(found.length>=10)break;
@@ -143,7 +145,7 @@ function componentSignals(lines,sourceUrl){
       const part=norm(match[0]).toLowerCase();
       if(seen.has(part))continue;
       seen.add(part);found.push({component:part,relationship:'published_inclusion_claim',
-        evidence:evidence(sourceUrl,line.slice(0,240),'primary page text')});
+        evidence:evidence(sourceUrl,line.slice(Math.max(0,s.index-25),Math.min(line.length,s.index+s[0].length+145)),'primary page text')});
       if(found.length>=10)break;
     }
     if(found.length>=10)break;
