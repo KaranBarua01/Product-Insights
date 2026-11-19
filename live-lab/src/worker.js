@@ -50,13 +50,16 @@ function cleanStale(s,now){
 }
 function publicRun(run,full=false){
   if(!run)return null;
+  const aiTimedOut=run.enrichment?.status==='queued'&&run.finishedAt&&Date.now()-run.finishedAt>100000;
+  const displayedEnrichment=aiTimedOut?{schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
+    reason:'Cloudflare AI enrichment exceeded the demo time limit; raw research remains available'}:run.enrichment;
   const base={id:run.id,url:run.url,status:run.status,createdAt:run.createdAt,
     startedAt:run.startedAt,finishedAt:run.finishedAt,maxPages:run.maxPages,
     browser:'local_headless_browser',error:run.error||null,
     cancelRequested:!!run.cancelRequested,events:(run.events||[]).slice(-35),
-    aiStatus:run.enrichment?.status||'not_started',
-    taxonomyNodesAdded:run.enrichment?.workingTaxonomy?.newWorkingNodes||0};
-  if(full){base.result=run.result||null;base.enrichment=run.enrichment||null;}
+    aiStatus:displayedEnrichment?.status||'not_started',
+    taxonomyNodesAdded:displayedEnrichment?.workingTaxonomy?.newWorkingNodes||0};
+  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;}
   return base;
 }
 export class LabSession{
