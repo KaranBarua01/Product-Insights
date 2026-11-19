@@ -8,6 +8,9 @@ const STOP=new Set('a an and are as at be by can for from has have in into is it
 const DOMAIN_ONLY=new Set('bicycle motorcycle vehicle truck van aircraft aerospace aviation marine medical technology industry food solar electronic computer fluid cargo transport accessory'.split(' '));
 // Generic object words recur in unrelated industries; require product-function qualifiers.
 const AMBIGUOUS_OBJECTS=new Set('rack tray box panel frame mount mounting column case cover enclosure beam component accessory part assembly housing cabinet bracket support fixture system equipment device item vehicle cross'.split(' '));
+// Industry-only qualifiers cannot name a component type. Functional words
+// such as cargo, solar or medical are retained for specific leaf matching.
+const SECTOR_QUALIFIERS=new Set('aircraft aerospace aviation marine vehicle truck van bicycle motorcycle'.split(' '));
 const ALIASES=new Map(Object.entries({
   bikes:'bicycle',bike:'bicycle',ebike:'bicycle',ebikes:'bicycle',bicycles:'bicycle',
   motorcycles:'motorcycle',motorbikes:'motorcycle',motorbike:'motorcycle',moto:'motorcycle',
@@ -100,7 +103,7 @@ export function rankEvidenceTaxonomy(product,nodes,{limit=3}={}){
     // Likewise a tray-style cargo rack is not a battery-enclosure tray.
     // Repeated domain words ('aircraft', 'vehicle') cannot satisfy a
     // component-specific category such as 'Aircraft wire harnesses'.
-    const distinctive=leaf.filter(t=>!AMBIGUOUS_OBJECTS.has(t)&&!DOMAIN_ONLY.has(t));
+    const distinctive=leaf.filter(t=>!AMBIGUOUS_OBJECTS.has(t)&&!SECTOR_QUALIFIERS.has(t));
     if(distinctive.length&&!distinctive.some(t=>primaryContext.has(t)))continue;
     // A generic noun-only category requires distinctive immediate parent evidence.
     if(!distinctive.length){
