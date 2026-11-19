@@ -1,0 +1,38 @@
+name: Two-mode Product Insights Lab offline QA
+on:
+  push:
+    branches:
+      - feat/two-mode-research-lab-manuel-os-view
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Scrappers dependencies
+        working-directory: Scrappers
+        run: npm install --omit=optional --no-audit --no-fund
+      - name: Syntax check business and technical browser modules
+        working-directory: Scrappers
+        run: |
+          node --check tools/lab-business.mjs
+          node --check tools/lab-business-shell.mjs
+          node --check tools/research-lab.mjs
+          node --check tools/research-lab-ui.js
+          node --check tools/research-lab-business-ui.js
+      - name: Run Scrappers complete regression suite
+        working-directory: Scrappers
+        run: npm test
+      - name: Verify immutable universal holdout remains frozen
+        working-directory: Scrappers
+        run: node tools/universal-benchmark.mjs --dry-run
