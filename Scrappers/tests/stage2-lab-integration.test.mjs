@@ -26,7 +26,7 @@ test('Stage 2 local app serves a real installed taxonomy, review queue and safe 
     const port=await freePort(),origin='http://127.0.0.1:'+port;
     child=spawn(process.execPath,[resolve('tools/research-lab.mjs')],{
       cwd:resolve('.'),env:{...process.env,RESEARCH_LAB_PORT:String(port),
-        RESEARCH_LAB_TAXONOMY_FILE:file,RESEARCH_LAB_AI_URL:'',RESEARCH_LAB_AI_TOKEN:''},
+        RESEARCH_LAB_TAXONOMY_FILE:file,RESEARCH_LAB_STAGE2_DIR:join(folder,'stage2'),RESEARCH_LAB_AI_URL:'',RESEARCH_LAB_AI_TOKEN:''},
       stdio:['ignore','pipe','pipe']});
     child.stdout.on('data',chunk=>{logs+=chunk.toString();});
     child.stderr.on('data',chunk=>{logs+=chunk.toString();});

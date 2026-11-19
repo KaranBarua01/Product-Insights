@@ -110,3 +110,40 @@ Live S01 extraction now preserves bounded per-source text sections as well as th
 Product Insights' original JS codes refer to ten logical sections, **not JavaScript or ten databases**. The prototype defines JS1 (company overview), JS2 (product categories), JS3 (products/components), JS4 (materials), JS5 (manufacturing processes), JS6 (actual company capabilities), JS7 (supply chain signals), JS8 (industries/markets), JS9 (differentiators), and JS10 (coverage/evidence report). The definitions and typed output contract live in `Scrappers/src/js-profile.ts`.
 
 An authenticated `POST /api/insights/analyze` with `{"url":"https://www.epcpower.com/","buildProfile":true,"useAI":true}` runs the existing allowlisted scraper and a **single** Workers AI pass for the JS profile. Source quotes must match the correct sampled page; rejected or missing claims are never replaced by fabrications. The existing five-fact AI display is derived from this same profile when both are requested, to avoid double billing. JS10 is generated deterministically from coverage and quote checks, not from AI assertions. Every accepted claim is explicitly **unverified**. The prototype does not persist profiles in D1, resolve canonical InsideJob OS company IDs, infer manufacturing requirements, or verify buyer needs.
+
+## Stage 2 locally, without deployment
+
+`npm run serve` starts the extraction-only Node adapter; it does not expose Stage 2. Run the canonical Worker with local Wrangler for `/api/stage2/plan`, `/api/stage2/analyze` and `/api/stage2/propose`. A deployed Worker returns 404 until the deployment controller promotes a revision containing those routes; pulling `main` does not publish it.
+
+Create an ignored `local-data/stage2/wrangler.jsonc` with this development-only configuration:
+
+```json
+{
+  "name": "product-insights-scrappers-prototype",
+  "main": "../../src/worker.ts",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {"binding": "AI", "remote": true},
+  "vars": {"ALLOWED_HOSTS": "1up-usa.com"}
+}
+```
+
+Use the existing authorized Wrangler account with Workers AI access. AI inference uses Cloudflare even though Worker code runs locally and can incur usage charges. Do not use `--remote`, deploy, upload versions, or change production secrets for this test.
+
+Generate a disposable **local endpoint token**, saved only beside that config:
+
+```powershell
+node --input-type=module -e "import{randomBytes}from'node:crypto';import{mkdirSync,writeFileSync}from'node:fs';mkdirSync('local-data/stage2',{recursive:true});writeFileSync('local-data/stage2/.dev.vars','SCRAPPERS_API_TOKEN='+randomBytes(32).toString('hex')+'\n');"
+npx.cmd wrangler dev --config local-data/stage2/wrangler.jsonc --ip 127.0.0.1 --port 8788
+```
+
+In a second terminal, start the Lab with the same local token without printing it:
+
+```powershell
+npm.cmd run build
+node --env-file=local-data/stage2/.dev.vars --input-type=module -e "process.env.RESEARCH_LAB_AI_URL='http://127.0.0.1:8788';process.env.RESEARCH_LAB_AI_TOKEN=process.env.SCRAPPERS_API_TOKEN;process.env.RESEARCH_LAB_PORT='8791';process.env.RESEARCH_LAB_STAGE2_DIR='local-data/stage2/live-qa';await import('./tools/research-lab.mjs');"
+```
+
+Open `http://127.0.0.1:8791`. The transport allows HTTP only for explicit loopback addresses; remote endpoints require HTTPS. `/analyze` has a bounded 90-second transport deadline because it performs separate profile and product inference calls. A configured connection, HTTP 200 or a matching quote alone does not establish semantic accuracy: inspect section status, accepted/rejected counts, attribution and claim meaning. Empty or rejected claims remain missing data. Taxonomy proposals remain pending until explicit review; the master reference is never automatically changed.
+
+`RESEARCH_LAB_STAGE2_DIR` selects a separate local proposal/working-edition directory. Offline QA and integration tests use disposable directories so a real local review queue cannot contaminate their results.
