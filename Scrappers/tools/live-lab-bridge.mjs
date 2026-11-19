@@ -54,6 +54,40 @@ async function localToken(){
 function lastEvents(events,start,host){
   return sanitizeEvents((Array.isArray(events)?events:[]).slice(start),host).slice(-12);
 }
+async function originalTaxonomyAnchors(report){
+  try{
+    const manifest=await local('/api/taxonomy/manifest',{timeoutMs:9000});
+    if(!manifest.loaded||!manifest.manifest?.totalNodes)
+      return {status:'not_loaded',totalNodes:0,nodeHash:null,anchors:[]};
+    const pi=report?.productIntelligence||{};
+    const keywords=[...(pi.products||[]).slice(0,8).map(x=>x.name),
+      ...(pi.categories||[]).slice(0,8).map(x=>x.name)]
+      .join(' ').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ')
+      .filter(x=>x.length>=4&&!['product','products','industrial','company','manufacturing',
+        'systems','components','equipment','heavy','light','duty','shop','made'].includes(x));
+    const distinct=[...new Set(keywords)].slice(0,9);
+    const nodes=new Map();
+    for(const word of distinct){
+      try{
+        const response=await local('/api/taxonomy?q='+encodeURIComponent(word),{timeoutMs:9000});
+        for(const n of response.results||[]){
+          if(n?.code&&n?.label&&n?.path&&!nodes.has(n.code))
+            nodes.set(n.code,{code:String(n.code).slice(0,160),
+              label:String(n.label).slice(0,160),path:String(n.path).slice(0,700),
+              level:Number(n.level)});
+          if(nodes.size>=80)break;
+        }
+        if(nodes.size>=80)break;
+      }catch(e){console.warn('Taxonomy anchor query skipped:',String(e.message).slice(0,110));}
+    }
+    return {status:'installed',totalNodes:manifest.manifest.totalNodes,
+      nodeHash:manifest.manifest.nodeHash,anchors:[...nodes.values()].slice(0,80)};
+  }catch(e){
+    console.warn('Original taxonomy unavailable to live bridge:',String(e.message).slice(0,140));
+    return {status:'not_loaded',totalNodes:0,nodeHash:null,anchors:[]};
+  }
+}
+
 async function finish(id,status,result=null,error=null){
   let problem=null;
   for(let i=0;i<3;i++){
@@ -100,7 +134,8 @@ async function execute(job){
   }
   const value=await reportPromise;
   if(!value.ok||!value.report)throw Error('Local research did not produce an actual report');
-  const sanitized=sanitizeCompleted(value,target.host);
+  const reference=await originalTaxonomyAnchors(value.report);
+  const sanitized=sanitizeCompleted({...value,taxonomyReference:reference},target.host);
   await finish(job.id,'completed',sanitized);
   console.log('Completed real research:',target.host,
     'pages:',sanitized.acquisition.pagesVisited,
