@@ -69,6 +69,44 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
   const root=await workspaceRoot(workspace);
   if(action==='health')return {status:'completed',action,nodeVersion:process.version,
     workspace:'Scrappers (private local path omitted)',network:'outbound-only'};
+  if(action==='benchmark_10'){
+    // Opt-in live retrieval only. The private job cannot choose URLs, paths, commands or flags.
+    // Reuse the existing policy-aware scraper benchmark and a fixed, explicitly reviewed list.
+    if(typeof jobId!=='string'||!/^[A-Za-z0-9_-]{8,64}$/.test(jobId))throw Error('Invalid output jobId');
+    const script=await confinedExisting(root,'tools/benchmark.mjs');
+    await confinedExisting(root,'benchmark/insidejob-os-ten-sites.csv');
+    await confinedExisting(root,'benchmark/insidejob-os-ten-approved-hosts.txt');
+    const outputDir=await confinedOutputDir(root);
+    const name=jobId+'-os10';
+    const batchDir=join(outputDir,name);
+    try{await lstat(batchDir);throw Error('Job result directory already exists');}
+    catch(e){if(e.code!=='ENOENT')throw e;}
+    const args=[script,
+      '--sites','benchmark/insidejob-os-ten-sites.csv',
+      '--allow-hosts','benchmark/insidejob-os-ten-approved-hosts.txt',
+      '--pattern-mode','none','--strategy','auto','--browser','none',
+      '--html-pages','3','--max-sites','10','--delay-ms','1500',
+      '--out',join(DATA,'outputs',name)];
+    const execution=await run(process.execPath,args,{cwd:root,secret,timeoutMs:580000});
+    if(execution.exitCode!==0||execution.timeout){
+      return {status:'failed',action,exitCode:execution.exitCode,timeout:execution.timeout,
+        diagnostic:execution.output};
+    }
+    const sumPath=await confinedExisting(root,join(DATA,'outputs',name,'summary.json'));
+    const rowsPath=await confinedExisting(root,join(DATA,'outputs',name,'results.json'));
+    const summary=JSON.parse(await readFile(sumPath,'utf8'));
+    const parsed=JSON.parse(await readFile(rowsPath,'utf8'));
+    if(summary.totalSites!==10||!Array.isArray(parsed.results)||parsed.results.length!==10)
+      throw Error('Unexpected ten-company benchmark result count');
+    return {status:'completed',action,siteCount:summary.totalSites,
+      statusCounts:summary.statusCounts,quality:summary.quality,
+      rows:parsed.results.map(x=>({siteId:x.siteId,company:x.companyName,status:x.status,
+        usable:x.usable,evidenceCount:x.evidenceCount,textChars:x.textChars,
+        firstStrategy:x.firstStrategy,finalStrategy:x.finalStrategy,
+        reason:String(x.reason||'').slice(0,220)})),
+      outputLocal:join(DATA,'outputs',name),
+      caveat:'Real retrieval benchmark only: no JS1-JS10, taxonomy accuracy, production integration, or process validation. Browser escalation and pattern scoring disabled for this first pass.'};
+  }
   if(action==='run_tests'){
     const tsc=await confinedExisting(root,'node_modules/typescript/bin/tsc');
     const testDir=await realpath(join(root,'tests'));
