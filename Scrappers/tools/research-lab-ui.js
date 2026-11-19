@@ -29,6 +29,60 @@
     if(manifest?.nodeHash)append(details,'div',`Installed version (SHA-256): ${manifest.nodeHash.slice(0,16)}…`);
     append(details,'div','File structure validated; classification accuracy not certified.','small');
   }
+  function renderProductIntelligence(root,report){
+    const intel=report.productIntelligence;
+    if(!intel)return;
+    append(root,'h3','Product Intelligence Extractor V1 — source-backed candidate records');
+    const c=intel.coverage||{};
+    append(root,'p','Discovered '+(c.categories||0)+' candidate categories, '+(c.products||0)+
+      ' product records, '+(c.specifications||0)+' labeled specifications, '+
+      (c.components||0)+' component mentions and '+(c.materials||0)+
+      ' material mentions. All require review; missing evidence remains unknown.','small');
+    const role=intel.company?.roleCandidate?.primaryRole||'unknown';
+    append(root,'p','Company role: '+role+' (unverified). A distributor selling products is not their manufacturer.','warn');
+    const cats=intel.categories||[];
+    const catNames=new Map(cats.map(x=>[x.id,x.name]));
+    if(cats.length){
+      const box=append(root,'details');
+      append(box,'summary','Observed product-category pages ('+cats.length+')');
+      for(const cat of cats.slice(0,35)){
+        const row=append(box,'p');
+        row.append(urlLink(cat.sourceUrl,cat.name));
+        append(row,'span',' · '+cat.reviewStatus,'small');
+      }
+    }
+    const products=intel.products||[];
+    if(!products.length)append(root,'p','No identifiable products in this bounded source sample. Do not treat this as an empty catalog.','warn');
+    for(const product of products.slice(0,45)){
+      const box=append(root,'details');
+      append(box,'summary',product.name+(product.sku?' · '+product.sku:'')+
+        ' — specs '+(product.specifications||[]).length+
+        ', components '+(product.components||[]).length+
+        ', materials '+(product.materials||[]).length);
+      const source=append(box,'p');
+      source.append(urlLink(product.sourceUrl,'Open observed product page'));
+      append(source,'span',' · '+product.extractionMethod+' · review required','small');
+      if(product.categoryIds?.length)
+        append(box,'p','Observed category link: '+product.categoryIds.map(id=>catNames.get(id)||'unknown').join(' · '),'small');
+      else append(box,'p','Category relationship unresolved — not inferred.','small');
+      for(const ev of (product.evidence||[]).slice(0,2))
+        append(box,'p','Identity evidence ('+ev.method+'): '+ev.quote,'small');
+      const groups=[['Specifications',product.specifications,x=>x.attribute+': '+x.value],
+        ['Components',product.components,x=>x.component],
+        ['Materials',product.materials,x=>x.material]];
+      for(const [label,items,format] of groups){
+        if(!items?.length)continue;
+        append(box,'h4',label+' (source-published, unverified)');
+        for(const item of items.slice(0,10)){
+          const detail=append(box,'details');
+          append(detail,'summary',format(item));
+          append(detail,'p','Source quote: '+(item.evidence?.quote||'Not available'),'small');
+          if(item.evidence?.sourceUrl)append(detail,'p').append(urlLink(item.evidence.sourceUrl,'Open evidence source'));
+        }
+      }
+    }
+    if(products.length>45)append(root,'p','Showing 45 of '+products.length+' candidate products. Export JSON for all records.','small');
+  }
   function render(report){
     const root=$('results');root.replaceChildren();$('result-card').hidden=false;exportLink.hidden=false;
     const summ=$('summary');summ.replaceChildren();
@@ -103,6 +157,7 @@
         if(m.evidenceType)append(line,'span',' · '+m.evidenceType,'small');
       }
     }
+    renderProductIntelligence(root,report);
     append(root,'h3','Visited source pages');
     const sc=append(root,'div',undefined,'scroll'),table=append(sc,'table'),thead=append(table,'thead'),hdr=append(thead,'tr');
     for(const name of ['Website page','Strategy','Status','Text chars','Evidence'])append(hdr,'th',name);
