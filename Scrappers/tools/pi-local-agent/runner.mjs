@@ -69,6 +69,56 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
   const root=await workspaceRoot(workspace);
   if(action==='health')return {status:'completed',action,nodeVersion:process.version,
     workspace:'Scrappers (private local path omitted)',network:'outbound-only'};
+  if(action==='products_7'){
+    // One explicitly approved fixed seven-site, bounded research job. The
+    // queue cannot specify URLs, output paths, binaries, scripts or AI options.
+    if(typeof jobId!=='string'||!/^[A-Za-z0-9_-]{8,64}$/.test(jobId))throw Error('Invalid output jobId');
+    const script=await confinedExisting(root,'tools/product-intelligence-benchmark.mjs');
+    await confinedExisting(root,'tools/product-intelligence.mjs');
+    await confinedExisting(root,'benchmark/insidejob-os-ten-sites.csv');
+    await confinedExisting(root,'benchmark/insidejob-os-ten-approved-hosts.txt');
+    const out=await confinedOutputDir(root),folder=jobId+'-products7';
+    const destination=join(out,folder);
+    try{await lstat(destination);throw Error('Product result directory already exists');}
+    catch(e){if(e.code!=='ENOENT')throw e;}
+    const task=await run(process.execPath,[script,'--out',join(DATA,'outputs',folder)],
+      {cwd:root,secret,timeoutMs:780000});
+    if(task.exitCode!==0||task.timeout)
+      return {status:'failed',action,exitCode:task.exitCode,timeout:task.timeout,diagnostic:task.output};
+    const summaryFile=await confinedExisting(root,join(DATA,'outputs',folder,'summary.json'));
+    const rowsFile=await confinedExisting(root,join(DATA,'outputs',folder,'results.json'));
+    const summary=JSON.parse(await readFile(summaryFile,'utf8'));
+    const parsed=JSON.parse(await readFile(rowsFile,'utf8'));
+    if(summary.schemaVersion!=='pi-product-intelligence/v1'||summary.siteCount!==7||
+      parsed.schemaVersion!=='pi-product-intelligence/v1'||!Array.isArray(parsed.rows)||parsed.rows.length!==7)
+      throw Error('Unexpected seven-site product intelligence report');
+    const fields=['pagesSubmitted','pagesUnique','pagesUsable','productPages','categoryPages',
+      'products','categories','productsWithSpecifications','productsWithComponents',
+      'productsWithMaterials','specifications','components','materials','unlinkedProducts'];
+    const pack=x=>Object.fromEntries(fields.map(k=>[k,Number(x?.[k]||0)]));
+    return {status:'completed',action,siteCount:7,baseline3:pack(summary.baseline3),
+      depth12:pack(summary.depth12),
+      rows:parsed.rows.map(r=>({siteId:r.siteId,company:r.company,status:r.runStatus,
+        attemptedPages:r.pagesAttempted,stoppingReason:r.stoppingReason,
+        baseline3:pack(r.baseline3?.coverage),depth12:pack(r.depth12?.coverage),
+        companyRoleCandidate:r.depth12?.company?.roleCandidate?.primaryRole||'unknown',
+        categories:(r.depth12?.categories||[]).slice(0,5).map(c=>({name:String(c.name||'').slice(0,125),
+          sourceUrl:String(c.sourceUrl||'').slice(0,240)})),
+        products:(r.depth12?.products||[]).slice(0,7).map(p=>({name:String(p.name||'').slice(0,150),
+          sourceUrl:String(p.sourceUrl||'').slice(0,240),method:p.extractionMethod,
+          specifications:(p.specifications||[]).slice(0,2).map(x=>({attribute:x.attribute,
+            value:String(x.value||'').slice(0,130),quote:String(x.evidence?.quote||'').slice(0,210)})),
+          materials:(p.materials||[]).slice(0,2).map(x=>({material:x.material,
+            quote:String(x.evidence?.quote||'').slice(0,210)})),
+          components:(p.components||[]).slice(0,2).map(x=>({component:x.component,
+            quote:String(x.evidence?.quote||'').slice(0,210)}))
+        })),
+        failures:(r.pageStatuses||[]).filter(p=>!['completed','partial'].includes(p.status)).slice(0,3)
+          .map(p=>({url:String(p.url||'').slice(0,230),status:p.status,reason:String(p.reason||'').slice(0,130)})),
+        errors:(r.errors||[]).slice(0,2)})),
+      outputLocal:join(DATA,'outputs',folder),
+      warning:'Provisional evidence-backed extraction only, not validated product accuracy. Manufactured-versus-distributed and unknown materials/components require explicit verification.'};
+  }
   if(action==='depth_7'){
     // Explicitly opt-in seven-site 3-vs-12 comparative research. No remotely
     // selectable URLs, page counts, scripts, shell commands or parameters.

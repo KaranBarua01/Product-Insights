@@ -1,0 +1,31 @@
+name: Product intelligence V1 offline QA
+on:
+  push:
+    branches:
+      - feat/source-grounded-product-intelligence-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-extractor:
+    name: Product extractor source-grounding and Scrappers regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Scrappers without optional browser
+        working-directory: Scrappers
+        run: npm install --omit=optional --no-audit --no-fund
+      - name: Compile and run the full Scrappers test suite
+        working-directory: Scrappers
+        run: npm test
+      - name: Confirm fixed seven sites without network requests
+        working-directory: Scrappers
+        run: node tools/product-intelligence-benchmark.mjs --dry-run
