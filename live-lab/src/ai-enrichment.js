@@ -1,5 +1,23 @@
 /* Cloudflare Workers AI taxonomy hypotheses, not OS facts or canonical changes. */
-export const MODEL='@cf/meta/llama-3.1-8b-instruct';
+export const MODEL='@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const atom={type:'string'};
+const nameReason={type:'object',properties:{name:atom,reason:atom},required:['name','reason'],additionalProperties:false};
+const processType={type:'object',properties:{name:atom,part:atom,reason:atom},
+  required:['name','part','reason'],additionalProperties:false};
+const itemType={type:'object',properties:{productName:atom,
+  parts:{type:'array',items:nameReason},materials:{type:'array',items:nameReason},
+  processes:{type:'array',items:processType}},
+  required:['productName','parts','materials','processes'],additionalProperties:false};
+export const AI_JSON_SCHEMA={type:'object',properties:{
+  hypotheticalProducts:{type:'array',items:{type:'object',
+    properties:{name:atom,basedOnCategory:atom,reason:atom},
+    required:['name','basedOnCategory','reason'],additionalProperties:false}},
+  items:{type:'array',items:itemType},
+  marketHypotheses:{type:'array',items:atom},
+  supplierOpportunityHypotheses:{type:'array',items:atom},
+  differentiatorHypotheses:{type:'array',items:atom}
+ },required:['hypotheticalProducts','items','marketHypotheses',
+   'supplierOpportunityHypotheses','differentiatorHypotheses'],additionalProperties:false};
 export const SCHEMA='pi-ai-working-taxonomy/v1';
 const clean=(v,n=140)=>String(v??'').replace(/\s+/g,' ').replace(/[<>{}]/g,'').trim().slice(0,n);
 const norm=v=>clean(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -158,6 +176,6 @@ export async function runEnrichment(env,facts){
  }
  const res=await env.AI.run(MODEL,{messages:[
   {role:'system',content:system},{role:'user',content:user}],
-  response_format:{type:'json_object'},max_tokens:1600,temperature:0.15});
+  response_format:{type:'json_schema',json_schema:AI_JSON_SCHEMA},max_tokens:1700,temperature:0.15});
  return resultFromModel(facts,res);
 }
