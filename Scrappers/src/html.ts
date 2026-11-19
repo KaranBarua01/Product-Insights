@@ -58,6 +58,13 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
     ??/<body\b[^>]*>([\s\S]*)$/i.exec(html)?.[1]
     ??html;
   const headings=[...region.matchAll(/<h[1-4]\b[^>]*>([\s\S]*?)<\/h[1-4]\s*>/gi)].map(m=>stripMarkup(m[1]??'')).filter(Boolean).slice(0,40).map(s=>s.slice(0,200));
+  // Commerce pages often place the product H1 before a description article.
+  // Keep that identity rather than promoting a nested Videos section heading.
+  const headingDocument=html.replace(/<!--[\s\S]*?-->/g,' ').replace(/<\s*(script|style|noscript|svg|template|iframe|header|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\s*\1\s*>/gi,' ');
+  const pageHeading=/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(region)
+    ??/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(headingDocument);
+  const primaryHeading=pageHeading?stripMarkup(pageHeading[1]??'').slice(0,200):'';
+  if(primaryHeading&&!headings.includes(primaryHeading))headings.unshift(primaryHeading);
   const text=stripMarkup(region).slice(0,35_000);
   const evidence:ExtractionEvidence[]=[];
   if(title)evidence.push({sourceUrl,locator:'html > head > title',excerpt:title.slice(0,210),method});

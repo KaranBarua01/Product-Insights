@@ -22,11 +22,13 @@ export function identifyCompanyRole(pages,rootUrl){
       t.toLowerCase().replace(/[^a-z0-9]/g,'').startsWith(compact));
   if(titled)brand=titled.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
   const branded=brand.length>=4?brand.replace(/\s+/g,'[\\s-]+'):null;
+  const passiveManufacturing=/\bour\s+(?:[\w'-]+\s+){1,4}(?:are|is)\s+(?:(?:proudly|locally|designed,?|engineered,?|and)\s+){0,5}manufactured\b/gi;
   const candidates=[
     ['manufacturer',[
       /\bwe\s+(?:design\s+and\s+)?manufactur(?:e|es)\b/gi,
       /\bwe\s+are\s+(?:(?:an?|the)\s+)?(?:[\w'-]+\s+){0,3}manufacturer\b/gi,
-      /\bour\s+company\s+(?:designs?\s+and\s+)?manufactur(?:es|e)\b/gi
+      /\bour\s+company\s+(?:designs?\s+and\s+)?manufactur(?:es|e)\b/gi,
+      passiveManufacturing
     ], 'explicit_manufacturing_statement'],
     ['distributor',[
       /\bwe\s+are\s+(?:(?:an?|the)\s+)?(?:[\w'-]+\s+){0,3}(?:distributor|retailer|reseller)\b/gi,
@@ -64,6 +66,12 @@ export function identifyCompanyRole(pages,rootUrl){
       const eligiblePatterns=isIdentityPage?patterns:branded?patterns.slice(-1):[];
       for(const re of eligiblePatterns){
         re.lastIndex=0;const m=re.exec(text);if(!m)continue;
+        // Passive own-product copy can explicitly credit another maker.
+        // Do not transfer a named supplier's manufacturing role to this host.
+        if(re===passiveManufacturing){
+          const sentence=text.slice(m.index).split(/[.!?\n]/)[0];
+          if(/\b(?:by\s+(?!us\b|our\s+(?:company|team)\b)|outsourc\w*|not|never)\b/i.test(sentence))continue;
+        }
         const quote=text.slice(Math.max(0,m.index-55),Math.min(text.length,m.index+m[0].length+95))
           .replace(/\s+/g,' ').trim();
         evidence.push({role,sourceUrl,quote,signal,reviewStatus:'requires_human_verification'});
