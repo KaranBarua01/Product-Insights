@@ -29,7 +29,7 @@ export function technicalSnippets(text,max=6){
   const found=[],seen=new Set();
   for(const raw of lines){
     const line=norm(raw);
-    if(line.length<18||line.length>420||!TECHNICAL_TERM.test(line)||!MEASURE.test(line))continue;
+    if(line.length<8||line.length>420||!TECHNICAL_TERM.test(line)||!MEASURE.test(line))continue;
     const quote=line.slice(0,210),k=key(quote);
     if(seen.has(k))continue;
     seen.add(k);found.push(quote);
