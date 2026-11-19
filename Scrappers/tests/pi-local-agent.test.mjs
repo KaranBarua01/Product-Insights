@@ -26,7 +26,7 @@ test('private queue configuration rejects public Product-Insights and malicious 
 });
 test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.equal(parseJob(job(),{owner}).action,'health');
-  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7'])
+  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7'])
     assert.equal(parseJob(job(name),{owner}).action,name);
   assert.throws(()=>parseJob({...job(),user:{login:'other'}},{owner}),/author/);
   assert.throws(()=>parseJob({...job(),labels:[]},{owner}),/queue/);
@@ -201,5 +201,56 @@ test('fixed seven-site depth action only calls the predeclared script and return
     assert.match(value.caveat,/unverified/);
     await assert.rejects(()=>executeAction('depth_7',{workspace:root,jobId:'depth_demo_1234'}),
       /already exists/);
+  });
+});
+
+test('product-intelligence job is fixed to seven permitted sites and bounded local-only output',async()=>{
+  await fixture(async root=>{
+    await mkdir(join(root,'benchmark'),{recursive:true});
+    await writeFile(join(root,'tools','product-intelligence.mjs'),'// synthetic extractor');
+    await writeFile(join(root,'tools','product-intelligence-benchmark.mjs'),'// synthetic fixed runner');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-sites.csv'),'site_id,company_name,url\n');
+    await writeFile(join(root,'benchmark','insidejob-os-ten-approved-hosts.txt'),'manufacturer.example.org\n');
+    let calls=0;
+    const result=await executeAction('products_7',{workspace:root,jobId:'product_job_1234',run:async(executable,args,options)=>{
+      calls++;
+      assert.equal(executable,process.execPath);
+      assert.equal(options.cwd,await realpath(root));
+      assert.deepEqual(args.slice(0,2),[await realpath(join(root,'tools','product-intelligence-benchmark.mjs')),'--out']);
+      assert.equal(args.length,3);
+      assert.match(args[2],/product_job_1234-products7$/);
+      assert.ok(!args.some(a=>/^-{1,2}(?:command|site|url|token|model|api)$/.test(a)));
+      assert.ok(options.timeoutMs<=780000);
+      const directory=join(root,args[2]);
+      await mkdir(directory,{recursive:true});
+      const cov={pagesSubmitted:3,pagesUnique:3,pagesUsable:3,productPages:2,categoryPages:1,
+        products:2,categories:1,productsWithSpecifications:1,productsWithComponents:1,
+        productsWithMaterials:0,specifications:1,components:1,materials:0,unlinkedProducts:1};
+      const company={roleCandidate:{primaryRole:'manufacturer'}};
+      const sample={name:'Widget X',sourceUrl:'https://manufacturer.example.org/product/widget-x',
+        extractionMethod:'product_page_heading',specifications:[{attribute:'weight',value:'10 kg',
+          evidence:{quote:'Weight: 10 kg'}}],materials:[],components:[{component:'tray',
+          evidence:{quote:'Includes one tray'}}]};
+      const cat={name:'Industrial Tools',sourceUrl:'https://manufacturer.example.org/productcategory/tools/'};
+      const row={siteId:'OS10-001',company:'Synthetic',runStatus:'sampled',pagesAttempted:3,
+        stoppingReason:'frontier_exhausted',baseline3:{coverage:cov},
+        depth12:{company,coverage:cov,categories:[cat],products:[sample]},
+        pageStatuses:[],errors:[]};
+      await writeFile(join(directory,'summary.json'),JSON.stringify({
+        schemaVersion:'pi-product-intelligence/v1',siteCount:7,baseline3:cov,depth12:cov}));
+      await writeFile(join(directory,'results.json'),JSON.stringify({
+        schemaVersion:'pi-product-intelligence/v1',rows:Array.from({length:7},(_,i)=>({
+          ...row,siteId:'OS10-00'+i}))}));
+      return {exitCode:0,timeout:false,output:'pass'};
+    }});
+    assert.equal(calls,1);
+    assert.equal(result.status,'completed');
+    assert.equal(result.siteCount,7);
+    assert.equal(result.rows.length,7);
+    assert.equal(result.depth12.products,2);
+    assert.equal(result.rows[0].products[0].specifications[0].value,'10 kg');
+    assert.equal(result.rows[0].companyRoleCandidate,'manufacturer');
+    assert.equal(result.rows[0].categories[0].name,'Industrial Tools');
+    await assert.rejects(()=>executeAction('products_7',{workspace:root,jobId:'product_job_1234'}),/already exists/);
   });
 });
