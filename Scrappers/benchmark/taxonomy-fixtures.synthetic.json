@@ -1,0 +1,151 @@
+{
+  "notice": "Entirely synthetic categories and quotations. Not the private OEM taxonomy or real website quotations.",
+  "nodes": [
+    {
+      "code": "demo-cargo",
+      "label": "Cargo racks & boxes",
+      "path": "Mobility & Transportation > Powersports & Recreational Vehicles > Bodywork & Accessories > Cargo racks & boxes",
+      "level": 3
+    },
+    {
+      "code": "demo-bicycle-frames",
+      "label": "Bicycle frames",
+      "path": "Mobility & Transportation > Bicycles & E-Bikes > Structural Components > Bicycle frames",
+      "level": 3
+    },
+    {
+      "code": "demo-transmissions",
+      "label": "Truck transmissions",
+      "path": "Mobility & Transportation > Commercial Vehicles > Drivetrain > Truck transmissions",
+      "level": 3
+    },
+    {
+      "code": "demo-server",
+      "label": "Server racks",
+      "path": "Technology > Data Centers > Server Infrastructure > Server racks",
+      "level": 3
+    },
+    {
+      "code": "demo-solar",
+      "label": "Solar racking",
+      "path": "Energy > Solar Systems > Mounting Hardware > Solar racking",
+      "level": 3
+    },
+    {
+      "code": "demo-pump",
+      "label": "Centrifugal pumps",
+      "path": "Industrial Equipment > Fluid Handling > Pumps > Centrifugal pumps",
+      "level": 3
+    },
+    {
+      "code": "demo-food-mixer",
+      "label": "Food mixers",
+      "path": "Foodservice > Commercial Kitchens > Mixing Equipment > Food mixers",
+      "level": 3
+    },
+    {
+      "code": "demo-medical",
+      "label": "Surgical carts",
+      "path": "Healthcare > Clinical Equipment > Medical Storage > Surgical carts",
+      "level": 3
+    }
+  ],
+  "cases": [
+    {
+      "id": "bike-1",
+      "name": "Heavy Duty",
+      "quote": "Heavy Duty is a tray style bicycle hitch rack designed for transporting bikes on vehicles.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "bike-2",
+      "name": "Quik Rack",
+      "quote": "Quik Rack is a tray style bicycle rack that fits vehicle hitch receivers.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "bike-3",
+      "name": "Super Duty",
+      "quote": "Super Duty is a rugged rack for transporting bicycles and e-bikes on a vehicle.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "bike-addon",
+      "name": "Heavy Duty Add-On",
+      "quote": "Heavy Duty Add-On is an extra bicycle rack tray used with a vehicle hitch carrier.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "moto",
+      "name": "Moto Rack",
+      "quote": "Moto Rack is a hitch-mounted motorcycle rack for carrying a motorcycle behind a vehicle.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "bike-addon-2",
+      "name": "Quik Rack Add-On",
+      "quote": "Quik Rack Add-On is an accessory bicycle rack tray expanding a vehicle hitch carrier.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "recon",
+      "name": "Recon Rack",
+      "quote": "Recon Rack is a vertical bicycle rack for mounting several bikes to a vehicle.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "server",
+      "name": "Data Rack X",
+      "quote": "Data Rack X is a server rack for computer servers in a data center.",
+      "expectedCode": "demo-server"
+    },
+    {
+      "id": "solar",
+      "name": "SolarMount",
+      "quote": "SolarMount solar racking supports rooftop solar photovoltaic panels.",
+      "expectedCode": "demo-solar"
+    },
+    {
+      "id": "industrial",
+      "name": "Pump AX50",
+      "quote": "Pump AX50 is a centrifugal fluid pump for chemical transfer and fluid handling.",
+      "expectedCode": "demo-pump"
+    },
+    {
+      "id": "food",
+      "name": "Mixer M",
+      "quote": "Mixer M is a food mixer for commercial kitchen bakeries.",
+      "expectedCode": "demo-food-mixer"
+    },
+    {
+      "id": "health",
+      "name": "MediCart",
+      "quote": "MediCart is a surgical cart for hospital instruments and clinical supplies.",
+      "expectedCode": "demo-medical"
+    },
+    {
+      "id": "truck",
+      "name": "Heavy Duty",
+      "quote": "Heavy Duty is a heavy-load truck transmission for vehicle drivetrain applications.",
+      "expectedCode": "demo-transmissions"
+    },
+    {
+      "id": "no-function",
+      "name": "Heavy Duty",
+      "quote": "Heavy Duty is made with excellent materials and attractive finishing.",
+      "expectedCode": null
+    },
+    {
+      "id": "nav-heading",
+      "name": "Quik Rack",
+      "quote": "Quik Rack videos and other news are coming soon.",
+      "expectedCode": null
+    },
+    {
+      "id": "unrelated-quote",
+      "name": "Invented Model",
+      "quote": "Heavy Duty is a bicycle hitch rack for carrying bikes on vehicles.",
+      "expectedCode": null
+    }
+  ]
+}
