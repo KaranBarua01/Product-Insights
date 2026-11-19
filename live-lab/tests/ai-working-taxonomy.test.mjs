@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Script} from 'node:vm';
+import {uiHtml,uiJs} from '../src/ui.js';
 import {promptFor,normalizeProposals,resultFromModel,runEnrichment,workingTaxonomy,jsSections,SCHEMA}
   from '../src/ai-enrichment.js';
 import {sanitizeCompleted} from '../src/protocol.js';
@@ -150,4 +152,14 @@ test('Cloudflare session transitions from completed research to real AI working 
  assert.equal(done.enrichment.sections.length,10);
  const duplicate=await s.fetch(req('/enrichment',{id,enrichment:done.enrichment}));
  assert.equal(duplicate.status,409);
+});
+
+test('Live browser UI is valid JavaScript and exposes true original vs AI taxonomy and JS1-JS10 sections',()=>{
+  assert.doesNotThrow(()=>new Script(uiJs,{filename:'hosted-live-lab-ui.js'}));
+  assert.match(uiHtml,/id="taxonomy-panel"/);
+  assert.match(uiHtml,/id="taxonomy-graph"/);
+  assert.match(uiHtml,/id="js-sections"/);
+  assert.match(uiJs,/Cloudflare Workers AI|Workers AI generating/);
+  assert.match(uiJs,/original taxonomy|Original taxonomy/i);
+  assert.match(uiJs,/status==='ai_inferred'/);
 });
