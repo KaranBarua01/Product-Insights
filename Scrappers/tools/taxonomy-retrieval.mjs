@@ -4,6 +4,8 @@
  */
 const STOP=new Set('a an and are as at be by can for from has have in into is it its of on or our the their this to via we with your you new best built made available designed features feature includes including support supports use used using product products model models series heavy duty super premium high low standard extra advanced system systems company usa ltd inc'.split(' '));
 const DOMAIN_ONLY=new Set('bicycle motorcycle vehicle truck van medical technology industry food solar electronic computer fluid cargo transport accessory'.split(' '));
+// Generic object words recur in unrelated industries; require product-function qualifiers.
+const AMBIGUOUS_OBJECTS=new Set('rack tray box panel frame mount mounting column case cover enclosure beam component accessory part assembly housing cabinet bracket support fixture system equipment device item vehicle cross'.split(' '));
 const ALIASES=new Map(Object.entries({
   bikes:'bicycle',bike:'bicycle',ebike:'bicycle',ebikes:'bicycle',bicycles:'bicycle',
   motorcycles:'motorcycle',motorbikes:'motorcycle',motorbike:'motorcycle',moto:'motorcycle',
@@ -18,7 +20,7 @@ const ALIASES=new Map(Object.entries({
   boxes:'box',cases:'case',
   solar:'solar',photovoltaic:'solar',
   accessories:'accessory',components:'component',
-  carries:'carry',carrying:'carry',carrier:'carry',carriers:'carry',
+  carries:'carry',carrying:'carry',carrier:'carry',carriers:'carry',hauling:'haul',transporting:'transport',loading:'load',holding:'hold',
   mounts:'mount',mounted:'mount',mounting:'mount',
   fluids:'fluid',liquids:'fluid',
   forklifts:'forklift'
@@ -40,6 +42,15 @@ function contextualize(q){
   if(['kitchen','baking','bakery','food'].some(t=>out.has(t)))out.add('food');
   if(['clinical','patient','medical'].some(t=>out.has(t)))out.add('medical');
   if(out.has('solar')){out.add('renewable');out.add('energy');}
+  return out;
+}
+function primaryFunctionTerms(intro){
+  const out=contextualize(intro),words=new Set(intro);
+  // A rack transporting bicycles/motorcycles on vehicles can be retrieved
+  // as a CARGO-rack candidate; taxonomy scope is STILL subject to review.
+  const carriesBikes=words.has('bicycle')||words.has('motorcycle');
+  const transportUse=['haul','carry','transport','hold','load','shuttle','receiver','hitch'].some(t=>words.has(t));
+  if(words.has('rack')&&carriesBikes&&(transportUse||words.has('vehicle')))out.add('cargo');
   return out;
 }
 function intersect(words,query){return [...new Set(words)].filter(t=>query.has(t));}
@@ -72,12 +83,27 @@ export function rankEvidenceTaxonomy(product,nodes,{limit=3}={}){
   const descriptive=quoteTerms.filter(t=>!nameTerms.has(t));
   if(descriptive.length<2)return [];
   const objects=new Set(terms(objectIntro)),context=contextualize(quoteTerms),candidates=[];
+  const primaryContext=primaryFunctionTerms([...objects]);
+  // A named add-on may mention the base rack for compatibility. Never turn
+  // its parent product into the add-on's own class from that mention alone.
+  const accessory=/(?:^|\s)(?:add[- ]?on|attachment|replacement|extension|adapter|spare\s+part)(?:\s|$)/i.test(product.name);
   for(const node of nodes){
     if(!node||!Number.isInteger(node.level)||node.level<2||typeof node.code!=='string'||typeof node.label!=='string')continue;
     const {leaf,rootContext,parentContext,l1Context}=nodeParts(node);
     if(!leaf.length||!parentContext.length)continue;
     const leafHits=intersect(leaf,objects);
     if(!leafHits.some(t=>!DOMAIN_ONLY.has(t)))continue;
+    // 'rack' plus 'vehicle' is not sufficient evidence for steering racks.
+    // Likewise a tray-style cargo rack is not a battery-enclosure tray.
+    const distinctive=leaf.filter(t=>!AMBIGUOUS_OBJECTS.has(t));
+    if(distinctive.length&&!distinctive.some(t=>primaryContext.has(t)))continue;
+    // A generic noun-only category requires distinctive immediate parent evidence.
+    if(!distinctive.length){
+      const parentParts=String(node.path||'').split(/\s*>\s*/);
+      const immediateParent=terms(parentParts.at(-2)||'').filter(t=>!AMBIGUOUS_OBJECTS.has(t));
+      if(!immediateParent.some(t=>primaryContext.has(t)))continue;
+    }
+    if(accessory&&!leaf.some(t=>['accessory','part','tray','attachment','adapter','extension'].includes(t)))continue;
     const contextHits=intersect(parentContext,context);
     const rootHits=intersect(rootContext,context);
     const l1Hits=intersect(l1Context,context);

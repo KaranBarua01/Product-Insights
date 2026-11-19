@@ -54,6 +54,24 @@
       "label": "Interior panels & luggage racks",
       "level": 3,
       "path": "Mobility & Transportation > Rail & Transit > Interiors & Doors > Interior panels & luggage racks"
+    },
+    {
+      "code": "demo-steering",
+      "label": "Steering racks & columns",
+      "level": 3,
+      "path": "Mobility & Transportation > Automotive & Light Vehicles > Steering & Suspension > Steering racks & columns"
+    },
+    {
+      "code": "demo-battery",
+      "label": "Battery enclosures & trays",
+      "level": 3,
+      "path": "Mobility & Transportation > Automotive & Light Vehicles > Electric Systems > Battery enclosures & trays"
+    },
+    {
+      "code": "demo-instrument",
+      "label": "Instrument panels & cross-car beams",
+      "level": 3,
+      "path": "Mobility & Transportation > Automotive & Light Vehicles > Interior Systems > Instrument panels & cross-car beams"
     }
   ],
   "cases": [
@@ -79,7 +97,7 @@
       "id": "bike-addon",
       "name": "Heavy Duty Add-On",
       "quote": "Heavy Duty Add-On is an extra bicycle rack tray used with a vehicle hitch carrier.",
-      "expectedCode": "demo-cargo"
+      "expectedCode": null
     },
     {
       "id": "moto",
@@ -91,7 +109,7 @@
       "id": "bike-addon-2",
       "name": "Quik Rack Add-On",
       "quote": "Quik Rack Add-On is an accessory bicycle rack tray expanding a vehicle hitch carrier.",
-      "expectedCode": "demo-cargo"
+      "expectedCode": null
     },
     {
       "id": "recon",
@@ -158,6 +176,36 @@
       "name": "Heavy Duty",
       "quote": "Heavy Duty is a tray-style bicycle rack for transporting several bikes on vehicles. It uses rugged aluminum components and adjustable arms for easy loading. The rack arms securely grip the bicycle tires without ever touching the bicycle frame or fork, and the rack works on pavement and off-road.",
       "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "steering-not-bicycle",
+      "name": "Helix Steer",
+      "quote": "Helix Steer is a steering rack for vehicle wheel alignment and pinion-assisted steering control.",
+      "expectedCode": "demo-steering"
+    },
+    {
+      "id": "battery-not-bike-tray",
+      "name": "VoltBox X",
+      "quote": "VoltBox X is a battery enclosure tray supporting a vehicle traction battery pack.",
+      "expectedCode": "demo-battery"
+    },
+    {
+      "id": "vehicle-instrument",
+      "name": "Cockpit 8",
+      "quote": "Cockpit 8 is an instrument panel for vehicle dashboards with gauges and controls.",
+      "expectedCode": "demo-instrument"
+    },
+    {
+      "id": "cross-country-irrelevant-to-cross-car",
+      "name": "Recon Rack",
+      "quote": "Recon Rack is a vertical bicycle rack for hauling bikes on cross-country trips and carrying bags by the vehicle hitch.",
+      "expectedCode": "demo-cargo"
+    },
+    {
+      "id": "addon-compatibility-not-base",
+      "name": "Heavy Duty Add-On",
+      "quote": "Heavy Duty Add-On tray expands the carrying capacity of your Quik Rack and Super Duty racks for more bikes.",
+      "expectedCode": null
     }
   ]
 }

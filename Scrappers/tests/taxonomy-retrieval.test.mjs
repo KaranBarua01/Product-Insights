@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {rankEvidenceTaxonomy} from '../tools/taxonomy-retrieval.mjs';
 import {mapStage2Products} from '../tools/research-stage2.mjs';
-import {scoreTaxonomyCases} from '../tools/taxonomy-benchmark.mjs';
+import {scoreTaxonomyCases,probeTaxonomyRows} from '../tools/taxonomy-benchmark.mjs';
 
 const fixture=JSON.parse(await readFile(new URL('../benchmark/taxonomy-fixtures.synthetic.json',import.meta.url),'utf8'));
 
@@ -44,14 +44,38 @@ test('Stage 2 uses evidence hierarchy candidates but never marks them verified',
 });
 test('local benchmark counts positives, abstentions and wrong-domain errors',()=>{
   const d=scoreTaxonomyCases(fixture.cases,fixture.nodes);
-  assert.equal(d.positiveCases,14);
-  assert.equal(d.top1Hits,14);
-  assert.equal(d.negativeCases,3);
-  assert.equal(d.negativeAbstentions,3);
-  assert.equal(d.taxonomyLeavesSearched,9);
+  assert.equal(d.positiveCases,16);
+  assert.equal(d.top1Hits,16);
+  assert.equal(d.negativeCases,6);
+  assert.equal(d.negativeAbstentions,6);
+  assert.equal(d.taxonomyLeavesSearched,12);
 });
 
 test('long quoted descriptions cannot turn transported bikes or rail luggage racks into the product class',()=>{
   const item=fixture.cases.find(x=>x.id==='later-bicycle-frames-and-rail-decoy');
   assert.deepEqual(rankEvidenceTaxonomy(item,fixture.nodes,{limit:10}).map(x=>x.code),['demo-cargo']);
+});
+
+test('originally failing steering/battery/instrument decoys cannot outrank bike carriers',()=>{
+  const item=fixture.cases.find(x=>x.id==='cross-country-irrelevant-to-cross-car');
+  assert.deepEqual(rankEvidenceTaxonomy(item,fixture.nodes,{limit:10}).map(x=>x.code),['demo-cargo']);
+  const accessory=fixture.cases.find(x=>x.id==='addon-compatibility-not-base');
+  assert.deepEqual(rankEvidenceTaxonomy(accessory,fixture.nodes),[]);
+});
+test('real steering, battery tray, and instrument panel products remain retrievable',()=>{
+  for(const id of ['steering-not-bicycle','battery-not-bike-tray','vehicle-instrument']){
+    const item=fixture.cases.find(x=>x.id===id);
+    assert.equal(rankEvidenceTaxonomy(item,fixture.nodes)[0]?.code,item.expectedCode,id);
+  }
+});
+
+test('unlabeled evidence probe reports candidate rankings without accuracy claims',()=>{
+  const one=fixture.cases.find(x=>x.id==='bike-1');
+  const report=probeTaxonomyRows([{family:one.name,evidence:one.quote,sourceUrl:'https://example.test/bike'},
+    {family:'Heavy Duty Add-On',evidence:'Heavy Duty Add-On tray expands the carrying capacity of your Quik Rack and Super Duty racks for more bikes.'}],fixture.nodes);
+  assert.equal(report.status,'unlabeled_retrieval_probe_not_accuracy');
+  assert.equal(report.candidateProducts,1);
+  assert.equal(report.abstentions,1);
+  assert.equal(report.results[0].topCode,'demo-cargo');
+  assert.equal(report.results[1].topCode,null);
 });

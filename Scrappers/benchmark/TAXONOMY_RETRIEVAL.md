@@ -17,7 +17,7 @@ From the Scrappers directory, run:
     npm test
     npm run benchmark:taxonomy -- --out qa-results/taxonomy-demo.json
 
-The bundled fixture is entirely SYNTHETIC: 13 positive product cases across mobility, servers, pumps, solar energy, foodservice, medical and truck drivetrains, plus three abstention cases. Passing it proves neither actual catalog coverage nor real-world taxonomy correctness.
+The bundled fixture is entirely SYNTHETIC: 16 positive product cases across mobility, servers, pumps, solar energy, foodservice, medical and truck drivetrains, plus six abstention cases. Passing it proves neither actual catalog coverage nor real-world taxonomy correctness.
 
 To use your installed PRIVATE 1,213-node taxonomy without uploading it:
 
@@ -35,3 +35,13 @@ Use human-reviewed codes and observed source quotations; null means abstention. 
 - The scope of Cargo racks & boxes for hitch-mounted bicycle/motorcycle racks and add-on trays still needs taxonomy-owner approval.
 - Calibrate recall, wrong-domain false candidates and abstention using real reviewed samples from multiple sectors before relaxing thresholds.
 - Optionally benchmark a local Sentence Transformers encoder against the exact same cases; keep semantic candidates review-only until calibrated.
+
+## Repeat the real 1,213-node retrieval probe (no AI)
+
+From Scrappers, in PowerShell:
+
+    $taxonomy = "$HOME\Downloads\oem_industry_taxonomy_explorer.html"
+    $evidence = "$HOME\Documents\Codex\2026-11-19\files-pasted-by-the-user-product\outputs\integration-taxonomy-results.json"
+    npm.cmd run benchmark:taxonomy -- --taxonomy "$taxonomy" --evidence "$evidence" --out qa-results/taxonomy-real-1213.json
+
+This `--evidence` mode reads the previously recorded source statements locally and shows a concise table. It reports **unlabeled retrieval candidates**, NOT top-1 accuracy. The original installed taxonomy, source evidence, and output stay on the PC. The intended category scope and add-on relationships still require human review. The real full-taxonomy failure (steering racks ranked for bicycle carriers) is covered by synthetic steering/battery/instrument negatives and positive controls. No AI/remote request is made.
