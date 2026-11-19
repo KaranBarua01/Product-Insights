@@ -76,6 +76,7 @@ export function traceabilityChecks(intelligence,rawPages){
   }
   const claims=[],add=(kind,source,evidence,subject,value)=>{
     claims.push({kind,sourceUrl:source||evidence?.sourceUrl||null,
+      evidenceSourceUrl:evidence?.sourceUrl||null,
       quote:norm(evidence?.quote),method:String(evidence?.method||''),
       subject:norm(subject).slice(0,110),value:norm(value).slice(0,120)});
   };
@@ -91,7 +92,7 @@ export function traceabilityChecks(intelligence,rawPages){
   for(const x of identity.evidence||[])
     add('company_role',x.sourceUrl,{quote:x.quote,method:'company_role_evidence'},x.role,x.role);
   const failures=[];
-  let matched=0,missingSource=0,missingQuote=0,offHost=0,metadataMatches=0;
+  let matched=0,missingSource=0,missingQuote=0,offHost=0,mismatchedEvidenceSource=0,metadataMatches=0;
   const expectedHost=host(intelligence?.company?.website);
   for(const claim of claims){
     const k=pageKey(claim.sourceUrl),page=k?pages.get(k):null;
@@ -100,6 +101,11 @@ export function traceabilityChecks(intelligence,rawPages){
     }
     if(host(k)!==expectedHost){
       offHost++;if(failures.length<12)failures.push({...claim,reason:'source_domain_mismatch'});continue;
+    }
+    if(claim.evidenceSourceUrl&&pageKey(claim.evidenceSourceUrl)!==k){
+      mismatchedEvidenceSource++;
+      if(failures.length<12)failures.push({...claim,reason:'attribute_source_differs_from_record_source'});
+      continue;
     }
     if(!claim.quote){
       missingQuote++;if(failures.length<12)failures.push({...claim,reason:'no_quote'});continue;
@@ -119,7 +125,8 @@ export function traceabilityChecks(intelligence,rawPages){
   const unmatched=claims.length-matched;
   return {claimCount:claims.length,matched,unmatched,
     matchRatePct:claims.length?Number((100*matched/claims.length).toFixed(1)):null,
-    missingSource,missingQuote,offHost,metadataMatches,examples:failures.slice(0,8),
+    missingSource,missingQuote,offHost,mismatchedEvidenceSource,metadataMatches,
+    examples:failures.slice(0,8),
     caveat:'Quote traceability checks source inclusion, not whether the claim is true or refers to the right product.'};
 }
 function nameKey(p){return norm(p.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();}
@@ -179,8 +186,14 @@ export function createHumanReviewTemplate(rows,{maxProductsPerSite=5,maxAttribut
   return {csv:csvEncode(out),rows:out.length-1,columns:HEADERS};
 }
 const DECISIONS=new Set(['correct','incorrect','uncertain']);
-export function scoreHumanReviews(csv){
+export function scoreHumanReviews(csv,referenceTemplateCsv=null){
   const rows=parseCsv(csv);
+  if(referenceTemplateCsv!==null){
+    const old=parseCsv(referenceTemplateCsv);
+    if(old.length!==rows.length)throw Error('Review row count changed from frozen template');
+    for(let i=0;i<rows.length;i++)for(const field of HEADERS.slice(0,10))
+      if(rows[i][field]!==old[i][field])throw Error('Frozen review source changed at row '+(i+1)+' field '+field);
+  }
   const perType=new Map();
   let unreviewed=0,uncertain=0,correct=0,incorrect=0;
   for(const row of rows){
