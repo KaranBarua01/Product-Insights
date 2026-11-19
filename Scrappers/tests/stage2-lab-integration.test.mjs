@@ -42,6 +42,53 @@ test('Stage 2 local app serves a real installed taxonomy, review queue and safe 
     const html=await (await fetch(origin+'/')).text();
     assert.match(html,/Stage 2/);
     assert.match(html,/Publish approved working edition/);
+
+    assert.match(html,/Product Insights · Intelligence Lab/);
+    assert.match(html,/id="mode-business"/);
+    assert.match(html,/id="mode-technical"/);
+    assert.match(html,/id="business-view"/);
+    assert.match(html,/id="technical-view" hidden/);
+    assert.match(html,/id="os-snapshot-file"/);
+    assert.match(html,/id="biz-product-tree"/);
+    assert.match(html,/id="biz-processes"/);
+    assert.match(html,/business-app\.js/);
+    const businessJs=await fetch(origin+'/business-app.js');
+    assert.equal(businessJs.status,200);
+    assert.match(await businessJs.text(),/manufacturing processes required for this product|Manufacturing processes required for this product/);
+    const preflight=await (await fetch(origin+'/api/business')).json();
+    assert.equal(preflight.business,null);
+    assert.equal(preflight.osSnapshot,null);
+    const template=await (await fetch(origin+'/api/os/template')).json();
+    assert.equal(template.schemaVersion,'pi-os-snapshot/v1');
+    assert.equal(template.products.length,0);
+    assert.equal((await fetch(origin+'/api/os/handoff')).status,404);
+    const os={
+      schemaVersion:'pi-os-snapshot/v1',
+      company:{id:'internal-local-only',name:'Synthetic OS Company',website:'https://example.org/'},
+      categories:['Widgets'],products:[{name:'Widget A'}],
+      parts:[],manufacturingProcesses:[]
+    };
+    const blockedOs=await fetch(origin+'/api/os/snapshot',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(os)});
+    assert.equal(blockedOs.status,403);
+    const token=html.match(/<meta name="lab-token" content="([0-9a-f]{64})">/)?.[1];
+    assert.ok(token,'random local session token exists');
+    const imported=await fetch(origin+'/api/os/snapshot',{
+      method:'POST',headers:{'x-lab-token':token,'Content-Type':'application/json'},
+      body:JSON.stringify(os)});
+    assert.equal(imported.status,200);
+    const body=await imported.json();
+    assert.equal(body.osSnapshot.company.name,'Synthetic OS Company');
+    assert.equal(body.business,null,'OS snapshot import does not create fake research');
+    const importedStatus=await (await fetch(origin+'/api/business')).json();
+    assert.equal(importedStatus.osSnapshot.company.name,'Synthetic OS Company');
+    const clear=await fetch(origin+'/api/os/clear',{
+      method:'POST',headers:{'x-lab-token':token,'Content-Type':'application/json'},
+      body:'{}'});
+    assert.equal(clear.status,200);
+    const noOs=await (await fetch(origin+'/api/business')).json();
+    assert.equal(noOs.osSnapshot,null);
+
     const parents=await (await fetch(origin+'/api/stage2/parents')).json();
     assert.equal(parents.parents.length,3);
     const proposals=await (await fetch(origin+'/api/stage2/proposals')).json();
