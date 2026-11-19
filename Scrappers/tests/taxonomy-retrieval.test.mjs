@@ -44,9 +44,14 @@ test('Stage 2 uses evidence hierarchy candidates but never marks them verified',
 });
 test('local benchmark counts positives, abstentions and wrong-domain errors',()=>{
   const d=scoreTaxonomyCases(fixture.cases,fixture.nodes);
-  assert.equal(d.positiveCases,13);
-  assert.equal(d.top1Hits,13);
+  assert.equal(d.positiveCases,14);
+  assert.equal(d.top1Hits,14);
   assert.equal(d.negativeCases,3);
   assert.equal(d.negativeAbstentions,3);
-  assert.equal(d.taxonomyLeavesSearched,8);
+  assert.equal(d.taxonomyLeavesSearched,9);
+});
+
+test('long quoted descriptions cannot turn transported bikes or rail luggage racks into the product class',()=>{
+  const item=fixture.cases.find(x=>x.id==='later-bicycle-frames-and-rail-decoy');
+  assert.deepEqual(rankEvidenceTaxonomy(item,fixture.nodes,{limit:10}).map(x=>x.code),['demo-cargo']);
 });

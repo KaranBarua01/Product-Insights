@@ -13,7 +13,7 @@ const ALIASES=new Map(Object.entries({
   pumps:'pump',pumping:'pump',mixers:'mixer',mixing:'mixer',
   servers:'server',datacenter:'data',
   appliances:'appliance',industrial:'industry',industries:'industry',
-  hospitals:'medical',hospital:'medical',healthcare:'medical',
+  hospitals:'medical',hospital:'medical',healthcare:'medical',clinical:'medical',
   computers:'computer',electronics:'electronic',
   boxes:'box',cases:'case',
   solar:'solar',photovoltaic:'solar',
@@ -39,6 +39,7 @@ function contextualize(q){
   if(['server','computer','data','network'].some(t=>out.has(t)))out.add('technology');
   if(['kitchen','baking','bakery','food'].some(t=>out.has(t)))out.add('food');
   if(['clinical','patient','medical'].some(t=>out.has(t)))out.add('medical');
+  if(out.has('solar')){out.add('renewable');out.add('energy');}
   return out;
 }
 function intersect(words,query){return [...new Set(words)].filter(t=>query.has(t));}
@@ -49,7 +50,8 @@ function nodeParts(node){
   const parents=segments.slice(0,-1);
   const rootContext=terms(parents.slice(0,2).join(' '));
   const parentContext=terms(parents.join(' '));
-  return {leaf,rootContext,parentContext};
+  const l1Context=terms(segments[1]||'');
+  return {leaf,rootContext,parentContext,l1Context};
 }
 /**
  * Candidates must have a product name embedded in a quoted source statement,
@@ -60,20 +62,26 @@ function nodeParts(node){
 export function rankEvidenceTaxonomy(product,nodes,{limit=3}={}){
   if(!product||!Array.isArray(nodes)||!nodes.length)return [];
   const name=phrase(product.name),quote=phrase(product.quote);
-  if(name.length<3||quote.length<24||!(' '+quote+' ').includes(' '+name+' '))return [];
-  const nameTerms=new Set(terms(product.name)),quoteTerms=terms(product.quote);
+  const where=(' '+quote+' ').indexOf(' '+name+' ');
+  if(name.length<3||quote.length<24||where<0)return [];
+  // Restrict object detection to the product introduction. Long descriptions
+  // may mention the transported object, spare parts, or things NOT included.
+  const focused=quote.slice(Math.max(0,where-32),Math.min(quote.length,where+name.length+210));
+  const objectIntro=quote.slice(Math.max(0,where),Math.min(quote.length,where+name.length+135));
+  const nameTerms=new Set(terms(product.name)),quoteTerms=terms(focused);
   const descriptive=quoteTerms.filter(t=>!nameTerms.has(t));
   if(descriptive.length<2)return [];
-  const objects=new Set(quoteTerms),context=contextualize(quoteTerms),candidates=[];
+  const objects=new Set(terms(objectIntro)),context=contextualize(quoteTerms),candidates=[];
   for(const node of nodes){
     if(!node||!Number.isInteger(node.level)||node.level<2||typeof node.code!=='string'||typeof node.label!=='string')continue;
-    const {leaf,rootContext,parentContext}=nodeParts(node);
+    const {leaf,rootContext,parentContext,l1Context}=nodeParts(node);
     if(!leaf.length||!parentContext.length)continue;
     const leafHits=intersect(leaf,objects);
     if(!leafHits.some(t=>!DOMAIN_ONLY.has(t)))continue;
     const contextHits=intersect(parentContext,context);
     const rootHits=intersect(rootContext,context);
-    if(!contextHits.length||!rootHits.length)continue;
+    const l1Hits=intersect(l1Context,context);
+    if(!contextHits.length||!rootHits.length||!l1Hits.length)continue;
     // A shared modifier such as "heavy" or "premium" cannot establish an object class.
     const objectStrength=Math.min(1,leafHits.length/Math.min(2,leaf.length));
     const contextStrength=Math.min(1,contextHits.length/2);

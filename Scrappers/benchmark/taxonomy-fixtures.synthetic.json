@@ -48,6 +48,12 @@
       "label": "Surgical carts",
       "path": "Healthcare > Clinical Equipment > Medical Storage > Surgical carts",
       "level": 3
+    },
+    {
+      "code": "demo-rail",
+      "label": "Interior panels & luggage racks",
+      "level": 3,
+      "path": "Mobility & Transportation > Rail & Transit > Interiors & Doors > Interior panels & luggage racks"
     }
   ],
   "cases": [
@@ -146,6 +152,12 @@
       "name": "Invented Model",
       "quote": "Heavy Duty is a bicycle hitch rack for carrying bikes on vehicles.",
       "expectedCode": null
+    },
+    {
+      "id": "later-bicycle-frames-and-rail-decoy",
+      "name": "Heavy Duty",
+      "quote": "Heavy Duty is a tray-style bicycle rack for transporting several bikes on vehicles. It uses rugged aluminum components and adjustable arms for easy loading. The rack arms securely grip the bicycle tires without ever touching the bicycle frame or fork, and the rack works on pavement and off-road.",
+      "expectedCode": "demo-cargo"
     }
   ]
 }
