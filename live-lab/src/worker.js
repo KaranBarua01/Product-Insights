@@ -126,6 +126,7 @@ export class LabSession{
         return await this.update(s=>{
           const run=s.runs.find(r=>r.id===s.active);
           if(!run||run.id!==input.id||run.status!=='running')return json({error:'No matching active run'},409);
+          s.lastAgentAt=Date.now();
           const added=(Array.isArray(input.events)?input.events:[]).slice(-16)
             .map(e=>({time:clip(e.time,35),status:clip(e.status,60),strategy:clip(e.strategy,20),
               url:typeof e.url==='string'&&hostOf(e.url)===run.host?clip(e.url,500):null,
