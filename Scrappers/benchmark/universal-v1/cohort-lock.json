@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "pi-independent-cohort/v1",
+  "createdUtc": "2026-11-19T18:10:00Z",
+  "status": "frozen_candidate_cohort_non_exhaustive",
+  "siteCount": 30,
+  "industryCount": 10,
+  "batches": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E"
+  ],
+  "sitesPerBatch": 6,
+  "pagesPerSiteMax": 12,
+  "recordsPath": "benchmark/universal-v1/cohort.csv",
+  "cohortGitBlobSha": "134341ef7b6e769ba735f87e76b089217bf75469",
+  "approvedHostsPath": "benchmark/universal-v1/hosts.txt",
+  "hostsGitBlobSha": "bcd8f08685ab6f2e5651371d8d617579fcd124af",
+  "productExtractorPath": "tools/product-intelligence.mjs",
+  "productExtractorGitBlobSha": "1c9f347699cc5a9b9de2600e9d6bc2dde4899eec",
+  "plannerPath": "tools/research-planner.mjs",
+  "plannerGitBlobSha": "be9ef954b8c55ec0c34431866ecab6e2dbe5e5fd",
+  "protocol": {
+    "holdoutPolicy": "No feature, pattern, prompt or extraction-rule modifications after seeing cohort results. Treat scored results as frozen V1 baseline; use a new unrelated validation cohort for subsequent changes.",
+    "trainingSeparation": "Original InsideJob OS10 plus prior Scrappers sites.example.csv are regression/development only; cohort must share no exact host with either list.",
+    "roleHints": "Sampling strata only, NOT reviewed labels and not expected manufacturing proof.",
+    "siteAccess": "Exactly allowlisted hosts; respect robots, access denials and limits, no challenge bypass.",
+    "accuracyClaims": "No product or manufacturing accuracy unless independent human-reviewed annotations are scored. Claim support, duplicates, record counts and crawl success are diagnostic only.",
+    "pages": "Fixed max12 site pages, max 65 seconds per host; five fixed six-site batches.",
+    "humanReview": "A separate evaluator reviews citations, business role and product identity without consulting the extractor predictions as ground truth."
+  },
+  "limitations": [
+    "Geographical coverage and language/platform mix are not yet statistically representative of all websites.",
+    "Domain and apparent role selection are candidates; ownership and individual pages must still be checked in source review.",
+    "No guarantee all 30 hosts permit crawling. Respect robots, 403/429, PDF byte/time limits.",
+    "Fisher Scientific and related distributors list other companies' goods; supplier listing is not proof of manufacturing."
+  ]
+}

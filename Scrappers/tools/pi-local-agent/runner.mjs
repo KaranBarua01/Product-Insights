@@ -7,6 +7,7 @@ import {lstat,mkdir,readFile,readdir,realpath} from 'node:fs/promises';
 import {join,relative,resolve,isAbsolute,sep} from 'node:path';
 import {sanitizeOutput} from './policy.mjs';
 const DATA='local-data/pi-local-agent';
+const U30_BATCH=Object.freeze({u30_a:'A',u30_b:'B',u30_c:'C',u30_d:'D',u30_e:'E'});
 const ALLOWED_INPUTS=Object.freeze({
   taxonomy_1up:'inputs/1up.json',
   taxonomy_cross:'inputs/cross-industry.json'
@@ -69,6 +70,67 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
   const root=await workspaceRoot(workspace);
   if(action==='health')return {status:'completed',action,nodeVersion:process.version,
     workspace:'Scrappers (private local path omitted)',network:'outbound-only'};
+  if(Object.hasOwn(U30_BATCH,action)){
+    // Each private job selects exactly one immutable six-site cohort batch.
+    // Remote Issue fields cannot choose URLs, scripts, page budgets or paths.
+    const batch=U30_BATCH[action];
+    if(typeof jobId!=='string'||!/^[A-Za-z0-9_-]{8,64}$/.test(jobId))throw Error('Invalid U30 output jobId');
+    const script=await confinedExisting(root,'tools/universal-benchmark.mjs');
+    await confinedExisting(root,'tools/universal-validation.mjs');
+    for(const name of [
+      'benchmark/universal-v1/cohort.csv','benchmark/universal-v1/hosts.txt',
+      'benchmark/universal-v1/cohort-lock.json','tools/product-intelligence.mjs',
+      'tools/research-planner.mjs','benchmark/insidejob-os-ten-sites.csv',
+      'benchmark/sites.example.csv'
+    ])await confinedExisting(root,name);
+    const out=await confinedOutputDir(root),folder=jobId+'-u30'+batch;
+    const target=join(out,folder);
+    try{await lstat(target);throw Error('U30 results already exist');}
+    catch(e){if(e.code!=='ENOENT')throw e;}
+    const p=await run(process.execPath,[script,'--batch',batch,'--out',join(DATA,'outputs',folder)],
+      {cwd:root,secret,timeoutMs:600000});
+    if(p.exitCode!==0||p.timeout)
+      return {status:'failed',action,batch,exitCode:p.exitCode,timeout:p.timeout,diagnostic:p.output};
+    const summaryPath=await confinedExisting(root,join(DATA,'outputs',folder,'summary.json'));
+    const resultsPath=await confinedExisting(root,join(DATA,'outputs',folder,'results.json'));
+    const reviewPath=await confinedExisting(root,join(DATA,'outputs',folder,'manual-review.csv'));
+    await confinedExisting(root,join(DATA,'outputs',folder,'manual-role-review.csv'));
+    const report=JSON.parse(await readFile(summaryPath,'utf8'));
+    const parsed=JSON.parse(await readFile(resultsPath,'utf8'));
+    if(!reviewPath||report.schemaVersion!=='pi-universal-holdout/v1'||report.batch!==batch||
+      report.siteCount!==6||parsed.schemaVersion!=='pi-universal-holdout/v1'||
+      parsed.batch!==batch||!Array.isArray(parsed.rows)||parsed.rows.length!==6)
+      throw Error('Unexpected frozen U30 batch report');
+    const fields=['pagesUsable','products','categories','productsWithSpecifications',
+      'productsWithComponents','productsWithMaterials','specifications','components',
+      'materials','unlinkedProducts'];
+    const pack=x=>Object.fromEntries(fields.map(k=>[k,Number(x?.[k]||0)]));
+    return {status:'completed',action,batch,siteCount:6,
+      frozenExtractorGitBlobSha:report.frozenLockPins?.['product-intelligence.mjs']||null,
+      qualityStatus:'unreviewed_no_product_accuracy',
+      baseline3:pack(report.baseline3),depth12:pack(report.depth12),
+      sourceSignals:report.sourceSignals,manualReviewRows:report.reviewTemplateRows,
+      rows:parsed.rows.map(r=>({siteId:r.siteId,company:r.company,industry:r.industry,
+        roleStratumNotGroundTruth:r.roleStratum,status:r.runStatus,
+        pagesAttempted:r.pagesAttempted,stoppingReason:r.stoppingReason,
+        baseline3:pack(r.baseline3?.coverage),depth12:pack(r.depth12?.coverage),
+        traceability:{checked:r.traceability?.claimCount,matched:r.traceability?.matched,
+          missingSource:r.traceability?.missingSource,missingQuote:r.traceability?.missingQuote},
+        duplicateCandidates:r.duplicateSignals?.samePageNormalizedNameGroups,
+        productSamples:(r.depth12?.products||[]).slice(0,3).map(p=>({
+          name:String(p.name||'').slice(0,150),sourceUrl:String(p.sourceUrl||'').slice(0,240),
+          specifications:(p.specifications||[]).slice(0,1).map(x=>({
+            attribute:x.attribute,value:String(x.value||'').slice(0,90),
+            quote:String(x.evidence?.quote||'').slice(0,180)}))})),
+        categorySamples:(r.depth12?.categories||[]).slice(0,2).map(x=>({
+          name:String(x.name||'').slice(0,130),sourceUrl:String(x.sourceUrl||'').slice(0,240)})),
+        failedPages:(r.pageStatuses||[]).filter(x=>!['completed','partial'].includes(x.status))
+          .slice(0,2).map(x=>({url:String(x.url||'').slice(0,220),
+            status:x.status,reason:String(x.reason||'').slice(0,145)})),
+        errors:(r.errors||[]).slice(0,2)})),
+      outputLocal:join(DATA,'outputs',folder),
+      caveat:'Frozen independent cross-industry V1 evaluation, not accuracy. Candidate roles are sampling hints. Manual labels are blank; all reported source records are unverified.'};
+  }
   if(action==='products_7'){
     // One explicitly approved fixed seven-site, bounded research job. The
     // queue cannot specify URLs, output paths, binaries, scripts or AI options.
