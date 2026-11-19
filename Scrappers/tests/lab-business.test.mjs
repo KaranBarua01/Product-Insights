@@ -106,6 +106,9 @@ test('OS snapshot import is clearly an imported snapshot, and exact matching doe
   assert.equal(view.osComparison.osCounts.products,2);
   assert.equal(view.osComparison.osCounts.productLinkedParts,1);
   assert.equal(view.osComparison.osCounts.productLinkedProcesses,1);
+  assert.equal(view.osComparison.osProductSamples[0].parts[0],'Bracket');
+  assert.equal(view.osComparison.osProductSamples[0].manufacturingProcesses[0],'Fabrication');
+  assert.equal(view.osComparison.productMatches[0].osManufacturingProcesses[0],'Fabrication');
   assert.equal(view.osComparison.productMatches.length,1);
   assert.equal(view.osComparison.osOnlyRecords[0],'Other Existing Product');
   assert.equal(view.osComparison.researchOnlyCandidates.length,0);
