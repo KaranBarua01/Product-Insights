@@ -5,6 +5,7 @@
  */
 import {createHash} from 'node:crypto';
 import {mapProductCandidates,tokens} from './research-planner.mjs';
+import {rankEvidenceTaxonomy} from './taxonomy-retrieval.mjs';
 import {groupProductFamilies,identifyCompanyRole} from './research-intelligence.mjs';
 
 const MAX_PAGES_TO_AI=8;
@@ -112,6 +113,10 @@ export function mapStage2Products(products,nodes,aliases=[]){
   const mapped=mapProductCandidates(products,nodes);
   const byCode=new Map(nodes.map(n=>[n.code,n]));
   return mapped.map(p=>{
+    // Evidence-based suggestions remain review-only; alias approvals and the
+    // installed master taxonomy are never modified by this ranking step.
+    const evidenceCandidates=rankEvidenceTaxonomy(p,nodes);
+    if(evidenceCandidates.length)return {...p,taxonomy:{status:'candidate_requires_review',suggestions:evidenceCandidates}};
     if(p.taxonomy.status!=='gap_or_insufficient_evidence')return p;
     const alias=aliases.find(a=>norm(a.alias)===norm(p.name)&&byCode.has(a.existingCode));
     if(!alias)return p;

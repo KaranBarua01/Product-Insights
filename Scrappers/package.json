@@ -17,7 +17,8 @@
     "deploy:cloudflare": "wrangler deploy",
     "benchmark": "npm run build && node tools/benchmark.mjs",
     "benchmark:dry": "npm run build && node tools/benchmark.mjs --sites benchmark/sites.example.csv --allow-hosts benchmark/approved-hosts.example.txt --dry-run",
-    "qa:direct": "npm run build && node tools/direct-qa.mjs"
+    "qa:direct": "npm run build && node tools/direct-qa.mjs",
+    "benchmark:taxonomy": "node tools/taxonomy-benchmark.mjs"
   },
   "dependencies": {
     "unpdf": "^2.1.0"
