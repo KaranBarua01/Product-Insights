@@ -83,7 +83,7 @@ function addUnique(set,rows,k){for(const r of rows||[])if(k(r))set.add(k(r));}
 export function coverageMetrics(samples,budget){
   if(!Number.isInteger(budget)||budget<1||budget>12)throw Error('Invalid page budget');
   const rows=(Array.isArray(samples)?samples:[]).slice(0,budget);
-  const sources=new Set(),categoryLinks=new Set(),productLinks=new Set(),pdfLinks=new Set(),structuredProducts=new Set();
+  const sources=new Set(),categoryLinks=new Set(),categoryNames=new Map(),productLinks=new Set(),pdfLinks=new Set(),structuredProducts=new Set();
   let successful=0,blocked=0,failed=0,chars=0,evidence=0,pdfRead=0,pdfPages=0,techPages=0,techExcerpts=0,capabilities=0,productPages=0,categoryPages=0,browserAttempts=0,browserSuccesses=0;
   const specimen=[],productSamples=[],technicalExamples=[];
   for(const x of rows){
@@ -96,6 +96,7 @@ export function coverageMetrics(samples,budget){
       if(x.kind==='product_detail_lead')productPages++;
       if(x.technicalSnippets?.length){techPages++;techExcerpts+=x.technicalSnippets.length;}
       addUnique(categoryLinks,x.categoryLinks,r=>r.url);
+      for(const c of x.categoryLinks||[])if(!categoryNames.has(c.url))categoryNames.set(c.url,c.label);
       addUnique(productLinks,x.productLinks,r=>r);
       addUnique(pdfLinks,x.pdfLinks,r=>r);
       addUnique(structuredProducts,x.structuredProducts,r=>key(r.name+'|'+r.sku));
@@ -110,7 +111,7 @@ export function coverageMetrics(samples,budget){
     if(x.browserAttempted)browserAttempts++;
     if(x.browserSucceeded)browserSuccesses++;
     if(specimen.length<12)specimen.push({url:x.url,kind:x.kind,status:x.status,textChars:x.textChars,strategy:x.strategy,
-      reason:x.reason});
+      reason:x.reason,heading:x.heading});
   }
   return {budget,attemptedPages:rows.length,usablePages:successful,blockedPages:blocked,otherFailedPages:failed,
     uniqueSuccessfulSourceUrls:sources.size,textChars:chars,evidenceRecords:evidence,
@@ -120,7 +121,8 @@ export function coverageMetrics(samples,budget){
     pdfLinksDiscovered:pdfLinks.size,pdfDocumentsRead:pdfRead,pdfPagesRead:pdfPages,
     technicalEvidencePages:techPages,technicalLineSignals:techExcerpts,
     browserAttempts,browserSuccesses,
-    productSamples,technicalExamples,sourcePages:specimen};
+    productSamples,technicalExamples,categorySamples:[...categoryNames].slice(0,12).map(([url,label])=>({url,label})),
+    sourcePages:specimen};
 }
 const DELTAS=['attemptedPages','usablePages','uniqueSuccessfulSourceUrls','textChars','evidenceRecords',
   'categoryPageLeads','productDetailPageLeads','capabilityPages',
