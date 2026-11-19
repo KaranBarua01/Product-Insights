@@ -72,6 +72,18 @@
       "label": "Instrument panels & cross-car beams",
       "level": 3,
       "path": "Mobility & Transportation > Automotive & Light Vehicles > Interior Systems > Instrument panels & cross-car beams"
+    },
+    {
+      "code": "demo-aircraft-harness",
+      "label": "Aircraft wire harnesses",
+      "level": 3,
+      "path": "Aerospace & Defense > Aircraft Platforms & Systems > Electrical Subsystems > Aircraft wire harnesses"
+    },
+    {
+      "code": "demo-aircraft-frames",
+      "label": "Aircraft frames",
+      "level": 3,
+      "path": "Aerospace & Defense > Aircraft Platforms & Systems > Structural Components > Aircraft frames"
     }
   ],
   "cases": [
@@ -206,6 +218,18 @@
       "name": "Heavy Duty Add-On",
       "quote": "Heavy Duty Add-On tray expands the carrying capacity of your Quik Rack and Super Duty racks for more bikes.",
       "expectedCode": null
+    },
+    {
+      "id": "alta-x-cannot-be-aircraft-wire-harness",
+      "name": "Alta X",
+      "quote": "Alta X is built to carry just about anything with our integrated quick release system on top and bottom of the aircraft.",
+      "expectedCode": null
+    },
+    {
+      "id": "real-aircraft-wire-harness-still-matches",
+      "name": "AeroLink Harness",
+      "quote": "AeroLink Harness is an aircraft wire harness for routing electrical signals between aircraft avionics and sensors.",
+      "expectedCode": "demo-aircraft-harness"
     }
   ]
 }

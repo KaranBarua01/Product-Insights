@@ -17,7 +17,7 @@ From the Scrappers directory, run:
     npm test
     npm run benchmark:taxonomy -- --out qa-results/taxonomy-demo.json
 
-The bundled fixture is entirely SYNTHETIC: 16 positive product cases across mobility, servers, pumps, solar energy, foodservice, medical and truck drivetrains, plus six abstention cases. Passing it proves neither actual catalog coverage nor real-world taxonomy correctness.
+The bundled fixture is entirely SYNTHETIC: 17 positive product cases across mobility, servers, pumps, solar energy, foodservice, medical and truck drivetrains, plus seven abstention cases. Passing it proves neither actual catalog coverage nor real-world taxonomy correctness.
 
 To use your installed PRIVATE 1,213-node taxonomy without uploading it:
 
@@ -45,3 +45,6 @@ From Scrappers, in PowerShell:
     npm.cmd run benchmark:taxonomy -- --taxonomy "$taxonomy" --evidence "$evidence" --out qa-results/taxonomy-real-1213.json
 
 This `--evidence` mode reads the previously recorded source statements locally and shows a concise table. It reports **unlabeled retrieval candidates**, NOT top-1 accuracy. The original installed taxonomy, source evidence, and output stay on the PC. The intended category scope and add-on relationships still require human review. The real full-taxonomy failure (steering racks ranked for bicycle carriers) is covered by synthetic steering/battery/instrument negatives and positive controls. No AI/remote request is made.
+
+## Cross-industry failure regression (Alta X)
+The local 1,213-node probe showed 'Aircraft wire harnesses' for the Alta X platform from an evidence sentence mentioning only an 'aircraft'. This is a **false positive**, not a validated drone classification. The matcher now treats aerospace/aircraft sector words as context only; component-type tokens (e.g. wire/harness) must be present for component categories. A synthetic counterexample demonstrates abstention for the incomplete Alta X quote, while an actual harness description still finds the harness category. The local benchmark also accepts UTF-8 BOM evidence JSON from Windows PowerShell. No private taxonomy or source export is committed. A longer, source-verified unmanned-aircraft description may be needed for a positive Alta X classification.

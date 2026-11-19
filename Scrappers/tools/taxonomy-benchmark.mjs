@@ -5,6 +5,8 @@ import {dirname,resolve} from 'node:path';
 import {performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
 import {rankEvidenceTaxonomy} from './taxonomy-retrieval.mjs';
+// PowerShell 5.1 may write a UTF-8 BOM even when the JSON itself is valid.
+export function parseLocalJson(raw){return JSON.parse(String(raw).replace(/^\uFEFF/,''));}
 
 export function scoreTaxonomyCases(cases,nodes){
   if(!Array.isArray(cases)||!Array.isArray(nodes))throw Error('cases and nodes arrays required');
@@ -57,7 +59,7 @@ async function main(){
   if(evidencePath){
     if(!privatePath||get('--cases'))throw Error('--evidence requires --taxonomy and must not be combined with --cases');
     const nodes=(await import('./research-planner.mjs')).parseTaxonomy(await readFile(privatePath,'utf8'));
-    const loaded=JSON.parse(await readFile(evidencePath,'utf8'));
+    const loaded=parseLocalJson(await readFile(evidencePath,'utf8'));
     const result=probeTaxonomyRows(Array.isArray(loaded)?loaded:loaded.rows,nodes);
     const output=get('--out');
     if(output){await mkdir(dirname(resolve(output)),{recursive:true});await writeFile(output,JSON.stringify(result,null,2)+'\n');}
@@ -69,7 +71,7 @@ async function main(){
     return;
   }
   const defaultCases=resolve(dirname(fileURLToPath(import.meta.url)),'../benchmark/taxonomy-fixtures.synthetic.json');
-  const casesPath=get('--cases')||defaultCases,caseFile=JSON.parse(await readFile(casesPath,'utf8'));
+  const casesPath=get('--cases')||defaultCases,caseFile=parseLocalJson(await readFile(casesPath,'utf8'));
   if(privatePath&&!get('--cases'))throw Error('--taxonomy requires your own locally labeled --cases (demo codes differ from private IDs)');
   const nodes=privatePath?(await import('./research-planner.mjs')).parseTaxonomy(await readFile(privatePath,'utf8')):caseFile.nodes;
   const result=scoreTaxonomyCases(caseFile.cases,nodes);

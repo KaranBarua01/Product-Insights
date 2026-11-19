@@ -3,7 +3,9 @@
  * Scores rank candidates within one query; they are NOT probabilities.
  */
 const STOP=new Set('a an and are as at be by can for from has have in into is it its of on or our the their this to via we with your you new best built made available designed features feature includes including support supports use used using product products model models series heavy duty super premium high low standard extra advanced system systems company usa ltd inc'.split(' '));
-const DOMAIN_ONLY=new Set('bicycle motorcycle vehicle truck van medical technology industry food solar electronic computer fluid cargo transport accessory'.split(' '));
+// Sector labels establish context, not a physical product type. Matching
+// 'aircraft' does not establish that the product is a wire harness or frame.
+const DOMAIN_ONLY=new Set('bicycle motorcycle vehicle truck van aircraft aerospace aviation marine medical technology industry food solar electronic computer fluid cargo transport accessory'.split(' '));
 // Generic object words recur in unrelated industries; require product-function qualifiers.
 const AMBIGUOUS_OBJECTS=new Set('rack tray box panel frame mount mounting column case cover enclosure beam component accessory part assembly housing cabinet bracket support fixture system equipment device item vehicle cross'.split(' '));
 const ALIASES=new Map(Object.entries({
@@ -29,6 +31,7 @@ function word(raw){
   let t=String(raw||'').toLowerCase();
   if(ALIASES.has(t))return ALIASES.get(t);
   if(t.endsWith('ies')&&t.length>5)t=t.slice(0,-3)+'y';
+  else if(/(?:sses|ches|shes|xes|zes)$/.test(t)&&t.length>5)t=t.slice(0,-2);
   else if(t.endsWith('s')&&t.length>4&&!t.endsWith('ss'))t=t.slice(0,-1);
   return ALIASES.get(t)||t;
 }
@@ -95,7 +98,9 @@ export function rankEvidenceTaxonomy(product,nodes,{limit=3}={}){
     if(!leafHits.some(t=>!DOMAIN_ONLY.has(t)))continue;
     // 'rack' plus 'vehicle' is not sufficient evidence for steering racks.
     // Likewise a tray-style cargo rack is not a battery-enclosure tray.
-    const distinctive=leaf.filter(t=>!AMBIGUOUS_OBJECTS.has(t));
+    // Repeated domain words ('aircraft', 'vehicle') cannot satisfy a
+    // component-specific category such as 'Aircraft wire harnesses'.
+    const distinctive=leaf.filter(t=>!AMBIGUOUS_OBJECTS.has(t)&&!DOMAIN_ONLY.has(t));
     if(distinctive.length&&!distinctive.some(t=>primaryContext.has(t)))continue;
     // A generic noun-only category requires distinctive immediate parent evidence.
     if(!distinctive.length){

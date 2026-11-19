@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {rankEvidenceTaxonomy} from '../tools/taxonomy-retrieval.mjs';
 import {mapStage2Products} from '../tools/research-stage2.mjs';
-import {scoreTaxonomyCases,probeTaxonomyRows} from '../tools/taxonomy-benchmark.mjs';
+import {scoreTaxonomyCases,probeTaxonomyRows,parseLocalJson} from '../tools/taxonomy-benchmark.mjs';
 
 const fixture=JSON.parse(await readFile(new URL('../benchmark/taxonomy-fixtures.synthetic.json',import.meta.url),'utf8'));
 
@@ -44,11 +44,11 @@ test('Stage 2 uses evidence hierarchy candidates but never marks them verified',
 });
 test('local benchmark counts positives, abstentions and wrong-domain errors',()=>{
   const d=scoreTaxonomyCases(fixture.cases,fixture.nodes);
-  assert.equal(d.positiveCases,16);
-  assert.equal(d.top1Hits,16);
-  assert.equal(d.negativeCases,6);
-  assert.equal(d.negativeAbstentions,6);
-  assert.equal(d.taxonomyLeavesSearched,12);
+  assert.equal(d.positiveCases,17);
+  assert.equal(d.top1Hits,17);
+  assert.equal(d.negativeCases,7);
+  assert.equal(d.negativeAbstentions,7);
+  assert.equal(d.taxonomyLeavesSearched,14);
 });
 
 test('long quoted descriptions cannot turn transported bikes or rail luggage racks into the product class',()=>{
@@ -78,4 +78,18 @@ test('unlabeled evidence probe reports candidate rankings without accuracy claim
   assert.equal(report.abstentions,1);
   assert.equal(report.results[0].topCode,'demo-cargo');
   assert.equal(report.results[1].topCode,null);
+});
+
+test('aircraft sector evidence alone cannot classify a drone as wire harnesses or an airframe',()=>{
+  const item=fixture.cases.find(x=>x.id==='alta-x-cannot-be-aircraft-wire-harness');
+  const results=rankEvidenceTaxonomy(item,fixture.nodes,{limit:10});
+  assert.deepEqual(results,[],'Unqualified aircraft context must not invent component type');
+});
+test('quoted electrical aircraft harness retains correct classification',()=>{
+  const item=fixture.cases.find(x=>x.id==='real-aircraft-wire-harness-still-matches');
+  assert.equal(rankEvidenceTaxonomy(item,fixture.nodes)[0]?.code,'demo-aircraft-harness');
+});
+
+test('Windows PowerShell UTF-8 BOM does not break local evidence JSON',()=>{
+  assert.deepEqual(parseLocalJson('\uFEFF{"rows":[]}'),{rows:[]});
 });
