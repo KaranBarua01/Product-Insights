@@ -1,0 +1,31 @@
+site_id,company_name,url,industry,role_stratum,batch,note
+U30-001,Freefly Systems,https://freeflysystems.com/,aerospace_uas,oem_candidate,A,candidate_role_only_not_ground_truth
+U30-002,Drone Nerds,https://www.dronenerds.com/,aerospace_uas,distributor_service_candidate,B,candidate_role_only_not_ground_truth
+U30-003,AeroTEC,https://aerotec.com/,aerospace_uas,engineering_service_candidate,C,candidate_role_only_not_ground_truth
+U30-004,Intuitive,https://www.intuitive.com/,medical_devices,oem_candidate,D,candidate_role_only_not_ground_truth
+U30-005,Medline,https://www.medline.com/,medical_devices,mixed_supplier_candidate,E,candidate_role_only_not_ground_truth
+U30-006,Phillips Medisize,https://phillipsmedisize.com/,medical_devices,contract_manufacturing_candidate,A,candidate_role_only_not_ground_truth
+U30-007,Enphase Energy,https://enphase.com/,energy_electrical,oem_candidate,B,candidate_role_only_not_ground_truth
+U30-008,Rexel USA,https://www.rexelusa.com/,energy_electrical,distributor_candidate,C,candidate_role_only_not_ground_truth
+U30-009,Jabil,https://www.jabil.com/,energy_electrical,contract_manufacturing_candidate,D,candidate_role_only_not_ground_truth
+U30-010,Grundfos,https://www.grundfos.com/,pumps_fluid,oem_candidate,E,candidate_role_only_not_ground_truth
+U30-011,Motion,https://www.motion.com/,pumps_fluid,distributor_service_candidate,A,candidate_role_only_not_ground_truth
+U30-012,PumpMan,https://pumpman.com/,pumps_fluid,repair_service_candidate,B,candidate_role_only_not_ground_truth
+U30-013,Analog Devices,https://www.analog.com/,electronics_components,oem_candidate,C,candidate_role_only_not_ground_truth
+U30-014,DigiKey,https://www.digikey.com/,electronics_components,distributor_candidate,D,candidate_role_only_not_ground_truth
+U30-015,PCBWay,https://www.pcbway.com/,electronics_components,contract_manufacturing_candidate,E,candidate_role_only_not_ground_truth
+U30-016,CertainTeed,https://www.certainteed.com/,building_materials,oem_candidate,A,candidate_role_only_not_ground_truth
+U30-017,ABC Supply,https://www.abcsupply.com/,building_materials,distributor_candidate,B,candidate_role_only_not_ground_truth
+U30-018,Oldcastle APG,https://www.oldcastleapg.com/,building_materials,brand_manufacturer_candidate,C,candidate_role_only_not_ground_truth
+U30-019,Vollrath Foodservice,https://www.vollrathfoodservice.com/,foodservice_equipment,oem_candidate,D,candidate_role_only_not_ground_truth
+U30-020,WebstaurantStore,https://www.webstaurantstore.com/,foodservice_equipment,distributor_candidate,E,candidate_role_only_not_ground_truth
+U30-021,TriMark USA,https://www.trimarkusa.com/,foodservice_equipment,distributor_design_candidate,A,candidate_role_only_not_ground_truth
+U30-022,CURT Manufacturing,https://www.curtmfg.com/,automotive_and_custom_manufacturing,oem_candidate,B,candidate_role_only_not_ground_truth
+U30-023,Tire Rack,https://www.tirerack.com/,automotive_and_custom_manufacturing,distributor_candidate,C,candidate_role_only_not_ground_truth
+U30-024,Xometry,https://www.xometry.com/,automotive_and_custom_manufacturing,manufacturing_marketplace_candidate,D,candidate_role_only_not_ground_truth
+U30-025,Land Pride,https://landpride.com/,agricultural_equipment,oem_candidate,E,candidate_role_only_not_ground_truth
+U30-026,Tractor Supply,https://www.tractorsupply.com/,agricultural_equipment,retailer_candidate,A,candidate_role_only_not_ground_truth
+U30-027,Great Plains Ag,https://www.greatplainsag.com/,agricultural_equipment,oem_candidate,B,candidate_role_only_not_ground_truth
+U30-028,Agilent,https://www.agilent.com/,laboratory_equipment,oem_candidate,C,candidate_role_only_not_ground_truth
+U30-029,Fisher Scientific,https://www.fishersci.com/,laboratory_equipment,distributor_candidate,D,candidate_role_only_not_ground_truth
+U30-030,Labconco,https://www.labconco.com/,laboratory_equipment,oem_candidate,E,candidate_role_only_not_ground_truth
