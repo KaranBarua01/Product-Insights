@@ -17,6 +17,7 @@ const flags=process.argv.slice(2);
 const once=flags.includes('--once');
 const allowTests=process.env.PI_AGENT_ALLOW_TESTS==='1';
 const allowLive10=process.env.PI_AGENT_ALLOW_LIVE_10==='1';
+const allowDepth7=process.env.PI_AGENT_ALLOW_DEPTH_7==='1';
 if(!token||!owner)throw Error('Set PI_AGENT_GITHUB_TOKEN and PI_AGENT_ALLOWED_AUTHOR locally');
 if(flags.some(x=>x!=='--once'))throw Error('Only --once is supported as an optional flag');
 
@@ -83,6 +84,7 @@ async function pump(out,state){
       job=parseJob(issue,{owner});
       if(job.action==='run_tests'&&!allowTests)throw Error('run_tests disabled; set PI_AGENT_ALLOW_TESTS=1 locally');
       if(job.action==='benchmark_10'&&!allowLive10)throw Error('benchmark_10 disabled; set PI_AGENT_ALLOW_LIVE_10=1 locally');
+      if(job.action==='depth_7'&&!allowDepth7)throw Error('depth_7 disabled; set PI_AGENT_ALLOW_DEPTH_7=1 locally');
       record={status:'running',jobId:job.jobId,action:job.action,startedAt:new Date().toISOString()};
       state.jobs[String(issue.number)]=record;
       await saveState(out,state);
