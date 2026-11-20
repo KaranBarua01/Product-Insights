@@ -117,9 +117,9 @@ test('published variants remain independent SKUs but only primary named product 
   assert.equal(r.products.find(x=>x.name==='Mixer 10').specifications.length,1);
   assert.equal(r.products.find(x=>x.name==='Mixer 20').specifications.length,0);
 });
-test('bounds: at most twelve input pages, exact host only, source-domain and quote confinement',()=>{
-  const pages=Array.from({length:13},(_,i)=>page(BASE+'product/model-'+i,'Model '+i+'\nWeight: 12 kg','Model '+i));
-  assert.throws(()=>extractProductIntelligence({companyName:'A',rootUrl:BASE,pages}),/at most 12/);
+test('bounds: at most thirty input pages, exact host only, source-domain and quote confinement',()=>{
+  const pages=Array.from({length:31},(_,i)=>page(BASE+'product/model-'+i,'Model '+i+'\nWeight: 12 kg','Model '+i));
+  assert.throws(()=>extractProductIntelligence({companyName:'A',rootUrl:BASE,pages}),/at most 30/);
   const r=extractProductIntelligence({companyName:'A',rootUrl:BASE,
     pages:[pages[0],pages[0],page('https://other.example.net/product/fake','Fake\nWeight: 12 kg','Fake')]});
   assert.equal(r.products.length,1);
