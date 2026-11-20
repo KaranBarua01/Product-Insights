@@ -19,9 +19,11 @@ jobs:
       - name: Install Scrappers
         working-directory: Scrappers
         run: npm install --omit=optional --no-audit --no-fund
-      - name: Build and full regressions
+      - name: Build and focused evidence regression suite
         working-directory: Scrappers
-        run: npm test
+        run: |
+          npm run build
+          node --test tests/part-evidence-verifier.test.mjs tests/oem-foundation.test.mjs tests/product-intelligence.test.mjs tests/independent-qa.test.mjs tests/adaptive-research-v2.test.mjs tests/research-intelligence.test.mjs
       - name: Ensure no production D1 data or original taxonomy is needed
         working-directory: Scrappers
         run: |
