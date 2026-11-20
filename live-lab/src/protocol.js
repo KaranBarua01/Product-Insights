@@ -177,7 +177,7 @@ export function normalizeApprovedCompanyHosts(hosts,{max=45}={}){
 }
 export function validateTarget(input,allowed){
   const v=validatePublicCompanyUrl(input);
-  if(!allowed.has(v.host))throw Error('Website not yet approved by the laptop operator. Add it on the laptop using APPROVE-NEW-COMPANY.cmd and retry.');
+  if(!allowed.has(v.host))throw Error('Website not approved (not yet approved by laptop operator). Add it on the laptop using APPROVE-NEW-COMPANY.cmd and retry.');
   return v;
 }
 export function validateStart(data,allowlist){
