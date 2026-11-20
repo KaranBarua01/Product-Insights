@@ -1,0 +1,46 @@
+name: D1 Five Companies - 50 Page Public Website Benchmark
+on:
+  push:
+    branches: [test/d1-five-50page-20261121]
+    paths: ['.github/workflows/d1-five-50page.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  investigate:
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [bike, polymer, pump, biotech, reseller]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Scrappers and compile
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Install Chromium
+        working-directory: Scrappers
+        run: npx playwright install --with-deps chromium
+      - name: Research live website, 50-page ceiling and source evidence
+        working-directory: Scrappers
+        timeout-minutes: 29
+        env:
+          PI_SITE_BATCH: ${{ matrix.batch }}
+          PI_SITE_PAGES: '50'
+        run: node tools/d1-five-50page-scrape.mjs
+      - name: Upload site-level measured results even if interrupted
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-five-50page-${{ matrix.batch }}
+          path: Scrappers/live-site-smoke-results/
+          retention-days: 14
+          if-no-files-found: warn
