@@ -4,7 +4,7 @@
  * Local Node 24+. Use distinct token from private GitHub agent credentials.
  */
 import {setTimeout as delay} from 'node:timers/promises';
-import {validateTarget,sanitizeEvents,sanitizeCompleted,allowedHosts} from '../../live-lab/src/protocol.js';
+import {validateTarget,sanitizeEvents,sanitizeCompleted,allowedHosts,sanitizeOriginalTaxonomy} from '../../live-lab/src/protocol.js';
 
 const LOCAL='http://127.0.0.1:8790';
 const APPROVED='1up-usa.com,hoshizakiamerica.com,labconco.com,cmcsupply.com,phillipsmedisize.com,dronenerds.com';
@@ -126,6 +126,26 @@ async function execute(job){
     'pages:',sanitized.acquisition.pagesVisited,
     'product candidates:',sanitized.productIntelligence.products.length);
 }
+let lastTaxonomyHash=null,lastTaxonomyCheck=0;
+async function syncOriginalTaxonomy(token){
+  const now=Date.now();if(now-lastTaxonomyCheck<30_000)return;
+  lastTaxonomyCheck=now;
+  try{
+    const localSnapshot=await local('/api/taxonomy/master-snapshot',{
+      method:'POST',body:{},token,timeoutMs:12_000});
+    const snapshot=sanitizeOriginalTaxonomy(localSnapshot);
+    const identity=snapshot.status+'|'+(snapshot.nodeHash||'none');
+    if(identity===lastTaxonomyHash)return;
+    await cloud('/api/agent/original-taxonomy',{snapshot},25_000);
+    lastTaxonomyHash=identity;
+    console.log('Original taxonomy viewer synchronized:',snapshot.status,
+      'nodes:',snapshot.totalNodes,'(read-only; AI cannot modify master)');
+  }catch(e){
+    console.warn('Original taxonomy sync unavailable; website research continues:',
+      String(e?.message||e).slice(0,170));
+  }
+}
+
 async function main(){
   console.log('Product Insights live bridge · outbound Cloudflare connection only');
   console.log('Cloudflare:',ORIGIN);
@@ -137,8 +157,9 @@ async function main(){
   let errors=0;
   while(run){
     try{
-      await localToken();
+      const token=await localToken();
       await cloud('/api/agent/heartbeat');
+      await syncOriginalTaxonomy(token);
       if(!active){
         const result=await cloud('/api/agent/next');
         if(result.job){
