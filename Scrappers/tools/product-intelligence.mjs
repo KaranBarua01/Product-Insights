@@ -11,7 +11,7 @@ import {identifyCompanyRole} from './research-intelligence.mjs';
 import {catalogCardLeads,pageSignals,classifyLeadUrl} from './adaptive-research-v2.mjs';
 
 export const PRODUCT_INTELLIGENCE_SCHEMA='pi-product-intelligence/v1';
-const MAX_PAGES=30,MAX_TEXT=85_000,MAX_PRODUCTS=120;
+const MAX_PAGES=50,MAX_TEXT=85_000,MAX_PRODUCTS=120;
 const GENERIC=/^(?:home|homepage|about|products?|all products|shop|shop now|catalog|catalogue|categories?|collections?|services?|about us|description|overview|specifications?|details|videos?|related products?|featured|new arrivals|bargain garage|support|gift cards?|company history)$/i;
 const BLOCKED_PATH=/(?:companyhistory|giftcards?|privacy|terms|warrant(?:y|ies)|return-policy|shipping-policy|catalog\/browse|\/about|\/help|\/faqs?|\/service|\/contact|\/login|\/account|\/cart)(?:[./_-]|\/|$)/i;
 const CATEGORY_PATH=/(?:^|\/)(?:product-?categor(?:y|ies)|categories?|collections?|product-families?)(?:\/|$)/i;
