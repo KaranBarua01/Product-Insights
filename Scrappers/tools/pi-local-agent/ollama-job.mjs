@@ -108,7 +108,7 @@ export function summarize1up({research,productIntelligence,model,reference,event
       acceptedCandidates:Number(ollama.products?.length||0),reason:limited(ollama.reason,110)},
     taxonomy:{installed:Boolean(reference?.nodes?.length),nodes:Number(reference?.nodes?.length||0),
       nodeHash:reference?.manifest?.nodeHash||null,masterChanged:false},
-    output:{products:products.length,localAiProducts:candidates,
+    output:{productCount:products.length,localAiProducts:candidates,
       productsWithMaterials:products.filter(x=>x.materials.length).length,
       productsWithComponents:products.filter(x=>x.components.length).length,
       taxonomyProposals:products.reduce((n,p)=>n+p.taxonomy.suggestions.length,0),
