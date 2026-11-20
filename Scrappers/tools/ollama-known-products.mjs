@@ -79,13 +79,28 @@ export async function enrichKnownProductsWithOllama({rootUrl,rawPages=[],knownPr
   const pages=pageIndex(rawPages,rootUrl),host=new URL(rootUrl).hostname;
   const deadline=Date.now()+Math.min(360_000,Math.max(30_000,timeBudgetMs));
   let boundedByTime=false;
-  const products=[],seen=new Set();
+  const eligible=[],seen=new Set();
   for(const p of knownProducts){
     if(!p?.name||!p?.sourceUrl||seen.has(id(p)))continue;
     let u;try{u=new URL(p.sourceUrl);}catch{continue;}
     if(u.hostname!==host)continue;
-    seen.add(id(p));products.push(p);
-    if(products.length>=Math.min(10,Math.max(1,maxProducts)))break;
+    seen.add(id(p));eligible.push(p);
+  }
+  // Prefer distinct evidence pages, not ten SKU variants that all point
+  // to one generic family page. Each selected product still needs its OWN
+  // exact source quote; evidence is never copied to sibling SKUs.
+  const cap=Math.min(10,Math.max(1,maxProducts)),products=[],chosen=new Set(),
+    selectedPages=new Set();
+  for(const p of eligible){
+    const source=String(p.sourceUrl).replace(/\/+$/,'');
+    if(!pages.has(source)||selectedPages.has(source))continue;
+    selectedPages.add(source);chosen.add(id(p));products.push(p);
+    if(products.length>=cap)break;
+  }
+  for(const p of eligible){
+    if(products.length>=cap)break;
+    if(chosen.has(id(p)))continue;
+    chosen.add(id(p));products.push(p);
   }
   let responses=0,errors=0,acceptedClaims=0,rejectedClaims=0,analyzed=0;
   const attempts=[],enrichments=[];
@@ -160,7 +175,8 @@ export async function enrichKnownProductsWithOllama({rootUrl,rawPages=[],knownPr
     boundedByTime?'partial_time_budget':
     !acceptedClaims&&responses?'completed_no_new_evidence':errors?'partial':'completed';
   return {...base,status,productsReviewed:enrichments.length,pagesAnalyzed:analyzed,
-    eligibleProducts:knownProducts.length,timeBudgetMs,boundedByTime,
+    eligibleProducts:eligible.length,distinctPagesPrioritized:selectedPages.size,
+    timeBudgetMs,boundedByTime,
     acceptedClaims,rejectedClaims,attempts,enrichments,
     taxonomy:{status:taxonomyStatus,candidateCount,selectedCount,masterModified:false}};
 }
