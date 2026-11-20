@@ -5,6 +5,7 @@
  */
 import {setTimeout as delay} from 'node:timers/promises';
 import {validateTarget,sanitizeEvents,sanitizeCompleted,allowedHosts,sanitizeOriginalTaxonomy,sanitizeProcessReference} from '../../live-lab/src/protocol.js';
+import {readApprovedCompanies} from './approved-company-sites.mjs';
 
 const LOCAL='http://127.0.0.1:8790';
 const APPROVED='1up-usa.com,hoshizakiamerica.com,labconco.com,cmcsupply.com,phillipsmedisize.com,dronenerds.com';
@@ -17,7 +18,35 @@ if(remote.protocol!=='https:'||remote.username||remote.password||remote.port||
   !remote.hostname.endsWith('.workers.dev')||remote.pathname!=='/'||
   remote.search||remote.hash)throw Error('For pilot, PI_LIVE_LAB_URL must be a plain HTTPS Cloudflare workers.dev origin');
 const ORIGIN=remote.origin;
-const allowed=allowedHosts(APPROVED);
+const baselineAllowed=allowedHosts(APPROVED);
+let allowed=new Set(baselineAllowed);
+let lastApprovalsIdentity=null,lastApprovalSyncAt=0;
+async function refreshLocalApprovals(){
+  const approvals=await readApprovedCompanies();
+  allowed=new Set([...baselineAllowed,...approvals.hosts]);
+  return approvals.hosts;
+}
+async function syncLocalOperatorApprovals({force=false}={}){
+  if(!force&&Date.now()-lastApprovalSyncAt<10000)return;
+  lastApprovalSyncAt=Date.now();
+  let hosts;
+  try{hosts=await refreshLocalApprovals();}
+  catch(e){
+    allowed=new Set(baselineAllowed);lastApprovalsIdentity=null;
+    console.warn('Additional company approvals invalid; restricted to original six:',
+      String(e?.message||e).slice(0,160));return;
+  }
+  const identity=JSON.stringify(hosts);
+  if(identity===lastApprovalsIdentity)return;
+  try{
+    const result=await cloud('/api/agent/approved-hosts',{hosts},13000);
+    lastApprovalsIdentity=identity;
+    console.log('Public company approvals synchronized:',hosts.length,
+      'new exact hosts; no Worker redeploy needed.');
+  }catch(e){
+    console.warn('Company approval synchronization pending:',String(e?.message||e).slice(0,150));
+  }
+}
 let run=true,active=false,seen=0,interrupted=false;
 const stop=()=>{run=false;console.log('Bridge stop requested. It will stop after the current local call.')};
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
@@ -82,6 +111,8 @@ async function finish(id,status,result=null,error=null){
   throw Error('Could not deliver final result to Cloudflare: '+String(problem?.message||problem));
 }
 async function execute(job){
+  // Fail closed if approval was removed between Cloudflare queueing and execution.
+  await refreshLocalApprovals();
   const target=validateTarget(job.url,allowed);
   if(job.host!==target.host||![3,7,12].includes(job.maxPages)||
     job.mode!=='auto'||job.browser!=='headless')
@@ -183,6 +214,7 @@ async function main(){
     try{
       const token=await localToken();
       await cloud('/api/agent/heartbeat');
+      await syncLocalOperatorApprovals();
       await syncOriginalTaxonomy(token);
       await syncReadOnlyProcessReference(token);
       if(!active){
