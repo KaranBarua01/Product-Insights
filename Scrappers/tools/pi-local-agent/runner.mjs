@@ -70,6 +70,82 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
   const root=await workspaceRoot(workspace);
   if(action==='health')return {status:'completed',action,nodeVersion:process.version,
     workspace:'Scrappers (private local path omitted)',network:'outbound-only'};
+  if(action==='ollama_health'||action==='ollama_1up'){
+    // Remote Issue cannot choose target, model, prompts, scripts or output path.
+    // Never forward the GitHub token into the local model process.
+    if(typeof jobId!=='string'||!/^[A-Za-z0-9_-]{8,64}$/.test(jobId))
+      throw Error('Invalid Ollama jobId');
+    const script=await confinedExisting(root,'tools/pi-local-agent/ollama-job.mjs');
+    await confinedExisting(root,'tools/ollama-mapping.mjs');
+    await confinedExisting(root,'tools/research-taxonomy-store.mjs');
+    await confinedExisting(root,'dist/engine.js');
+    const out=await confinedOutputDir(root);
+    const name=jobId+'-'+action+'.json',file=join(out,name);
+    try{await lstat(file);throw Error('Ollama job result already exists');}
+    catch(e){if(e.code!=='ENOENT')throw e;}
+    const p=await run(process.execPath,[script,action,'--out',join(DATA,'outputs',name)],
+      {cwd:root,secret,timeoutMs:action==='ollama_health'?150000:720000});
+    if(p.exitCode!==0||p.timeout)return {status:'failed',action,
+      exitCode:p.exitCode,timeout:p.timeout,
+      diagnostic:'Local fixed job did not finish; inspect Windows agent console. No remote shell commands executed.'};
+    const resultFile=await confinedExisting(root,join(DATA,'outputs',name));
+    const data=await readFile(resultFile,'utf8');
+    if(data.length>55000)throw Error('Ollama job summary too large');
+    const parsed=JSON.parse(data);
+    if(parsed.schemaVersion!=='pi-ollama-agent-result/v1'||parsed.action!==action||
+      !['completed','failed','unavailable'].includes(parsed.status))
+      throw Error('Unexpected local Ollama job response contract');
+    if(action==='ollama_health')return {status:parsed.status,action,
+      model:String(parsed.model||'').slice(0,70),check:String(parsed.check||'').slice(0,80),
+      latencyMs:Number(parsed.latencyMs||0),localhostOnly:true,
+      reason:String(parsed.reason||'').slice(0,140),
+      conclusion:parsed.status==='completed'?'Local model generated expected JSON':'Model inference not verified'};
+    // Only a bounded evidence summary is sent to the PRIVATE issue.
+    const a=parsed.acquisition||{},m=parsed.model||{},t=parsed.taxonomy||{},o=parsed.output||{};
+    const products=(Array.isArray(o.products)?o.products:[]).slice(0,12).map(p=>({
+      name:String(p.name||'').slice(0,130),
+      sourceUrl:String(p.sourceUrl||'').slice(0,240),
+      extractionMethod:String(p.method||'').slice(0,70),
+      evidenceQuote:String(p.quote||'').slice(0,180),
+      reviewStatus:'unverified',
+      components:(p.components||[]).slice(0,2).map(x=>({
+        name:String(x.name||'').slice(0,100),quote:String(x.quote||'').slice(0,150)})),
+      materials:(p.materials||[]).slice(0,2).map(x=>({
+        name:String(x.name||'').slice(0,100),quote:String(x.quote||'').slice(0,150)})),
+      taxonomyStatus:String(p.taxonomy?.status||'not_mapped').slice(0,60),
+      taxonomySuggestions:(p.taxonomy?.suggestions||[]).slice(0,2).map(x=>({
+        code:String(x.code||'').slice(0,80),label:String(x.label||'').slice(0,100)}))
+    }));
+    return {status:parsed.status,action,site:'1up-usa.com',durationMs:Number(parsed.durationMs||0),
+      acquisition:{status:String(a.status||'').slice(0,50),
+        pagesVisited:Number(a.pagesVisited||0),pagesUsable:Number(a.pagesUsable||0),
+        pages:(a.pages||[]).slice(0,7).map(x=>({
+          url:String(x.url||'').slice(0,230),status:String(x.status||'').slice(0,35),
+          textChars:Number(x.textChars||0),warning:String(x.warning||'').slice(0,105)}))},
+      model:{name:String(m.name||'').slice(0,70),status:String(m.status||'').slice(0,55),
+        mode:'enrich_existing_products',pagesAnalyzed:Number(m.pagesAnalyzed||0),
+        productsReviewed:Number(m.productsReviewed||0),
+        acceptedClaims:Number(m.acceptedClaims||0),
+        rejectedClaims:Number(m.rejectedClaims||0),
+        acceptedCandidates:Number(m.acceptedCandidates||0),
+        taxonomyStatus:String(m.taxonomyStatus||'not_loaded').slice(0,65),
+        attempts:(Array.isArray(m.attempts)?m.attempts:[]).slice(0,5).map(x=>({
+          product:String(x.product||'').slice(0,90),
+          status:String(x.status||'').slice(0,55),
+          materialsAccepted:Number(x.materialsAccepted||0),
+          componentsAccepted:Number(x.componentsAccepted||0),
+          rejectedClaims:Number(x.rejectedClaims||0),
+          durationMs:Number(x.durationMs||0)})),
+        reason:String(m.reason||'').slice(0,130)},
+      taxonomy:{installed:Boolean(t.installed),nodes:Number(t.nodes||0),
+        masterChanged:false},
+      results:{productCount:Number(o.productCount||0),productsWithMaterials:Number(o.productsWithMaterials||0),
+        productsWithComponents:Number(o.productsWithComponents||0),
+        taxonomyProposals:Number(o.taxonomyProposals||0),products},
+      localDetailsPath:'local-data/pi-local-agent/outputs/'+name.replace(/\.json$/,'-evidence.json'),
+      quality:'unverified_candidates_not_accuracy',
+      caveat:'Only public website text and review candidates. No confirmed BOM, processes, OS connection, or taxonomy mutation.'};
+  }
   if(Object.hasOwn(U30_BATCH,action)){
     // Each private job selects exactly one immutable six-site cohort batch.
     // Remote Issue fields cannot choose URLs, scripts, page budgets or paths.

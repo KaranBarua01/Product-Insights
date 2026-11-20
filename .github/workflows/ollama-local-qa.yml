@@ -1,7 +1,7 @@
 name: Ollama Local Mapping QA
 on:
   push:
-    branches: [feat/local-ollama-evidence-mapping-pilot]
+    branches: [feat/local-ollama-evidence-mapping-pilot, feat/local-agent-ollama-fixed-jobs]
   pull_request:
     branches: [fix/ai-recovery-ui-null-and-timeout]
   workflow_dispatch:
@@ -23,6 +23,9 @@ jobs:
       - name: Syntax checks for local AI and bridge
         run: |
           node --check Scrappers/tools/ollama-mapping.mjs
+          node --check Scrappers/tools/pi-local-agent/ollama-job.mjs
+          node --check Scrappers/tools/pi-local-agent/agent.mjs
+          node --check Scrappers/tools/pi-local-agent/runner.mjs
           node --check Scrappers/tools/research-lab.mjs
           node --check live-lab/src/protocol.js
           node --check live-lab/src/ui.js
@@ -34,3 +37,23 @@ jobs:
       - name: Test live Lab protocol
         working-directory: live-lab
         run: node --test tests/*.test.mjs
+
+  windows-agent:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Scrappers dependencies
+        working-directory: Scrappers
+        run: npm install --no-audit --no-fund
+      - name: Compile Scrappers engine on Windows
+        working-directory: Scrappers
+        run: npm run build
+      - name: Test native Windows paths and local-agent contracts
+        working-directory: Scrappers
+        run: node --test tests/pi-local-agent.test.mjs tests/pi-ollama-agent.test.mjs tests/ollama-mapping.test.mjs

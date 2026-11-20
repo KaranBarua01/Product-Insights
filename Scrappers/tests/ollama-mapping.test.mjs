@@ -9,7 +9,10 @@ const extraction={products:[{name:'Heavy Duty Bike Rack',sourceUrl:url,quote:'He
   kind:'product_model',category:'Bike racks',
   components:[{name:'mounting brackets',quote:'Includes mounting brackets.'}],
   materials:[{name:'aluminum',quote:'This rack is made from aluminum.'}]}]};
-function mockApi({product=extraction,matches={matches:[]},models=[{name:'qwen3:4b-instruct',size:2500000000}]}={}){
+const cpuReply={productName:'Heavy Duty Bike Rack',sourceQuote:'Heavy Duty Bike Rack',
+  components:[{name:'mounting brackets',quote:'Includes mounting brackets.'}],
+  materials:[{name:'aluminum',quote:'This rack is made from aluminum.'}]};
+function mockApi({product=cpuReply,matches={matches:[]},models=[{name:'qwen3:4b-instruct',size:2500000000}]}={}){
   const seen=[];
   const fetcher=async (address,opts={})=>{
     assert.ok(address.startsWith('http://127.0.0.1:11434/'),'Only localhost is allowed');
@@ -48,6 +51,14 @@ test('extracts actual product evidence and proposes only a listed taxonomy code'
   assert.equal(result.products[0].components[0].component,'mounting brackets');
   assert.equal(result.products[0].taxonomy.suggestions[0].code,'L3-RACK');
   assert.equal(seen.filter(x=>x.type==='chat').length,2);
+  const extractionRequest=JSON.parse(seen.filter(x=>x.type==='chat')[0].opts.body);
+  const body=JSON.parse(extractionRequest.messages[1].content);
+  assert.equal(body.pageText.includes('aluminum'),true);
+  assert.ok(body.pageText.length<=2400);
+  assert.equal(extractionRequest.options.num_predict,300);
+  assert.equal(extractionRequest.messages[0].content.includes('ONE product page'),true);
+  assert.equal(result.pagesAnalyzed,1);
+
   const merged=mergeOllamaProducts({coverage:{products:0},products:[]},result);
   assert.equal(merged.coverage.products,1);
 });
@@ -62,4 +73,23 @@ test('gracefully falls back when Ollama is not running',async()=>{
     fetcher:async()=>{throw Error('ECONNREFUSED')}});
   assert.equal(output.status,'unavailable');
   assert.deepEqual(output.products,[]);
+});
+test('CPU inference sends one bounded product page even if source collection has three large pages',async()=>{
+  const candidates=[
+    {...page,content:{...page.content,text:page.content.text.repeat(100)}},
+    {...page,url:'https://1up-usa.com/product/super-duty',sourceUrl:'https://1up-usa.com/product/super-duty',
+      content:{title:'Super Duty Bike Rack',headings:['Super Duty Bike Rack'],text:'Super Duty Bike Rack '.repeat(200)}},
+    {...page,url:'https://1up-usa.com/product/quik-rack',sourceUrl:'https://1up-usa.com/product/quik-rack',
+      content:{title:'Quik Rack',headings:['Quik Rack'],text:'Quik Rack '.repeat(200)}}
+  ];
+  const {fetcher,seen}=mockApi();
+  const result=await enrichWithLocalOllama({rootUrl:'https://1up-usa.com/',rawPages:candidates,fetcher});
+  assert.equal(result.pagesAnalyzed,1);
+  assert.equal(result.status,'completed');
+  const chats=seen.filter(x=>x.type==='chat');
+  assert.equal(chats.length,1);
+  const request=JSON.parse(chats[0].opts.body);
+  const input=JSON.parse(request.messages[1].content);
+  assert.ok(input.pageText.length<=2400);
+  assert.ok(!('pages' in input));
 });

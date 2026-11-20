@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,rm,symlink,realpath} from 'node:fs/promises';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {parseQueueRepo,parseJob,JOB_SCHEMA,QUEUE_LABEL,sanitizeOutput} from '../tools/pi-local-agent/policy.mjs';
 import {workspaceRoot,inside,confinedExisting,confinedOutputDir,executeAction} from '../tools/pi-local-agent/runner.mjs';
@@ -26,7 +27,7 @@ test('private queue configuration rejects public Product-Insights and malicious 
 });
 test('job only accepts exact short-lived JSON allowlist and owner',()=>{
   assert.equal(parseJob(job(),{owner}).action,'health');
-  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7','u30_a','u30_b','u30_c','u30_d','u30_e'])
+  for(const name of ['health','run_tests','taxonomy_1up','taxonomy_cross','benchmark_10','depth_7','products_7','ollama_health','ollama_1up','u30_a','u30_b','u30_c','u30_d','u30_e'])
     assert.equal(parseJob(job(name),{owner}).action,name);
   assert.throws(()=>parseJob({...job(),user:{login:'other'}},{owner}),/author/);
   assert.throws(()=>parseJob({...job(),labels:[]},{owner}),/queue/);
@@ -318,4 +319,80 @@ test('U30 pilot job cannot choose URLs, scripts, commands or non-frozen batches'
     await assert.rejects(()=>executeAction('u30_a',{workspace:root,jobId:'u30_fake_job_123'}),
       /already exist/);
   });
+});
+
+
+test('Ollama queue jobs execute only the pinned runner and return bounded private summaries',async()=>{
+  await fixture(async root=>{
+    const resolved=await workspaceRoot(root);
+    await mkdir(join(root,'tools','pi-local-agent'),{recursive:true});
+    await mkdir(join(root,'dist'),{recursive:true});
+    for(const name of ['tools/pi-local-agent/ollama-job.mjs','tools/ollama-mapping.mjs',
+      'tools/research-taxonomy-store.mjs','dist/engine.js']){
+      await writeFile(join(root,...name.split('/')),'// test-only immutable fixture');
+    }
+    const requested=[];
+    const fake=async(exe,args,opts)=>{
+      requested.push({exe,args,opts});
+      assert.equal(exe,process.execPath);
+      assert.equal(opts.cwd,resolved);
+      assert.ok(opts.timeoutMs<=720000);
+      assert.ok(!args.some(x=>/powershell|cmd\.exe|--eval|-Command/i.test(x)));
+      assert.equal(args[0],await realpath(join(root,'tools','pi-local-agent','ollama-job.mjs')));
+      assert.deepEqual(args.slice(1,3),[args[1],'--out']);
+      assert.ok(['ollama_health','ollama_1up'].includes(args[1]));
+      const rel=args[3];
+      assert.ok(rel.startsWith('local-data'));
+      // Windows temp paths may differ in canonical spelling (8.3 aliases / case).
+      // Compare and write against the SAME canonical workspace used by runner.
+      const output=join(resolved,...rel.split(/[\\/]/));
+      assert.equal(inside(resolved,output),true);
+      const status=args[1]==='ollama_health'
+        ? {schemaVersion:'pi-ollama-agent-result/v1',action:'ollama_health',
+          status:'completed',model:'qwen3:4b-instruct',check:'inference_passed',latencyMs:835}
+        : {schemaVersion:'pi-ollama-agent-result/v1',action:'ollama_1up',status:'completed',
+          durationMs:1000,acquisition:{status:'sampled',pagesVisited:3,pagesUsable:2,
+            pages:[{url:'https://1up-usa.com/products/rack',status:'completed',textChars:600}]},
+          model:{name:'qwen3:4b-instruct',status:'completed',pagesAnalyzed:2,acceptedCandidates:1},
+          taxonomy:{installed:true,nodes:1213},output:{productCount:1,productsWithMaterials:1,
+            productsWithComponents:0,taxonomyProposals:1,products:[{
+              name:'Super Duty Rack',method:'local_ollama_exact_source_quote',
+              quote:'Super Duty Rack',sourceUrl:'https://1up-usa.com/products/rack',
+              taxonomy:{status:'candidate_requires_review',
+                suggestions:[{code:'CAT.1',label:'Bike rack'}]},
+              components:[],materials:[{name:'aluminum',quote:'made from aluminum'}]
+            }]}};
+      await writeFile(output,JSON.stringify(status));
+      return {exitCode:0,timeout:false,output:'LOCAL DIAGNOSTIC ONLY'};
+    };
+    const h=await executeAction('ollama_health',{workspace:root,jobId:'safe_ollama_health_001',run:fake,secret:'secret'});
+    assert.equal(h.status,'completed');
+    assert.equal(h.check,'inference_passed');
+    const p=await executeAction('ollama_1up',{workspace:root,jobId:'safe_ollama_1up_001',run:fake,secret:'secret'});
+    assert.equal(p.status,'completed');
+    assert.equal(p.results.productCount,1);
+    assert.equal(p.results.products.length,1);
+    assert.equal(p.taxonomy.nodes,1213);
+    assert.equal(p.results.products[0].evidenceQuote,'Super Duty Rack');
+    assert.equal(p.results.products[0].reviewStatus,'unverified');
+    assert.ok(!JSON.stringify(h).includes('secret')&&!JSON.stringify(p).includes('secret'));
+    assert.equal(requested.length,2);
+    await assert.rejects(()=>executeAction('ollama_1up',{workspace:root,
+      jobId:'safe_ollama_1up_001',run:fake}),/already exists/);
+    await assert.rejects(()=>executeAction('ollama_health',{workspace:root,
+      jobId:'../../bad',run:fake}),/Invalid Ollama jobId/);
+    assert.equal(requested.length,2);
+  });
+});
+
+
+test('Ollama PowerShell launcher resolves its own checkout, not another worktree',async()=>{
+  const base=dirname(fileURLToPath(import.meta.url));
+  const path=join(base,'..','tools','pi-local-agent','start-ollama-agent.ps1');
+  const ps=await readFile(path,'utf8');
+  assert.match(ps,/\$PSScriptRoot/);
+  assert.match(ps,/Resolve-Path/);
+  assert.doesNotMatch(ps,/Join-Path \$env:USERPROFILE 'PI-ollama-queue-agent/);
+  assert.match(ps,/PI_AGENT_QUEUE_REPO/);
+  assert.match(ps,/Remove-Item Env:\\PI_AGENT_GITHUB_TOKEN/);
 });

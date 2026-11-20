@@ -19,6 +19,7 @@ const allowTests=process.env.PI_AGENT_ALLOW_TESTS==='1';
 const allowLive10=process.env.PI_AGENT_ALLOW_LIVE_10==='1';
 const allowDepth7=process.env.PI_AGENT_ALLOW_DEPTH_7==='1';
 const allowProducts7=process.env.PI_AGENT_ALLOW_PRODUCTS_7==='1';
+const allowOllama1up=process.env.PI_AGENT_ALLOW_OLLAMA_1UP==='1';
 const allowU30=process.env.PI_AGENT_ALLOW_U30==='1';
 if(!token||!owner)throw Error('Set PI_AGENT_GITHUB_TOKEN and PI_AGENT_ALLOWED_AUTHOR locally');
 if(flags.some(x=>x!=='--once'))throw Error('Only --once is supported as an optional flag');
@@ -88,6 +89,7 @@ async function pump(out,state){
       if(job.action==='benchmark_10'&&!allowLive10)throw Error('benchmark_10 disabled; set PI_AGENT_ALLOW_LIVE_10=1 locally');
       if(job.action==='depth_7'&&!allowDepth7)throw Error('depth_7 disabled; set PI_AGENT_ALLOW_DEPTH_7=1 locally');
       if(job.action==='products_7'&&!allowProducts7)throw Error('products_7 disabled; set PI_AGENT_ALLOW_PRODUCTS_7=1 locally');
+      if(job.action==='ollama_1up'&&!allowOllama1up)throw Error('ollama_1up disabled; set PI_AGENT_ALLOW_OLLAMA_1UP=1 locally');
       if(/^u30_[abcde]$/.test(job.action)&&!allowU30)throw Error('Independent U30 holdout disabled; set PI_AGENT_ALLOW_U30=1 locally');
       record={status:'running',jobId:job.jobId,action:job.action,startedAt:new Date().toISOString()};
       state.jobs[String(issue.number)]=record;
