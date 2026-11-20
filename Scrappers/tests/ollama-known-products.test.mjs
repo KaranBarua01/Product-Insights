@@ -124,3 +124,16 @@ test('long uninterrupted page text keeps technical evidence within CPU budget',(
   assert.ok(sample.sourceText.length<=5100);
   assert.ok(sample.sourceText.includes('aluminum'));
 });
+
+
+test('CPU-bound AI covers distinct product evidence pages before repeat SKU variants',async()=>{
+ const variant={...p1,id:'real-1-variant',name:'Heavy Duty (SKU-A240)'};
+ const {fetcher}=fake([{components:[],materials:[]},{components:[],materials:[]}]);
+ const result=await enrichKnownProductsWithOllama({rootUrl:site,rawPages:pages,
+   knownProducts:[p1,variant,p2],fetcher,maxProducts:2,timeBudgetMs:60000});
+ assert.equal(result.productsReviewed,2);
+ assert.equal(result.distinctPagesPrioritized,2);
+ assert.deepEqual(result.enrichments.map(x=>x.name),[p1.name,p2.name]);
+ assert.equal(result.enrichments.some(x=>x.name===variant.name),false);
+ assert.equal(result.taxonomy.masterModified,false);
+});
