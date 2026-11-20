@@ -1,9 +1,10 @@
 /* Hosted Cloudflare control-plane for real laptop-run website research.
  * No Cloudflare-side crawling, no raw scraped HTML, no OS writes.
  */
-import {validateStart,hostOf,LIVE_SCHEMA} from './protocol.js';
+import {validateStart,hostOf,LIVE_SCHEMA,sanitizeOriginalTaxonomy,ORIGINAL_TAXONOMY_SCHEMA,sanitizeProcessReference} from './protocol.js';
 import {uiHtml,uiJs,uiCss} from './ui.js';
 import {runEnrichment,SCHEMA as ENRICHMENT_SCHEMA} from './ai-enrichment.js';
+import {buildLaptopWorkingGraph} from './local-working-graph.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{
   'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -39,7 +40,7 @@ async function parse(req,max=10000){
   return JSON.parse(raw);
 }
 const RUN_LIMIT=8,STALE_MS=9*60*1000,AI_STALE_MS=100_000;
-function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],revision:0};}
+function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],originalTaxonomy:null,revision:0};}
 function cleanStale(s,now){
   const run=s.runs.find(x=>x.id===s.active);
   if(!run){s.active=null;return;}
@@ -61,7 +62,7 @@ function publicRun(run,full=false){
     aiStatus:displayedEnrichment?.status||'not_started',
     enrichmentAttempts:run.enrichmentAttempts||0,
     taxonomyNodesAdded:displayedEnrichment?.workingTaxonomy?.newWorkingNodes||0};
-  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;}
+  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;base.localWorking=run.localWorking||null;base.localEdition=run.result?.localEdition||null;}
   return base;
 }
 export class LabSession{
@@ -87,6 +88,33 @@ export class LabSession{
         activeRunId:s.active,
         runs:s.runs.map(x=>publicRun(x,false)),revision:s.revision});
     }
+    if(method==='GET'&&path==='/original-taxonomy'){
+      const state=(await this.ctx.storage.get('state'))||initial();
+      return json(state.originalTaxonomy||{schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,
+        status:'not_loaded',totalNodes:0,nodeHash:null,nodes:[],masterModified:false,syncedAt:null});
+    }
+
+    if(method==='GET'&&path==='/original-processes'){
+      const code=url.searchParams.get('code')||'';
+      if(!/^[a-z0-9_]{2,180}$/.test(code))return json({error:'Valid existing taxonomy code required'},400);
+      const state=(await this.ctx.storage.get('state'))||initial();
+      const master=state.originalTaxonomy;
+      const node=master?.nodes?.find(n=>n.code===code);
+      if(!node)return json({error:'No such original taxonomy code is installed'},404);
+      if(node.level!==3)return json({code,label:node.label,path:node.path,
+        processCount:0,isLeaf:false,processes:[],status:'read_only_original_category'});
+      const snapshot=await this.ctx.storage.get('processReference');
+      if(!snapshot||snapshot.status!=='loaded')return json({code,label:node.label,path:node.path,
+        processCount:0,isLeaf:true,processes:[],status:'process_reference_not_synchronized'});
+      const row=snapshot.edgeRows.find(x=>x[0]===code),list=row?.[1]||[];
+      return json({code,label:node.label,path:node.path,isLeaf:true,
+        processCount:list.length,status:'unreviewed_draft_reference',
+        processes:list.slice(0,60).map(e=>({
+          name:snapshot.processNames[e[0]],role:snapshot.roles[e[1]],
+          prevalence:snapshot.prevalences[e[2]],materialContext:e[3]||null,
+          status:'unreviewed_taxonomy_process_hypothesis'})),
+        note:'Industry category-to-process priors are not evidence that this company performs any of these processes.'});
+    }
     if(method==='GET'&&path.startsWith('/run/')){
       const state=(await this.ctx.storage.get('state'))||initial();
       const run=state.runs.find(r=>r.id===path.slice('/run/'.length));
@@ -94,8 +122,31 @@ export class LabSession{
     }
     if(method!=='POST')return notFound();
     let input={};
-    try{input=await parse(req,180000);}catch(e){return json({error:clip(e.message)},400);}
+    try{input=await parse(req,path==='/original-taxonomy'?1_600_000:path==='/original-processes'?450_000:180000);}catch(e){return json({error:clip(e.message)},400);}
     try{
+      if(path==='/original-taxonomy'){
+        // Protected bridge may synchronize the real catalog, never invent or mutate nodes.
+        const snapshot=sanitizeOriginalTaxonomy(input.snapshot);
+        return await this.update((state,now)=>{
+          state.originalTaxonomy={...snapshot,syncedAt:now};
+          return json({ok:true,status:snapshot.status,totalNodes:snapshot.totalNodes,
+            nodeHash:snapshot.nodeHash,masterModified:false});
+        });
+      }
+      if(path==='/original-processes'){
+        const snapshot=sanitizeProcessReference(input.snapshot);
+        if(snapshot.status==='loaded'){
+          const state=(await this.ctx.storage.get('state'))||initial();
+          if(state.originalTaxonomy?.status!=='installed'||
+            state.originalTaxonomy?.totalNodes!==1213||
+            snapshot.edgeRows.some(x=>!state.originalTaxonomy.nodes.some(n=>n.code===x[0]&&n.level===3)))
+            return json({error:'Process reference must match the installed original taxonomy'},409);
+        }
+        // A separate viewer cache key, NOT a taxonomy database or canonical master.
+        await this.ctx.storage.put('processReference',{...snapshot,syncedAt:Date.now()});
+        return json({ok:true,status:snapshot.status,
+          links:snapshot.counts?.links||0,originalMasterModified:false});
+      }
       if(path==='/create'){
         const v=validateStart(input,this.env.ALLOWED_TEST_HOSTS);
         return await this.update((s,now)=>{
@@ -205,6 +256,7 @@ export class LabSession{
             const bytes=JSON.stringify(input.result);
             if(bytes.length>168000)return json({error:'Result too large'},413);
             run.result=input.result;
+            run.localWorking=input.result.researchGraph||buildLaptopWorkingGraph(input.result,s.originalTaxonomy);
             run.aiGeneration=0;
             run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
               message:'Cloudflare Workers AI is generating an unverified working taxonomy'};
@@ -258,6 +310,13 @@ export default {
           String(env.ALLOWED_TEST_HOSTS||'').split(',').map(x=>x.trim()).filter(Boolean))]});
       if(method==='GET'&&path==='/api/state')
         return doRequest(env,'/state');
+      if(method==='GET'&&path==='/api/original-taxonomy')
+        return doRequest(env,'/original-taxonomy');
+      if(method==='GET'&&path==='/api/original-processes'){
+        const code=url.searchParams.get('code')||'';
+        if(!/^[a-z0-9_]{2,180}$/.test(code))return json({error:'Valid existing taxonomy code required'},400);
+        return doRequest(env,'/original-processes?code='+encodeURIComponent(code));
+      }
       if(method==='GET'&&/^\/api\/runs\/[0-9a-f-]{36}$/.test(path))
         return doRequest(env,'/run/'+path.split('/').at(-1));
       if(method==='POST'&&/^\/api\/runs\/[0-9a-f-]{36}\/recover-ai$/.test(path)){
@@ -277,6 +336,14 @@ export default {
       if(method==='POST'&&path==='/api/cancel')
         return doRequest(env,'/cancel','POST',{});
       if(agent&&method==='POST'){
+        if(path==='/api/agent/original-taxonomy'){
+          const payload=await parse(request,1_600_000);
+          return doRequest(env,'/original-taxonomy','POST',{snapshot:sanitizeOriginalTaxonomy(payload.snapshot)});
+        }
+        if(path==='/api/agent/original-processes'){
+          const payload=await parse(request,450_000);
+          return doRequest(env,'/original-processes','POST',{snapshot:sanitizeProcessReference(payload.snapshot)});
+        }
         if(path==='/api/agent/heartbeat')return doRequest(env,'/heartbeat','POST',{});
         if(path==='/api/agent/next')return doRequest(env,'/next','POST',{});
         if(path==='/api/agent/progress'){

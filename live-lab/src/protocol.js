@@ -1,6 +1,139 @@
 /* Shared, strict Cloudflare/laptop Live Lab contract. No site inference. */
 export const LIVE_SCHEMA='pi-cloud-laptop-live-lab/v1';
+export const ORIGINAL_TAXONOMY_SCHEMA='pi-original-taxonomy-snapshot/v1';
+/** Transfer only the checked, read-only taxonomy node catalog; never the original file or local path. */
+export function sanitizeOriginalTaxonomy(snapshot){
+  if(!snapshot||snapshot.status==='not_loaded')return {
+    schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,status:'not_loaded',totalNodes:0,
+    nodeHash:null,sourceName:null,nodes:[],masterModified:false};
+  if(snapshot.status!=='installed'||!Array.isArray(snapshot.nodes)||
+    snapshot.nodes.length<1||snapshot.nodes.length>12000||
+    snapshot.totalNodes!==snapshot.nodes.length||
+    !/^[a-f0-9]{64}$/i.test(snapshot.nodeHash||''))
+    throw Error('Invalid complete original taxonomy snapshot');
+  const used=new Set(),nodes=[];
+  for(const node of snapshot.nodes){
+    const code=String(node?.code||'').trim(),label=String(node?.label||'').trim(),
+      path=String(node?.path||'').trim(),level=node?.level;
+    if(!code||code.length>180||!label||label.length>240||!path||path.length>1200||
+      !Number.isInteger(level)||level<0||level>4||used.has(code))
+      throw Error('Invalid or duplicate original taxonomy node');
+    used.add(code);nodes.push({code,label,path,level});
+  }
+  return {schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,status:'installed',
+    totalNodes:nodes.length,nodeHash:snapshot.nodeHash.toLowerCase(),
+    sourceName:String(snapshot.sourceName||'Installed OEM taxonomy').split(/[\\/]/).pop().slice(0,100),
+    nodes,masterModified:false};
+}
+
 const s=(value,max=250)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
+
+export const PROCESS_SNAPSHOT_SCHEMA='pi-oem-process-snapshot/v1';
+/** Authenticated bridge view cache only; original process JSON remains laptop-local code. */
+export function sanitizeProcessReference(snapshot){
+ if(!snapshot||snapshot.status==='not_loaded')return {schemaVersion:PROCESS_SNAPSHOT_SCHEMA,
+   status:'not_loaded',sourceHash:null,counts:null,processNames:[],roles:[],
+   prevalences:[],edgeRows:[],originalMasterModified:false};
+ const p=snapshot.processNames,e=snapshot.edgeRows,roles=snapshot.roles,
+   prev=snapshot.prevalences,counts=snapshot.counts;
+ if(snapshot.schemaVersion!==PROCESS_SNAPSHOT_SCHEMA||snapshot.status!=='loaded'||
+   snapshot.sourceHash!=='23e6b05bedf44a02206903ddd6126128abe1c31a131e6bc812b60c3084d89aa8'||
+   !Array.isArray(p)||p.length!==220||!Array.isArray(e)||e.length!==1004||
+   !Array.isArray(roles)||roles.length!==5||!Array.isArray(prev)||prev.length!==3||
+   counts?.nodes!==1213||counts?.leaves!==1004||counts?.processes!==220||counts?.links!==10388)
+   throw Error('Process reference must match the pinned uploaded code taxonomy');
+ const unique=new Set(),edgeRows=[];let total=0;
+ for(const item of p)if(typeof item!=='string'||!item.trim()||item.length>130)
+   throw Error('Invalid process name');
+ for(const item of [...roles,...prev])if(typeof item!=='string'||item.length>55)
+   throw Error('Invalid process metadata');
+ for(const item of e){
+   const code=item?.[0],list=item?.[1];
+   if(typeof code!=='string'||!/^[a-z0-9_]{3,180}$/.test(code)||
+     unique.has(code)||!Array.isArray(list)||list.length>80)
+     throw Error('Invalid or repeated process category');
+   unique.add(code);
+   for(const value of list){
+     if(!Array.isArray(value)||value.length!==4||
+       !Number.isInteger(value[0])||value[0]<0||value[0]>=220||
+       !Number.isInteger(value[1])||value[1]<0||value[1]>=5||
+       !Number.isInteger(value[2])||value[2]<0||value[2]>=3||
+       !(value[3]===null||typeof value[3]==='string'&&value[3].length<=160))
+       throw Error('Invalid coded process edge');
+     total++;
+   }
+   edgeRows.push([code,list]);
+ }
+ if(total!==10388)throw Error('Process edge count mismatch');
+ return {schemaVersion:PROCESS_SNAPSHOT_SCHEMA,status:'loaded',sourceHash:snapshot.sourceHash,
+   counts:{nodes:1213,leaves:1004,processes:220,links:10388},
+   processNames:p,roles,prevalences:prev,edgeRows,originalMasterModified:false};
+}
+export const RESEARCH_GRAPH_SCHEMA='pi-research-relationship-graph/v1';
+export function sanitizeResearchGraph(graph,expectedHost){
+ if(!graph||graph.schemaVersion!==RESEARCH_GRAPH_SCHEMA||
+   graph.originalMasterModified!==false||graph.osWritePerformed!==false||
+   graph.company?.host!==expectedHost||!Array.isArray(graph.nodes)||
+   !Array.isArray(graph.links))return null;
+ const nodes=[],ids=new Set();
+ for(const n of graph.nodes.slice(0,180)){
+   if(!n||typeof n.id!=='string'||!/^(company|product|part|material|process):[a-f0-9]{18}$/.test(n.id)||
+     !['company','product','part','material','process'].includes(n.kind)||ids.has(n.id))continue;
+   const url=n.sourceUrl?webUrl(n.sourceUrl,expectedHost):null;
+   if(n.sourceUrl&&!url)continue;
+   ids.add(n.id);nodes.push({id:n.id,kind:n.kind,label:s(n.label,145),
+     sourceUrl:url,evidenceQuote:s(n.evidenceQuote,230),
+     status:s(n.status,80),modelInferred:!!n.modelInferred});
+ }
+ const links=[];
+ for(const e of graph.links.slice(0,500)){
+   if(!ids.has(e?.from)||!(ids.has(e?.to)||typeof e?.to==='string'&&
+     /^original:[a-z0-9_]{2,180}$/.test(e.to)))continue;
+   const sourceQuote=s(e.sourceQuote,230);
+   links.push({from:e.from,to:e.to,relation:s(e.relation,95),
+     status:s(e.status,90),basis:s(e.basis,85),
+     referenceCode:s(e.referenceCode,180)||null,
+     role:s(e.role,50)||null,prevalence:s(e.prevalence,50)||null,
+     sourceQuote,method:s(e.method,80),confidence:s(e.confidence,70)});
+ }
+ const mappings=(Array.isArray(graph.mappings)?graph.mappings:[]).slice(0,48)
+   .filter(x=>typeof x.targetCode==='string'&&
+     /^[a-z0-9_]{2,180}$/.test(x.targetCode))
+   .map(x=>({product:s(x.product||x.item,135),item:s(x.item,135),
+     kind:s(x.kind,20),targetCode:s(x.targetCode,180),
+     targetLabel:s(x.targetLabel,140),method:s(x.method,85),
+     sourceUrl:webUrl(x.sourceUrl,expectedHost),status:'needs_review'}));
+ const gaps=(Array.isArray(graph.gaps)?graph.gaps:[]).slice(0,45)
+   .map(x=>({item:s(x.item,120),kind:s(x.kind,25),reason:s(x.reason,80),
+     sourceUrl:webUrl(x.sourceUrl,expectedHost)}));
+ const counts={products:nodes.filter(x=>x.kind==='product').length,
+   parts:nodes.filter(x=>x.kind==='part').length,
+   materials:nodes.filter(x=>x.kind==='material').length,
+   processCandidates:links.filter(x=>x.relation==='possible_manufacturing_process').length,
+   mappings:mappings.length,gaps:gaps.length};
+ return {schemaVersion:RESEARCH_GRAPH_SCHEMA,source:'local_laptop_research',
+   status:'candidate_graph',mode:'read_only_original_plus_per_run_working_overlay',
+   nodes,links,mappings,gaps,counts,
+   originalMasterModified:false,osWritePerformed:false,
+   note:'Source candidates, optional AI hypotheses, and unreviewed OEM industry process priors; not manufacturer capability proof.'};
+}
+export function sanitizeEditionSummary(edition){
+ if(!edition||edition.schemaVersion!=='pi-ai-working-edition-json/v1')return null;
+ const c=edition.totals||{},counts={};
+ for(const key of ['companies','products','parts','materials','processHypotheses','taxonomyMappings','gaps','candidateNodes','candidateRelations'])
+   counts[key]=Number.isInteger(c[key])&&c[key]>=0&&c[key]<=999999?c[key]:0;
+ return {schemaVersion:'pi-ai-working-edition-json/v1',version:Number.isInteger(edition.version)?
+   Math.max(0,Math.min(250,edition.version)):0,updatedAt:s(edition.updatedAt,35)||null,
+   totals:counts,
+   candidateSamples:(Array.isArray(edition.candidateSamples)?edition.candidateSamples:[]).slice(-8)
+     .map(x=>({kind:s(x.kind,25),label:s(x.label,140),
+       status:s(x.status,80),companyCount:Number(x.companyCount||0),
+       occurrences:Number(x.occurrences||0)})),
+   recentCompanies:(Array.isArray(edition.recentCompanies)?edition.recentCompanies:[])
+     .slice(-8).map(x=>({companyName:s(x.companyName,100),companyHost:s(x.companyHost,120),
+       counts:x.counts||{}})),originalMasterModified:false,osWritePerformed:false};
+}
+
 export function hostOf(raw){
   try{return new URL(raw).hostname.toLowerCase().replace(/^www\./,'');}catch{return null;}
 }
@@ -115,6 +248,11 @@ export function sanitizeCompleted(data,expectedHost){
       pagesUsable:pages.filter(p=>['completed','partial'].includes(p.status)).length,
       pages},
     taxonomyReference:safeReference(data.taxonomyReference),
+    researchGraph:sanitizeResearchGraph(report.researchGraph,expectedHost),
+    localEdition:sanitizeEditionSummary(report.editionSummary),
+    relationshipAi:{status:s(report.relationshipAi?.status||'not_run',60),
+      attemptedProducts:Number(report.relationshipAi?.attemptedProducts||0),
+      hypotheses:Number(report.relationshipAi?.hypotheses||0)},
     productIntelligence:{categories,products:resultProducts,
       publishedCounts:{products:Number(coverage.products||resultProducts.length),
         categories:Number(coverage.categories||categories.length),
@@ -139,7 +277,29 @@ export function sanitizeCompleted(data,expectedHost){
       'A product or material does not establish a manufacturing process or OEM ownership.',
       'No confirmed OS integration or existing OS record comparison is implemented.'
     ]};
-  const serialized=JSON.stringify(facts);
+  // Preserve the primary source extraction if an unusually large research graph
+  // would exceed the existing 165 KB Cloudflare result budget. Local JSON retains
+  // the FULL graph; Cloudflare receives a bounded view or safely falls back.
+  let serialized=JSON.stringify(facts);
+  if(serialized.length>158000&&facts.researchGraph){
+    const full=facts.researchGraph;
+    for(const [nodeLimit,linkLimit] of [[120,190],[75,120],[35,45],[0,0]]){
+      if(nodeLimit===0){facts.researchGraph=null;serialized=JSON.stringify(facts);break;}
+      const nodes=full.nodes.slice(0,nodeLimit),ids=new Set(nodes.map(n=>n.id));
+      const links=full.links.filter(x=>ids.has(x.from)&&
+        (ids.has(x.to)||String(x.to).startsWith('original:'))).slice(0,linkLimit);
+      facts.researchGraph={...full,nodes,links,
+        mappings:full.mappings.slice(0,24),gaps:full.gaps.slice(0,18),
+        counts:{products:nodes.filter(x=>x.kind==='product').length,
+          parts:nodes.filter(x=>x.kind==='part').length,
+          materials:nodes.filter(x=>x.kind==='material').length,
+          processCandidates:links.filter(x=>x.relation==='possible_manufacturing_process').length,
+          mappings:Math.min(24,full.mappings.length),gaps:Math.min(18,full.gaps.length)},
+        truncatedForCloudflare:true};
+      serialized=JSON.stringify(facts);
+      if(serialized.length<=158000)break;
+    }
+  }
   if(serialized.length>165000)throw Error('Result exceeds the bounded remote evidence payload');
   return facts;
 }

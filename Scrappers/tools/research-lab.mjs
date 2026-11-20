@@ -18,6 +18,10 @@ import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-tax
 import {stage2Analyze,callStage2,stage2Config} from './research-stage2.mjs';
 import {listTaxonomyProposals,enqueueTaxonomyProposals,reviewTaxonomyProposal,publishApprovedTaxonomy,loadWorkingTaxonomy} from './research-stage2-store.mjs';
 import {assertPublicDns} from './research-lab-security.mjs';
+import {loadOemProcessReference} from './oem-process-reference.mjs';
+import {buildResearchGraph} from './research-relationship-graph.mjs';
+import {proposePartHypotheses} from './ollama-relationships.mjs';
+import {appendResearchEdition,readResearchEdition,publicEditionSummary} from './research-edition-store.mjs';
 
 const port=Number(process.env.RESEARCH_LAB_PORT||8790),host='127.0.0.1';
 if(!Number.isInteger(port)||port<1024||port>65535)throw Error('RESEARCH_LAB_PORT must be between 1024 and 65535');
@@ -130,7 +134,33 @@ async function runJob(body){
   const ollama=await enrichKnownProductsWithOllama({rootUrl:u.href,rawPages:rawProductEvidence,
     knownProducts:deterministic.products,taxonomyNodes,onProgress:logEvent});
   const productIntelligence=mergeKnownProductEnrichment(deterministic,ollama);
-  return {...enriched,productIntelligence,lab:{ollama:{
+  // The source file is a pinned, gitignored, local CODE asset. An absent or invalid
+  // reference never blocks website research; no taxonomy / OS write is attempted.
+  let processReference=null;
+  try{processReference=await loadOemProcessReference();}
+  catch(e){logEvent({status:'process_reference_warning',
+    reason:String(e?.message||e).slice(0,150)});}
+  const relationshipAi=await proposePartHypotheses({
+    products:productIntelligence.products,
+    processNames:processReference?.processNames||[],
+    enabled:process.env.RESEARCH_LAB_RELATIONSHIP_AI==='1'&&!!processReference,
+    model:'qwen3:4b-instruct'});
+  const researchGraph=buildResearchGraph({companyName:u.hostname,companyUrl:u.href,
+    products:productIntelligence.products,processReference,aiParts:relationshipAi.proposals});
+  let editionResult=null,editionSummary=null;
+  try{
+    editionResult=await appendResearchEdition(researchGraph);
+    editionSummary=publicEditionSummary(await readResearchEdition());
+    logEvent({status:'working_edition',reason:'JSON edition '+editionResult.version+
+      ' · '+researchGraph.counts.products+' product candidates · '+
+      researchGraph.counts.processHypotheses+' possible process links'});
+  }catch(e){logEvent({status:'working_edition_warning',
+    reason:String(e?.message||e).slice(0,150)});}
+  return {...enriched,productIntelligence,researchGraph,
+    relationshipAi:{status:relationshipAi.status,model:relationshipAi.model,
+      attemptedProducts:relationshipAi.attemptedProducts,
+      hypotheses:relationshipAi.proposals.length,reason:relationshipAi.reason||null},
+    editionSummary,lab:{ollama:{
     status:ollama.status,model:ollama.model||null,pagesAnalyzed:ollama.pagesAnalyzed||0,
     productsReviewed:ollama.productsReviewed||0,acceptedClaims:ollama.acceptedClaims||0,
     rejectedClaims:ollama.rejectedClaims||0,
@@ -147,8 +177,38 @@ async function handler(req,res){
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/business-app.js')return send(res,await readFile(join(BASE,'research-lab-business-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/api/ollama/status')return json(res,await probeOllama());
-  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',foundationVersion:'pi-code-foundation/v1',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/api/working-edition/summary'){
+    try{return json(res,publicEditionSummary(await readResearchEdition()));}
+    catch(e){return json(res,{error:'Working edition unavailable',reason:String(e.message).slice(0,110)},503);}
+  }
+  if(req.method==='GET'&&path==='/api/process-reference/status'){
+    try{const ref=await loadOemProcessReference();return json(res,ref?{
+      status:'loaded',counts:ref.counts,sourceHash:ref.sourceSha256,
+      reviewStatus:ref.reviewStatus}:{status:'not_loaded',counts:null});}
+    catch(e){return json(res,{status:'invalid_reference',reason:String(e.message).slice(0,110)},503);}
+  }
+  // This is an authenticated read-only transfer for the EXISTING outbound-only
+  // Cloudflare bridge. The source JSON is never committed to the public repo.
+  if(req.method==='POST'&&path==='/api/process-reference/snapshot'){
+    try{
+      const ref=await loadOemProcessReference();
+      if(!ref)return json(res,{status:'not_loaded',sourceHash:null,counts:null,
+        processNames:[],roles:[],prevalences:[],edgeRows:[]});
+      const roles=['primary shaping','secondary','joining','finishing','assembly'],
+        prevalences=['dominant','common','occasional'];
+      const processIndex=new Map(ref.processNames.map((n,i)=>[n,i]));
+      return json(res,{schemaVersion:'pi-oem-process-snapshot/v1',status:'loaded',
+        sourceHash:ref.sourceSha256,counts:ref.counts,
+        processNames:ref.processNames,roles,prevalences,
+        edgeRows:ref.nodes.filter(n=>n.level===3).map(n=>[n.code,
+          ref.decode(n.code,{max:80}).map(p=>[processIndex.get(p.name),
+            roles.indexOf(p.role),prevalences.indexOf(p.prevalence),
+            p.materialContext||null])])});
+    }catch(e){return json(res,{error:'OEM process reference unavailable',
+      reason:String(e.message).slice(0,120)},503);}
+  }
   if(req.method==='GET'&&path==='/api/report')return json(res,state.report||{error:'No finished research run'},state.report?200:404);
   if(req.method==='GET'&&path==='/api/business')
     return json(res,{business:state.report?buildBusinessView(state.report,state.osSnapshot):null,
@@ -246,6 +306,16 @@ async function handler(req,res){
     await activateWorkingTaxonomy();
     state.report=null;
     return json(res,{ok:true,...result});
+  }
+  // Local authenticated read-only snapshot for the protected Cloudflare viewer.
+  // Uses original master, never the AI working edition; no file paths or secrets.
+  if(req.method==='POST'&&path==='/api/taxonomy/master-snapshot'){
+    if(!masterTaxonomy?.nodes?.length)return json(res,{status:'not_loaded',nodes:[],totalNodes:0,nodeHash:null});
+    const master=masterTaxonomy;
+    return json(res,{status:'installed',totalNodes:master.nodes.length,
+      nodeHash:master.manifest.nodeHash,sourceName:master.manifest.sourceName,
+      nodes:master.nodes.map(n=>({code:n.code,label:n.label,path:n.path,level:n.level})),
+      masterModified:false});
   }
   if(req.method==='GET'&&path==='/api/taxonomy/manifest')return json(res,{loaded:taxonomyNodes.length>0,source:taxonomySource,manifest:taxonomyManifest});
   if(req.method==='GET'&&path==='/api/taxonomy'){
