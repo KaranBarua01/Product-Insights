@@ -184,7 +184,7 @@ export function validateStart(data,allowlist){
   if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Invalid investigation request');
   const {url,host}=validateTarget(data.url,allowedHosts(allowlist));
   const maxPages=Number(data.maxPages||7);
-  if(![3,7,12].includes(maxPages))throw Error('Page budget must be 3, 7 or 12');
+  if(![3,5,7,12,15,30].includes(maxPages))throw Error('Page budget must be Quick 5, Standard 15, Deep 30, or legacy 3/7/12');
   return {url,host,maxPages,mode:'auto',browser:'headless'};
 }
 function webUrl(raw,host){
