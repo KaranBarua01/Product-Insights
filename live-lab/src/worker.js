@@ -39,7 +39,7 @@ async function parse(req,max=10000){
   if(raw.length>max)throw Error('Request exceeded size limit');
   return JSON.parse(raw);
 }
-const RUN_LIMIT=8,STALE_MS=9*60*1000,AI_STALE_MS=100_000;
+const RUN_LIMIT=8,STALE_MS=17*60*1000,AI_STALE_MS=100_000;
 function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],originalTaxonomy:null,approvedHosts:[],approvedHostsAt:null,revision:0};}
 function cleanStale(s,now){
   const run=s.runs.find(x=>x.id===s.active);
