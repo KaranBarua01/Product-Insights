@@ -14,7 +14,8 @@ import {createPlaywrightBrowserCapture} from '../node-browser.mjs';
 import {runResearch} from '../research-planner.mjs';
 import {extractProductIntelligence} from '../product-intelligence.mjs';
 import {loadInstalledTaxonomy} from '../research-taxonomy-store.mjs';
-import {probeOllama,enrichWithLocalOllama,mergeOllamaProducts} from '../ollama-mapping.mjs';
+import {probeOllama} from '../ollama-mapping.mjs';
+import {enrichKnownProductsWithOllama,mergeKnownProductEnrichment} from '../ollama-known-products.mjs';
 
 export const JOB_SCHEMA='pi-ollama-agent-result/v1';
 export const MODEL='qwen3:4b-instruct';
@@ -105,8 +106,17 @@ export function summarize1up({research,productIntelligence,model,reference,event
         title:limited(p.title,100),textChars:Number(p.textChars||0),
         warning:limited(p.warnings?.[0]||p.reason,120)})).filter(p=>p.url)},
     model:{name:limited(ollama.model||MODEL,75),status:limited(ollama.status,48),
-      pagesAnalyzed:Number(ollama.pagesAnalyzed||0),
-      acceptedCandidates:Number(ollama.products?.length||0),reason:limited(ollama.reason,110)},
+      mode:'enrich_existing_products',pagesAnalyzed:Number(ollama.pagesAnalyzed||0),
+      productsReviewed:Number(ollama.productsReviewed||0),
+      acceptedClaims:Number(ollama.acceptedClaims||0),
+      rejectedClaims:Number(ollama.rejectedClaims||0),
+      acceptedCandidates:Number(ollama.acceptedClaims||0),reason:limited(ollama.reason,110),
+      attempts:(ollama.attempts||[]).slice(0,5).map(x=>({product:limited(x.product,90),
+        status:limited(x.status,55),componentsAccepted:Number(x.componentsAccepted||0),
+        materialsAccepted:Number(x.materialsAccepted||0),
+        rejectedClaims:Number(x.rejectedClaims||0),
+        durationMs:Number(x.durationMs||0)})),
+      taxonomyStatus:limited(ollama.taxonomy?.status||'not_loaded',65)},
     taxonomy:{installed:Boolean(reference?.nodes?.length),nodes:Number(reference?.nodes?.length||0),
       nodeHash:reference?.manifest?.nodeHash||null,masterChanged:false},
     output:{productCount:products.length,localAiProducts:candidates,
@@ -152,16 +162,19 @@ export async function run1up({fetcher=fetch}={}){
   const deterministic=extractProductIntelligence({
     companyName:'1UP USA',rootUrl:COMPANY_URL,pages:captured
   });
-  const model=await enrichWithLocalOllama({rootUrl:COMPANY_URL,rawPages:captured,
-    taxonomyNodes:reference?.nodes||[],preferredModel:MODEL,fetcher,
+  const model=await enrichKnownProductsWithOllama({rootUrl:COMPANY_URL,rawPages:captured,
+    knownProducts:deterministic.products,taxonomyNodes:reference?.nodes||[],
+    preferredModel:MODEL,fetcher,
     onProgress:e=>{if(events.length<70)events.push(e);}});
-  const productIntelligence=mergeOllamaProducts(deterministic,model);
+  const productIntelligence=mergeKnownProductEnrichment(deterministic,model);
   const summary=summarize1up({research,productIntelligence,model,reference,
     events,durationMs:performance.now()-started});
   // Additional source traces stay on the user's own PC, never in a GitHub issue.
   const details={schemaVersion:JOB_SCHEMA,action:'ollama_1up',createdAt:utc(),
     research,productIntelligence,localInference:{status:model.status,reason:model.reason||null,
-      model:model.model,acceptedProducts:model.products||[]},taxonomyReference:summary.taxonomy};
+      model:model.model,mode:'enrich_existing_products',productsReviewed:model.productsReviewed,
+      acceptedClaims:model.acceptedClaims,rejectedClaims:model.rejectedClaims,
+      attempts:model.attempts||[],taxonomy:model.taxonomy},taxonomyReference:summary.taxonomy};
   return {summary,details};
 }
 async function main(){
