@@ -1,0 +1,48 @@
+name: Adaptive V2 Real Website Holdout
+on:
+  push:
+    branches:
+      - feat/adaptive-evidence-research-v2
+    paths:
+      - .github/workflows/adaptive-real-sites.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-new-sites:
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [industrial, hardware]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Scrappers and compile
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Install headless Chromium
+        working-directory: Scrappers
+        run: npx playwright install --with-deps chromium
+      - name: Real adaptive 15-page holdout on the same 8 previous unfamiliar websites
+        timeout-minutes: 17
+        working-directory: Scrappers
+        env:
+          PI_SITE_BATCH: ${{ matrix.batch }}
+          PI_SITE_PAGES: '15'
+        run: node tools/hosted-live-site-smoke.mjs
+      - name: Upload measured per-company evidence and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-v2-new-sites-${{ matrix.batch }}
+          path: Scrappers/live-site-smoke-results/
+          retention-days: 15
+          if-no-files-found: warn

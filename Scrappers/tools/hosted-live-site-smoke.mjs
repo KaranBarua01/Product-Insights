@@ -30,12 +30,15 @@ const TEST_MATRICES={
 const BATCH=process.env.PI_SITE_BATCH||'industrial';
 if(!Object.hasOwn(TEST_MATRICES,BATCH))throw Error('Site batch must be industrial or hardware');
 const TARGETS=TEST_MATRICES[BATCH];
-const OUTPUT=resolve('live-site-smoke-results'), MAX_PAGES=3;
+const OUTPUT=resolve('live-site-smoke-results');
+const MAX_PAGES=Number(process.env.PI_SITE_PAGES||3);
+if(![3,15].includes(MAX_PAGES))throw Error('Hosted comparison only permits fixed 3 or 15 page budgets');
 const clip=(s,n=200)=>String(s??'').replace(/\s+/g,' ').trim().slice(0,n);
 const start=new Date().toISOString(),results=[];
 const summary=()=>({schemaVersion:'pi-hosted-real-site-smoke/v1',startedAt:start,
   updatedAt:new Date().toISOString(),execution:'github_hosted_ubuntu_runner',siteBatch:BATCH,
-  testClass:'real_websites_existing_extraction_engine',
+  testClass:'real_websites_adaptive_extraction_engine_v2',
+  pagesRequestedPerSite:MAX_PAGES,
   qwenTested:false,privateTaxonomyLoaded:false,
   limitations:['Not the user Windows Research Lab','No laptop Qwen3 inference',
     'No original private taxonomy, so no actual OEM-category matching',
@@ -47,7 +50,7 @@ async function persist(){
  const all=summary();
  await writeFile(join(OUTPUT,'live-site-evidence.json'),JSON.stringify(all,null,2));
  let md='# Live Scrappers Test — Four New Companies ('+BATCH+')\n\n';
- md+='Run: '+start+' | GitHub-hosted runner (not user laptop)\n\n';
+ md+='Run: '+start+' | GitHub-hosted runner (not user laptop) | Page budget: '+MAX_PAGES+'\n\n';
  md+='| Company | Pages | Successful | Product candidates | Categories | Parts mentioned | Materials mentioned | Access status |\n|---|---:|---:|---:|---:|---:|---:|---|\n';
  for(const r of results)md+='| '+new URL(r.url).hostname+' | '+(r.pagesVisited??0)+
    ' | '+(r.successfulPages??0)+' | '+(r.productCandidates??0)+' | '+(r.categories??0)+
@@ -94,6 +97,9 @@ async function one(site){
    pagesVisited:report.coverage?.visitedPages||0,
    successfulPages:report.pages.filter(x=>['completed','partial'].includes(x.status)).length,
    productCandidates:products.products.length,categories:products.categories.length,
+   productCardLeads:products.productLeads?.length||0,
+   usefulPages:report.coverage?.usefulPages||0,
+   stopReason:report.coverage?.stopReason||null,
    componentMentions:products.products.reduce((n,p)=>n+(p.components||[]).length,0),
    materialMentions:products.products.reduce((n,p)=>n+(p.materials||[]).length,0),
    graphNodeCount:graph.nodes.length,graphGapCount:graph.gaps.length,
@@ -110,7 +116,9 @@ for(let i=0;i<TARGETS.length;i++){
  const site=TARGETS[i];console.log('TEST '+(i+1)+'/'+TARGETS.length+' '+site.url);
  try{const result=await one(site);results.push(result);
    console.log('RESULT '+JSON.stringify({site:site.url,status:result.status,pages:result.pagesVisited,
-     products:result.productCandidates,parts:result.componentMentions,
+     products:result.productCandidates,productCardLeads:result.productCardLeads,
+     usefulPages:result.usefulPages,stopReason:result.stopReason,
+     parts:result.componentMentions,
      materials:result.materialMentions,examples:result.productNames.slice(0,3)}));}
  catch(e){results.push({url:site.url,industry:site.industry,status:'failed',
    reason:clip(e?.message||e,250),pagesVisited:0,successfulPages:0,

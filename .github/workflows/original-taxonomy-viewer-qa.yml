@@ -4,6 +4,7 @@ on:
     branches:
       - feat/full-taxonomy-explorer-target
       - feat/operator-approved-any-company-tests
+      - feat/adaptive-evidence-research-v2
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,6 +33,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         working-directory: live-lab
         run: npm run build:check
+      - name: Install and compile improved Scrappers engine
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
       - name: Validate all local relationship and bridge JavaScript
         working-directory: Scrappers
         run: |
@@ -44,6 +50,8 @@ jobs:
           node --check tools/approved-company-sites.mjs
           node --check tools/approve-company.mjs
           node --check tools/test-diverse-company-websites.mjs
+          node --check tools/adaptive-research-v2.mjs
+          node --check tools/product-evidence-v2.mjs
       - name: Test OEM foundation and arbitrary public company approval/benchmarks
         working-directory: Scrappers
-        run: node --test tests/oem-foundation.test.mjs tests/any-company-benchmark.test.mjs tests/cross-industry-navigation.test.mjs
+        run: node --test tests/oem-foundation.test.mjs tests/any-company-benchmark.test.mjs tests/cross-industry-navigation.test.mjs tests/adaptive-research-v2.test.mjs tests/adaptive-html.test.mjs tests/product-intelligence.test.mjs tests/ollama-known-products.test.mjs tests/research-lab.test.mjs

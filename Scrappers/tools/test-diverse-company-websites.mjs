@@ -25,9 +25,9 @@ function parseArgs(args){
    else if(flag==='--max'&&v){out.maxSites=Number(v);i++;}
    else if(flag==='--pages'&&v){out.pages=Number(v);i++;}
    else if(flag==='--output'&&v){out.output=resolve(v);i++;}
-   else throw Error('Usage: node tools/test-diverse-company-websites.mjs [--sites list.txt] [--pages 3|7|12] [--max 1..8] [--output directory]');
+   else throw Error('Usage: node tools/test-diverse-company-websites.mjs [--sites list.txt] [--pages 3|5|7|12|15|30] [--max 1..8] [--output directory]');
  }
- if(![3,7,12].includes(out.pages)||!Number.isInteger(out.maxSites)||out.maxSites<1||out.maxSites>8)
+ if(![3,5,7,12,15,30].includes(out.pages)||!Number.isInteger(out.maxSites)||out.maxSites<1||out.maxSites>8)
    throw Error('Benchmark permits 3, 7 or 12 pages and at most 8 companies');
  return out;
 }
@@ -142,7 +142,7 @@ export async function runDiversityBenchmark(config,{logger=console}={}){
      if(status.busy)throw Error('Research Lab busy (another process started a test); not overwriting it');
      const before=await localFetch('/api/working-edition/summary').catch(()=>null);
      const run=await localFetch('/api/run',{method:'POST',token,body:{
-       url:site,maxPages:config.pages,strategy:'auto',browser:'headless'},timeoutMs:440000});
+       url:site,maxPages:config.pages,strategy:'auto',browser:'headless'},timeoutMs:920000});
      const after=await localFetch('/api/working-edition/summary').catch(()=>null);
      row=summarizeLabReport(site,run,{pages:config.pages,startedAt:started,
        finishedAt:new Date().toISOString(),editionBefore:before,editionAfter:after});

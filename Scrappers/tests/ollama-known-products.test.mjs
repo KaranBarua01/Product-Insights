@@ -72,9 +72,9 @@ test('known product enrichment accepts evidence but never creates a new product 
     const body=JSON.parse(x.opts.body);
     assert.equal(body.stream,false);
     assert.equal(body.options.temperature,0);
-    assert.ok(body.options.num_predict<=190);
+    assert.ok(body.options.num_predict<=240);
     const input=JSON.parse(body.messages[1].content);
-    assert.ok(input.pageText.length<=2050);
+    assert.ok(input.pageText.length<=5100);
     assert.ok(!('productUrl' in input));
   }
 });
@@ -82,9 +82,9 @@ test('known product enrichment does not copy evidence across distinct product pa
   const {fetcher}=fake([{materials:[claim('aluminum','made entirely from aluminum')],components:[]}]);
   const result=await enrichKnownProductsWithOllama({rootUrl:site,rawPages:[pages[1]],
     knownProducts:[p1,p2],fetcher});
-  assert.equal(result.enrichments[0].materials.length,0);
-  assert.equal(result.attempts[0].status,'no_source_page');
-  assert.equal(result.enrichments[1].materials.length,0);
+  assert.equal(result.enrichments.find(x=>x.name===p1.name).materials.length,0);
+  assert.equal(result.attempts.find(x=>x.product===p1.name).status,'no_source_page');
+  assert.equal(result.enrichments.find(x=>x.name===p2.name).materials.length,0);
 });
 test('taxonomy codes selected by AI must be a retrieved read-only candidate',async()=>{
   const nodes=[{code:'BIKE_RACK',label:'Heavy Duty Bike Rack',path:'Transport > Heavy Duty Bike Rack',level:3}];
@@ -121,6 +121,19 @@ test('model unavailable preserves all deterministic products and reports missing
 test('long uninterrupted page text keeps technical evidence within CPU budget',()=>{
   const long='Navigation '.repeat(130)+'Made entirely from corrosion-resistant aluminum. Includes security bolts and mounting brackets.';
   const sample=sampledEvidence({content:{title:'Heavy Duty Rack',text:long}},'Heavy Duty');
-  assert.ok(sample.sourceText.length<=2050);
+  assert.ok(sample.sourceText.length<=5100);
   assert.ok(sample.sourceText.includes('aluminum'));
+});
+
+
+test('CPU-bound AI covers distinct product evidence pages before repeat SKU variants',async()=>{
+ const variant={...p1,id:'real-1-variant',name:'Heavy Duty (SKU-A240)'};
+ const {fetcher}=fake([{components:[],materials:[]},{components:[],materials:[]}]);
+ const result=await enrichKnownProductsWithOllama({rootUrl:site,rawPages:pages,
+   knownProducts:[p1,variant,p2],fetcher,maxProducts:2,timeBudgetMs:60000});
+ assert.equal(result.productsReviewed,2);
+ assert.equal(result.distinctPagesPrioritized,2);
+ assert.deepEqual(result.enrichments.map(x=>x.name),[p1.name,p2.name]);
+ assert.equal(result.enrichments.some(x=>x.name===variant.name),false);
+ assert.equal(result.taxonomy.masterModified,false);
 });

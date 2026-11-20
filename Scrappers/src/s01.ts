@@ -49,7 +49,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
       if(fetched.truncated){truncatedCount++;warnings.push(`HTML truncated at ${maxBytes} bytes: ${fetched.url}`)}
       warnings.push(...parsed.warnings);evidence.push(...parsed.evidence);
       for(const h of content.headings??[])if(!headings.includes(h)&&headings.length<70)headings.push(h);
-      for(const link of content.links??[])if(!linkSeen.has(link.url)&&links.length<160){linkSeen.add(link.url);links.push(link)}
+      for(const link of content.links??[])if(!linkSeen.has(link.url)&&links.length<260){linkSeen.add(link.url);links.push(link)}
       for(const doc of content.documents??[])if(!documentSeen.has(doc)&&documents.length<35){documentSeen.add(doc);documents.push(doc)}
       jsonLd.push(...(content.jsonLd??[]).slice(0,16-jsonLd.length));appState.push(...(content.appState??[]).slice(0,4-appState.length));
       // Only same-host, already-observed HTML links are candidates. No exhaustive crawling.
@@ -62,7 +62,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
     }catch(err){fetchErrors++;warnings.push(`Page ${next} failed: ${String(err instanceof Error?err.message:err)}`)}
   }
   if(pdfResponse)return {strategy:'S01',status:'unsupported',reason:'PDF response; delegate to S03',sourceUrl:firstUrl,content:{},evidence:[],warnings,next:'S03'};
-  const text=textParts.join('\n\n').slice(0,65_000);
+  const text=textParts.join('\n\n').slice(0,90_000);
   if(!pages.length)return {strategy:'S01',status:'failed',reason:warnings[0]||'No HTML pages could be retrieved',sourceUrl:firstUrl,content:{},evidence:[],warnings};
   const allTruncated=truncatedCount===pages.length;
   const sparse=text.trim().length<180;
