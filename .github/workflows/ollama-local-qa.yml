@@ -1,7 +1,7 @@
 name: Ollama Local Mapping QA
 on:
   push:
-    branches: [feat/local-ollama-evidence-mapping-pilot]
+    branches: [feat/local-ollama-evidence-mapping-pilot, feat/local-agent-ollama-fixed-jobs]
   pull_request:
     branches: [fix/ai-recovery-ui-null-and-timeout]
   workflow_dispatch:
@@ -23,6 +23,9 @@ jobs:
       - name: Syntax checks for local AI and bridge
         run: |
           node --check Scrappers/tools/ollama-mapping.mjs
+          node --check Scrappers/tools/pi-local-agent/ollama-job.mjs
+          node --check Scrappers/tools/pi-local-agent/agent.mjs
+          node --check Scrappers/tools/pi-local-agent/runner.mjs
           node --check Scrappers/tools/research-lab.mjs
           node --check live-lab/src/protocol.js
           node --check live-lab/src/ui.js
