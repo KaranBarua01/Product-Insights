@@ -7,12 +7,12 @@ const detailSegment=/(?:^|\/)(?:products?|p|items?|shop|catalog|collections|deta
 const excludedSegment=/(?:^|\/)(?:about(?:-us)?|contact|privacy|terms|news|blog|stories|careers|support|help|faq|resources|search)(?:\/|$)/i;
 /** @returns {Array<{name:string,sourceUrl:string,sourceTitle:string,kind:string,reason:string}>} */
 export function pageTitleCandidates(facts){
-  let host;try{host=new URL(facts?.company?.url).hostname.toLowerCase();}catch{return [];}
+  let host;try{host=new URL(facts?.company?.url).hostname.toLowerCase().replace(/^www\./,'');}catch{return [];}
   const out=[],seen=new Set();
   for(const page of (Array.isArray(facts?.acquisition?.pages)?facts.acquisition.pages:[]).slice(0,12)){
     if(!page||!['completed','partial'].includes(page.status))continue;
     let url;try{url=new URL(page.url);}catch{continue;}
-    if(url.protocol!=='https:'||url.hostname.toLowerCase()!==host||url.username||url.password)continue;
+    if(url.protocol!=='https:'||url.hostname.toLowerCase().replace(/^www\./,'')!==host||url.username||url.password)continue;
     if(url.pathname==='/'||excludedSegment.test(url.pathname))continue;
     const parts=url.pathname.split('/').filter(Boolean),last=parts.at(-1)||'';
     const detail=detailSegment.test(url.pathname)||
