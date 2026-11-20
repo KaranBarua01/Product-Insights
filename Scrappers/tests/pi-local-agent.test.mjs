@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,rm,symlink,realpath} from 'node:fs/promises';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {parseQueueRepo,parseJob,JOB_SCHEMA,QUEUE_LABEL,sanitizeOutput} from '../tools/pi-local-agent/policy.mjs';
 import {workspaceRoot,inside,confinedExisting,confinedOutputDir,executeAction} from '../tools/pi-local-agent/runner.mjs';
@@ -380,4 +381,16 @@ test('Ollama queue jobs execute only the pinned runner and return bounded privat
       jobId:'../../bad',run:fake}),/Invalid Ollama jobId/);
     assert.equal(requested.length,2);
   });
+});
+
+
+test('Ollama PowerShell launcher resolves its own checkout, not another worktree',async()=>{
+  const base=dirname(fileURLToPath(import.meta.url));
+  const path=join(base,'..','tools','pi-local-agent','start-ollama-agent.ps1');
+  const ps=await readFile(path,'utf8');
+  assert.match(ps,/\$PSScriptRoot/);
+  assert.match(ps,/Resolve-Path/);
+  assert.doesNotMatch(ps,/Join-Path \$env:USERPROFILE 'PI-ollama-queue-agent/);
+  assert.match(ps,/PI_AGENT_QUEUE_REPO/);
+  assert.match(ps,/Remove-Item Env:\\PI_AGENT_GITHUB_TOKEN/);
 });
