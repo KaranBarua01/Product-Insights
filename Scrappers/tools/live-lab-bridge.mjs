@@ -114,7 +114,7 @@ async function execute(job){
   // Fail closed if approval was removed between Cloudflare queueing and execution.
   await refreshLocalApprovals();
   const target=validateTarget(job.url,allowed);
-  if(job.host!==target.host||![3,7,12].includes(job.maxPages)||
+  if(job.host!==target.host||![3,5,7,12,15,30].includes(job.maxPages)||
     job.mode!=='auto'||job.browser!=='headless')
     throw Error('Remote job options were rejected by local fixed safety policy');
   console.log('Live investigation accepted:',target.host,'pages:',job.maxPages);
@@ -122,7 +122,7 @@ async function execute(job){
   const body={url:target.url,maxPages:job.maxPages,strategy:'auto',browser:'headless'};
   let done=false,cursor=0,cancelSent=false,reportPromise;
   // The local Lab runs one bounded request; poll status separately to relay progress.
-  reportPromise=local('/api/run',{method:'POST',body,token,timeoutMs:430000})
+  reportPromise=local('/api/run',{method:'POST',body,token,timeoutMs:920000})
     .then(value=>{done=true;return value;},error=>{done=true;throw error;});
   while(!done&&run){
     try{
