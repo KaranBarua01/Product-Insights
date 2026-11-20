@@ -116,7 +116,7 @@ export async function runDiversityBenchmark(config,{logger=console}={}){
  const sites=await readSiteList(config.file,{max:config.maxSites});
  const health=await localFetch('/health');
  if(health.service!=='InsideJob Research Lab'||health.access!=='loopback_only'||
-   health.foundationVersion!=='pi-code-foundation/v1')
+   health.foundationVersion!=='pi-code-foundation/v1'||health.anyCompanyTesting!==true)
    throw Error('Port 8790 must host the approved local Foundation Research Lab');
  let status=await localFetch('/api/status');
  if(status.busy)throw Error('Research Lab is already busy; do not interrupt the active Cloudflare investigation');
