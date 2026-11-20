@@ -4,6 +4,7 @@
 import {validateStart,hostOf,LIVE_SCHEMA,sanitizeOriginalTaxonomy,ORIGINAL_TAXONOMY_SCHEMA} from './protocol.js';
 import {uiHtml,uiJs,uiCss} from './ui.js';
 import {runEnrichment,SCHEMA as ENRICHMENT_SCHEMA} from './ai-enrichment.js';
+import {buildLaptopWorkingGraph} from './local-working-graph.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{
   'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -61,7 +62,7 @@ function publicRun(run,full=false){
     aiStatus:displayedEnrichment?.status||'not_started',
     enrichmentAttempts:run.enrichmentAttempts||0,
     taxonomyNodesAdded:displayedEnrichment?.workingTaxonomy?.newWorkingNodes||0};
-  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;}
+  if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;base.localWorking=run.localWorking||null;}
   return base;
 }
 export class LabSession{
@@ -219,6 +220,7 @@ export class LabSession{
             const bytes=JSON.stringify(input.result);
             if(bytes.length>168000)return json({error:'Result too large'},413);
             run.result=input.result;
+            run.localWorking=buildLaptopWorkingGraph(input.result,s.originalTaxonomy);
             run.aiGeneration=0;
             run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
               message:'Cloudflare Workers AI is generating an unverified working taxonomy'};
