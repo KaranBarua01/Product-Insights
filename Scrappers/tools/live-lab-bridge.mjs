@@ -4,7 +4,7 @@
  * Local Node 24+. Use distinct token from private GitHub agent credentials.
  */
 import {setTimeout as delay} from 'node:timers/promises';
-import {validateTarget,sanitizeEvents,sanitizeCompleted,allowedHosts,sanitizeOriginalTaxonomy} from '../../live-lab/src/protocol.js';
+import {validateTarget,sanitizeEvents,sanitizeCompleted,allowedHosts,sanitizeOriginalTaxonomy,sanitizeProcessReference} from '../../live-lab/src/protocol.js';
 
 const LOCAL='http://127.0.0.1:8790';
 const APPROVED='1up-usa.com,hoshizakiamerica.com,labconco.com,cmcsupply.com,phillipsmedisize.com,dronenerds.com';
@@ -146,6 +146,30 @@ async function syncOriginalTaxonomy(token){
   }
 }
 
+let lastProcessHash=null,lastProcessCheckedAt=0;
+async function syncReadOnlyProcessReference(token){
+ const now=Date.now();
+ if(now-lastProcessCheckedAt<70_000)return;
+ lastProcessCheckedAt=now;
+ try{
+   const original=await local('/api/process-reference/snapshot',{
+     method:'POST',body:{},token,timeoutMs:17000});
+   const snapshot=sanitizeProcessReference(original);
+   if(snapshot.status!=='loaded')return;
+   const fingerprint=snapshot.sourceHash+'|'+snapshot.counts.links;
+   if(fingerprint===lastProcessHash)return;
+   await cloud('/api/agent/original-processes',{snapshot},35000);
+   lastProcessHash=fingerprint;
+   console.log('Read-only manufacturing-process viewer cache synchronized:',
+     snapshot.counts.processes,'processes,',snapshot.counts.links,'draft links.');
+ }catch(e){
+   // Older deployed Cloudflare Worker may not yet have the new viewer endpoint;
+   // keep existing live investigations functional.
+   console.warn('Process viewer cache not available (research unaffected):',
+     String(e?.message||e).slice(0,170));
+ }
+}
+
 async function main(){
   console.log('Product Insights live bridge · outbound Cloudflare connection only');
   console.log('Cloudflare:',ORIGIN);
@@ -160,6 +184,7 @@ async function main(){
       const token=await localToken();
       await cloud('/api/agent/heartbeat');
       await syncOriginalTaxonomy(token);
+      await syncReadOnlyProcessReference(token);
       if(!active){
         const result=await cloud('/api/agent/next');
         if(result.job){
