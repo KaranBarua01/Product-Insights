@@ -1,8 +1,9 @@
-name: Adaptive V2 Real Website Holdout
+name: Adaptive V2 Real Website Holdout and D1 Fifty Page Evaluation
 on:
   push:
     branches:
       - feat/adaptive-evidence-research-v2
+      - test/d1-five-50page-20261121
     paths:
       - .github/workflows/adaptive-real-sites.yml
   workflow_dispatch:
@@ -13,9 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        batch: [industrial, hardware]
+        batch: [bike, polymer, pump, biotech, reseller]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,17 +33,17 @@ jobs:
         working-directory: Scrappers
         run: npx playwright install --with-deps chromium
       - name: Real adaptive 15-page holdout on the same 8 previous unfamiliar websites
-        timeout-minutes: 17
+        timeout-minutes: 29
         working-directory: Scrappers
         env:
           PI_SITE_BATCH: ${{ matrix.batch }}
-          PI_SITE_PAGES: '15'
-        run: node tools/hosted-live-site-smoke.mjs
+          PI_SITE_PAGES: '50'
+        run: node tools/d1-five-50page-scrape.mjs
       - name: Upload measured per-company evidence and failures
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: adaptive-v2-new-sites-${{ matrix.batch }}
+          name: d1-50page-${{ matrix.batch }}
           path: Scrappers/live-site-smoke-results/
           retention-days: 15
           if-no-files-found: warn
