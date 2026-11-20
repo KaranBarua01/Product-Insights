@@ -236,7 +236,10 @@ export async function runResearch({url,maxPages,profile='auto',extractPage,
        for(const lead of candidates){
          const p=new URL(lead.url).pathname.toLowerCase();
          if(p.includes('/product-category/'))lead.score=Math.min(lead.score,55);
-         else if(/^\/product\/[^/]+\/?$/.test(p))lead.score=Math.max(lead.score,170);
+         else if(/^\/product\/[^/]+\/?$/.test(p)){
+           const originalIndex=(content.links||[]).findIndex(l=>l.url===lead.url);
+           lead.score=Math.max(lead.score,190-Math.max(0,originalIndex));
+         }
        }
      }
      // Give the first catalog path priority over marketing/about pages.
