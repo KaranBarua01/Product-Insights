@@ -38,7 +38,7 @@ async function parse(req,max=10000){
   if(raw.length>max)throw Error('Request exceeded size limit');
   return JSON.parse(raw);
 }
-const RUN_LIMIT=8,STALE_MS=9*60*1000;
+const RUN_LIMIT=8,STALE_MS=9*60*1000,AI_STALE_MS=100_000;
 function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],revision:0};}
 function cleanStale(s,now){
   const run=s.runs.find(x=>x.id===s.active);
@@ -51,7 +51,7 @@ function cleanStale(s,now){
 function publicRun(run,full=false){
   if(!run)return null;
   const queuedAt=run.enrichment?.queuedAt||run.finishedAt;
-  const aiTimedOut=run.enrichment?.status==='queued'&&queuedAt&&Date.now()-queuedAt>100000;
+  const aiTimedOut=run.enrichment?.status==='queued'&&queuedAt&&Date.now()-queuedAt>AI_STALE_MS;
   const displayedEnrichment=aiTimedOut?{schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
     reason:'Cloudflare AI enrichment exceeded the demo time limit; raw research remains available'}:run.enrichment;
   const base={id:run.id,url:run.url,status:run.status,createdAt:run.createdAt,
@@ -149,7 +149,10 @@ export class LabSession{
           if(!run||run.status!=='completed'||!run.result)
             return json({error:'A completed real website investigation is required for AI recovery'},409);
           const status=run.enrichment?.status||'not_started';
-          if(status==='queued')return json({error:'Cloudflare AI is already running for this test'},409);
+          const queuedAt=run.enrichment?.queuedAt||run.finishedAt||now;
+          const timedOut=status==='queued'&&now-queuedAt>AI_STALE_MS;
+          if(status==='queued'&&!timedOut)
+            return json({error:'Cloudflare AI is already running for this test'},409);
           const hasProposals=!!run.enrichment?.workingTaxonomy?.aiGeneratedNodes||
             !!run.enrichment?.proposals?.titleProductCandidates?.length;
           if(status==='completed'&&hasProposals)
@@ -160,9 +163,14 @@ export class LabSession{
             .some(p=>['completed','partial'].includes(p.status)&&p.url);
           if(!usable)return json({error:'No usable website pages exist for AI recovery'},409);
           run.enrichmentAttempts=(run.enrichmentAttempts||0)+1;
+          run.aiGeneration=(run.aiGeneration||0)+1;
           run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
             message:'Workers AI is examining real visited page titles for missing product candidates'};
-          return json({ok:true,id:run.id,result:run.result});
+          run.events.push({time:new Date(now).toISOString(),status:'ai_retry_started',
+            strategy:'Cloudflare Workers AI',url:null,
+            reason:timedOut?'Previous AI invocation timed out':'Retry requested for missing AI proposals',chars:null});
+          run.events=run.events.slice(-65);
+          return json({ok:true,id:run.id,result:run.result,generation:run.aiGeneration});
         });
       }
       if(path==='/enrichment'){
@@ -170,6 +178,8 @@ export class LabSession{
           const run=s.runs.find(x=>x.id===input.id);
           if(!run||run.status!=='completed'||run.enrichment?.status!=='queued')
             return json({error:'Enrichment does not match a completed waiting run'},409);
+          if(Number(input.generation??0)!==Number(run.aiGeneration||0))
+            return json({error:'Outdated AI attempt cannot overwrite a newer retry'},409);
           const result=input.enrichment;
           if(!result||result.schemaVersion!==ENRICHMENT_SCHEMA||
             !['completed','failed','unavailable','insufficient_source_evidence'].includes(result.status))
@@ -195,6 +205,7 @@ export class LabSession{
             const bytes=JSON.stringify(input.result);
             if(bytes.length>168000)return json({error:'Result too large'},413);
             run.result=input.result;
+            run.aiGeneration=0;
             run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
               message:'Cloudflare Workers AI is generating an unverified working taxonomy'};
           }else run.error=clip(input.error||'Research failed or source access blocked',230);
@@ -214,12 +225,15 @@ async function doRequest(env,path,method='GET',body=null){
     body:method==='POST'?JSON.stringify(body):undefined
   }));
 }
-async function completeAiEnrichment(env,id,facts){
+async function completeAiEnrichment(env,id,facts,generation=0){
   let enrichment;
   try{enrichment=await runEnrichment(env,facts);}
   catch(e){enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
     reason:clip(e?.message||'AI inference failed',200),originalTaxonomyModified:false,osWritePerformed:false};}
-  try{await doRequest(env,'/enrichment','POST',{id,enrichment});}
+  try{
+    const stored=await doRequest(env,'/enrichment','POST',{id,enrichment,generation});
+    if(!stored.ok)console.warn('AI result was not persisted:',stored.status,await stored.text());
+  }
   catch(e){console.error('Could not persist AI working edition',String(e?.message||e).slice(0,140));}
 }
 export default {
@@ -252,7 +266,7 @@ export default {
         const response=await doRequest(env,'/reenrich','POST',{id});
         if(!response.ok)return response;
         const data=await response.json();
-        ctx.waitUntil(completeAiEnrichment(env,id,data.result));
+        ctx.waitUntil(completeAiEnrichment(env,id,data.result,data.generation));
         return json({ok:true,id,aiStatus:'queued',
           message:'Workers AI recovery started from existing website evidence; no new laptop crawl required'});
       }
@@ -273,7 +287,7 @@ export default {
           const data=await parse(request,175000);
           const stored=await doRequest(env,'/finish','POST',data);
           if(stored.ok&&data.status==='completed'){
-            if(ctx?.waitUntil)ctx.waitUntil(completeAiEnrichment(env,data.id,data.result));
+            if(ctx?.waitUntil)ctx.waitUntil(completeAiEnrichment(env,data.id,data.result,0));
             else console.warn('Worker execution context missing; AI enrichment cannot be scheduled');
           }
           return stored;
