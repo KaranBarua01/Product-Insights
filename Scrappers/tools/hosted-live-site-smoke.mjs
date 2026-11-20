@@ -13,17 +13,28 @@ import {runResearch} from './research-planner.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
 import {buildResearchGraph} from './research-relationship-graph.mjs';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
-const TARGETS=[
-  {industry:'Electrical enclosures',url:'https://www.hammfg.com/'},
-  {industry:'Polymer motion systems',url:'https://www.igus.com/'},
-  {industry:'Industrial weighing equipment',url:'https://www.ricelake.com/'},
-  {industry:'Dispensing and coating equipment',url:'https://www.nordson.com/'}
-];
+const TEST_MATRICES={
+  industrial:[
+    {industry:'Electrical enclosures',url:'https://www.hammfg.com/'},
+    {industry:'Polymer motion systems',url:'https://www.igus.com/'},
+    {industry:'Industrial weighing equipment',url:'https://www.ricelake.com/'},
+    {industry:'Dispensing and coating equipment',url:'https://www.nordson.com/'}
+  ],
+  hardware:[
+    {industry:'Embedded computing hardware',url:'https://www.raspberrypi.com/'},
+    {industry:'Electronics development parts',url:'https://www.sparkfun.com/'},
+    {industry:'3D printers and tooling',url:'https://www.prusa3d.com/'},
+    {industry:'Industrial automation components',url:'https://www.boschrexroth.com/'}
+  ]
+};
+const BATCH=process.env.PI_SITE_BATCH||'industrial';
+if(!Object.hasOwn(TEST_MATRICES,BATCH))throw Error('Site batch must be industrial or hardware');
+const TARGETS=TEST_MATRICES[BATCH];
 const OUTPUT=resolve('live-site-smoke-results'), MAX_PAGES=3;
 const clip=(s,n=200)=>String(s??'').replace(/\s+/g,' ').trim().slice(0,n);
 const start=new Date().toISOString(),results=[];
 const summary=()=>({schemaVersion:'pi-hosted-real-site-smoke/v1',startedAt:start,
-  updatedAt:new Date().toISOString(),execution:'github_hosted_ubuntu_runner',
+  updatedAt:new Date().toISOString(),execution:'github_hosted_ubuntu_runner',siteBatch:BATCH,
   testClass:'real_websites_existing_extraction_engine',
   qwenTested:false,privateTaxonomyLoaded:false,
   limitations:['Not the user Windows Research Lab','No laptop Qwen3 inference',
@@ -35,7 +46,7 @@ async function persist(){
  await mkdir(OUTPUT,{recursive:true});
  const all=summary();
  await writeFile(join(OUTPUT,'live-site-evidence.json'),JSON.stringify(all,null,2));
- let md='# Live Scrappers Test — Four New Companies\n\n';
+ let md='# Live Scrappers Test — Four New Companies ('+BATCH+')\n\n';
  md+='Run: '+start+' | GitHub-hosted runner (not user laptop)\n\n';
  md+='| Company | Pages | Successful | Product candidates | Categories | Parts mentioned | Materials mentioned | Access status |\n|---|---:|---:|---:|---:|---:|---:|---|\n';
  for(const r of results)md+='| '+new URL(r.url).hostname+' | '+(r.pagesVisited??0)+
