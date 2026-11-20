@@ -1,3 +1,4 @@
+import {MAX_ADAPTIVE_PAGES,getResearchBudget,pageSignals,rankPageLinks,catalogCardLeads,classifyLeadUrl} from './adaptive-research-v2.mjs';
 /** Bounded research orchestration over the existing Scrappers extract() implementation.
  * This module does not fetch pages or infer manufacturing processes itself.
  */
@@ -8,7 +9,7 @@ const STOP=new Set('a an the and or for with from into of by on to in is are pro
 // Shared modifiers alone do not identify a product class (e.g. a Heavy Duty
 // bike rack is not a heavy-duty transmission).
 const MODIFIERS=new Set('heavy duty super high low premium standard advanced lightweight durable extra'.split(' '));
-export const MAX_PAGES=12;
+export const MAX_PAGES=MAX_ADAPTIVE_PAGES;
 export function safeCandidate(raw,rootHost){
   try{
     const u=new URL(raw);u.hash='';
@@ -144,66 +145,147 @@ export function mapProductCandidates(products,nodes){
     return {...product,taxonomy:{status:scored.length?'candidate_requires_review':'gap_or_insufficient_evidence',suggestions:scored.slice(0,3)}};
   });
 }
-export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},delayMs=0,shouldContinue=()=>true,taxonomyNodes=[],prioritizeLinks=null}){
-  if(!Number.isInteger(maxPages)||maxPages<1||maxPages>MAX_PAGES)throw Error(`maxPages must be 1-${MAX_PAGES}`);
-  if(typeof extractPage!=='function')throw Error('extractPage callback required');
-  const root=new URL(url).hostname,start=new Date().toISOString();
-  const queued=[{url,score:100,reason:'Starting website'}],seen=new Set(),pages=[],productIndex=new Map(),warnings=[];
-  let discovered=0;
-  while(queued.length&&pages.length<maxPages&&shouldContinue()){
-    queued.sort((a,b)=>b.score-a.score);
-    const next=queued.shift();if(seen.has(next.url))continue;
-    seen.add(next.url);onProgress({step:pages.length+1,maxPages,url:next.url,status:'visiting',reason:next.reason});
-    let result;
-    try{result=await extractPage(next.url)}
-    catch(e){result={status:'failed',strategy:'none',reason:String(e?.message||e),content:{},warnings:[],evidence:[]};}
-    const content=result.content||{},sourceUrl=result.sourceUrl||next.url;
-    const structured=extractStructuredProducts(content.jsonLd||[],sourceUrl);
-    for(const p of structured)productIndex.set((p.name+'|'+(p.sku||'')).toLowerCase(),p);
-    const page={url:sourceUrl,status:result.status||'failed',strategy:result.strategy||'none',title:content.title||'',reason:result.reason||'',textChars:(content.text||'').length,
-      snippet:(content.text||'').slice(0,1300),aiText:(content.text||'').slice(0,4800),headings:(content.headings||[]).slice(0,12),
-      evidence:(result.evidence||[]).slice(0,7),structuredProducts:structured,
-      warnings:(result.warnings||[]).slice(0,10),lead:next.reason};
-    pages.push(page);
-    if(page.status==='blocked')warnings.push(`Access blocked on ${sourceUrl}; no bypass attempted`);
-    if(page.status==='failed')warnings.push(`Failed: ${sourceUrl} — ${page.reason}`);
-    if(['completed','partial'].includes(page.status)){
-      const candidates=[...(content.links||[]),...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
-        .map(x=>rankResearchLink(x,root)).filter(Boolean);
-      // A site using unfamiliar navigation names should not silently stop at
-      // its home page. Explore a few low-priority, same-host public sections.
-      if(pages.length===1&&candidates.length<2){
-        const exploratory=exploratoryCompanyLinks(content.links||[],root,{max:6});
-        for(const item of exploratory)if(!candidates.some(c=>c.url===item.url))candidates.push(item);
-        if(exploratory.length)warnings.push('Unfamiliar navigation: added bounded exploratory public same-host links');
-      }
-      if(pages.length===1&&typeof prioritizeLinks==='function'){
-        try{
-          const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
-          const picks=new Set(Array.isArray(preferred)?preferred.slice(0,8):[]);
-          for(const c of candidates)if(picks.has(c.url))c.score+=18;
-        }catch(e){warnings.push('Stage 2 link planning was unavailable; deterministic ranking retained: '+String(e?.message||e).slice(0,120));}
-      }
-      // Reserve identity evidence even when technical links or optional AI
-      // planning raise product scores. Product detail pages follow this slot.
-      if(pages.length===1&&maxPages>=4){
-        const about=candidates.find(c=>/\/(?:about|about-us|our-company|our-story|who-we-are)(?:\/|$)/i.test(new URL(c.url).pathname));
-        if(about)about.score=Math.max(17,...candidates.map(c=>c.score+1));
-      }
-      for(const c of candidates){if(!seen.has(c.url)&&!queued.some(x=>x.url===c.url)){queued.push(c);discovered++;}}
-      queued.sort((a,b)=>b.score-a.score);if(queued.length>70)queued.length=70;
-    }
-    onProgress({step:pages.length,maxPages,url:sourceUrl,status:page.status,chars:page.textChars,products:structured.length});
-    if(delayMs&&queued.length&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
-  }
-  const products=mapProductCandidates([...productIndex.values()].slice(0,120),taxonomyNodes);
-  return {schemaVersion:'local-research-lab/0.1',startedAt:start,finishedAt:new Date().toISOString(),requestedUrl:url,rootHost:root,
-    status:!shouldContinue()?'cancelled':pages.some(p=>p.status==='completed')?'sampled':'no_successful_pages',
-    coverage:{visitedPages:pages.length,discoveredLeads:discovered,remainingLeads:queued.length,structuredProducts:products.length,taxonomyCandidates:products.filter(x=>x.taxonomy.status==='candidate_requires_review').length,taxonomyGaps:products.filter(x=>x.taxonomy.status==='gap_or_insufficient_evidence').length},
-    pages,products,warnings,limitations:[
-      'A bounded sample is not a complete product catalog or a verified company profile.',
-      'JSON-LD product records are unverified website assertions, not approved engineering facts.',
-      'Taxonomy suggestions use lexical similarity only and require human review.',
-      'No manufacturing-process inference, supplier qualification, or automatic RFQ detection is performed.'
-    ]};
+export async function runResearch({url,maxPages,profile='auto',extractPage,
+ onProgress=()=>{},delayMs=0,shouldContinue=()=>true,taxonomyNodes=[],
+ prioritizeLinks=null}={}){
+ const budget=getResearchBudget({profile,maxPages});
+ const limit=budget.maxPages;
+ if(typeof extractPage!=='function')throw Error('extractPage callback required');
+ const root=new URL(url).hostname,start=new Date().toISOString();
+ const queued=[{url,kind:'company',score:110,reason:'Starting company website'}],
+   seen=new Set(),pages=[],productIndex=new Map(),warnings=[],visitedKinds={},
+   discoveredProductUrls=new Set(),cardUrlSeen=new Set();
+ let discovered=0,usefulPages=0,productPages=0,catalogPages=0,technicalPages=0,
+   cardLeads=0,stagnantUseful=0,stagnantProduct=0,stopReason='frontier_exhausted';
+ while(queued.length&&pages.length<limit&&shouldContinue()){
+   queued.sort((a,b)=>b.score-a.score||a.url.localeCompare(b.url));
+   const next=queued.shift();
+   if(seen.has(next.url))continue;
+   seen.add(next.url);
+   onProgress({step:pages.length+1,maxPages:limit,url:next.url,
+     status:'visiting',reason:next.reason});
+   let result;
+   try{result=await extractPage(next.url)}
+   catch(e){result={status:'failed',strategy:'none',
+     reason:String(e?.message||e),content:{},warnings:[],evidence:[]};}
+   const content=result.content||{},sourceUrl=result.sourceUrl||next.url;
+   const signal=pageSignals({url:sourceUrl,content,sourceUrl});
+   const structured=extractStructuredProducts(content.jsonLd||[],sourceUrl);
+   for(const p of structured)productIndex.set((p.name+'|'+(p.sku||'')).toLowerCase(),p);
+   const cards=['completed','partial'].includes(result.status)?
+     catalogCardLeads({url:sourceUrl,sourceUrl,content},root,{max:16}):[];
+   let newCards=0;
+   for(const card of cards)if(!cardUrlSeen.has(card.sourceUrl)){
+     cardUrlSeen.add(card.sourceUrl);newCards++;
+   }
+   cardLeads+=newCards;
+   const stage=signal.role==='catalog'?'category_discovery':
+     signal.role==='product'?'product_detail':
+     signal.role==='technical'?'technical_evidence':
+     signal.role==='company'?'company_identity':'site_exploration';
+   const page={url:sourceUrl,status:result.status||'failed',
+     strategy:result.strategy||'none',title:content.title||'',
+     reason:result.reason||'',textChars:(content.text||'').length,
+     snippet:(content.text||'').slice(0,1300),
+     aiText:(content.text||'').slice(0,4800),
+     headings:(content.headings||[]).slice(0,12),
+     evidence:(result.evidence||[]).slice(0,7),
+     structuredProducts:structured,warnings:(result.warnings||[]).slice(0,10),
+     lead:next.reason,stage,useful:signal.useful,
+     productCardLeads:newCards};
+   pages.push(page);
+   visitedKinds[signal.role]=(visitedKinds[signal.role]||0)+1;
+   if(page.status==='blocked')warnings.push('Access blocked on '+sourceUrl+'; no bypass attempted');
+   if(page.status==='failed')warnings.push('Failed: '+sourceUrl+' — '+page.reason);
+   if(['completed','partial'].includes(page.status)){
+     if(signal.useful)usefulPages++;
+     if(signal.role==='product')productPages++;
+     if(signal.role==='catalog')catalogPages++;
+     if(signal.role==='technical')technicalPages++;
+     const oldLeads=[...(content.links||[]),
+       ...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
+       .map(x=>rankResearchLink(x,root)).filter(Boolean);
+     const smartLeads=rankPageLinks([...(content.links||[]),
+       ...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))],root,
+       {parentRole:signal.role,seenKinds:visitedKinds,limit:90});
+     const byUrl=new Map();
+     for(const c of [...oldLeads,...smartLeads]){
+       const previous=byUrl.get(c.url);
+       if(!previous||previous.score<c.score)byUrl.set(c.url,{...c});
+     }
+     if(pages.length===1&&byUrl.size<3){
+       for(const c of exploratoryCompanyLinks(content.links||[],root,{max:6}))
+         if(!byUrl.has(c.url))byUrl.set(c.url,{...c,kind:'other'});
+       if(byUrl.size)warnings.push('Unfamiliar navigation: added bounded exploratory public same-host links');
+     }
+     const candidates=[...byUrl.values()].sort((a,b)=>b.score-a.score);
+     if(pages.length===1&&typeof prioritizeLinks==='function'){
+       try{
+         const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
+         const picks=new Set(Array.isArray(preferred)?preferred.slice(0,8):[]);
+         for(const c of candidates)if(picks.has(c.url))c.score+=15;
+       }catch(e){warnings.push('Optional link planning unavailable; deterministic ranking retained: '+
+         String(e?.message||e).slice(0,120));}
+     }
+     // Give the first catalog path priority over marketing/about pages.
+     // A category page must not win solely because it contains generic "solutions".
+     for(const card of cards){
+       const target=candidates.find(x=>x.url===card.sourceUrl);
+       if(target)target.score=Math.max(target.score,111);
+     }
+     for(const c of candidates){
+       if(!seen.has(c.url)&&!queued.some(x=>x.url===c.url)){
+         queued.push(c);discovered++;
+         if(c.kind==='product'||classifyLeadUrl(c.url)==='product')
+           discoveredProductUrls.add(c.url);
+       }
+     }
+     // Frontier is bounded, deterministic and exact-host. No global crawl.
+     queued.sort((a,b)=>b.score-a.score||a.url.localeCompare(b.url));
+     if(queued.length>90)queued.length=90;
+   }
+   const novelProduct=structured.length>0||newCards>0||
+     signal.role==='product'&&signal.specs>0;
+   stagnantProduct=novelProduct?0:stagnantProduct+1;
+   stagnantUseful=page.useful?0:stagnantUseful+1;
+   onProgress({step:pages.length,maxPages:limit,url:sourceUrl,status:page.status,
+     chars:page.textChars,products:structured.length,productCards:newCards,
+     useful:page.useful,stage});
+   // Adaptive early stop only after a meaningful sample. Do not stop because
+   // a run found no products while product/catalog leads still exist.
+   const min=limit<=5?3:limit<=15?8:13;
+   const highIntentRemaining=queued.some(c=>(c.kind==='product'||c.kind==='catalog'||
+     c.score>=60));
+   if(limit>=5&&pages.length>=min&&stagnantUseful>=5&&stagnantProduct>=5&&
+      !highIntentRemaining){
+     stopReason='diminishing_returns';break;
+   }
+   if(delayMs&&queued.length&&pages.length<limit)
+     await new Promise(r=>setTimeout(r,delayMs));
+ }
+ if(!shouldContinue())stopReason='cancelled';
+ else if(pages.length>=limit)stopReason='budget_exhausted';
+ else if(!queued.length&&stopReason!=='diminishing_returns')
+   stopReason='frontier_exhausted';
+ const products=mapProductCandidates([...productIndex.values()].slice(0,120),taxonomyNodes);
+ const successful=pages.filter(p=>['completed','partial'].includes(p.status));
+ return {schemaVersion:'local-research-lab/0.1',startedAt:start,finishedAt:new Date().toISOString(),
+   requestedUrl:url,rootHost:root,
+   status:stopReason==='cancelled'?'cancelled':successful.length?'sampled':'no_successful_pages',
+   researchProfile:budget.profile,requestedPages:limit,
+   coverage:{visitedPages:pages.length,discoveredLeads:discovered,
+     remainingLeads:queued.length,structuredProducts:products.length,
+     taxonomyCandidates:products.filter(x=>x.taxonomy.status==='candidate_requires_review').length,
+     taxonomyGaps:products.filter(x=>x.taxonomy.status==='gap_or_insufficient_evidence').length,
+     usefulPages,productPages,catalogPages,technicalPages,
+     productCardLeads:cardLeads,discoveredProductUrls:discoveredProductUrls.size,
+     successfulPages:successful.length,stopReason,
+     visitStages:pages.reduce((acc,p)=>(acc[p.stage]=(acc[p.stage]||0)+1,acc),{})},
+   pages,products,warnings,
+   limitations:[
+     'A bounded sample does not establish a complete catalog or verified company role.',
+     'Catalog card links and JSON-LD are website assertions, not confirmed product inventory.',
+     'Product data and original taxonomy matches remain review-only.',
+     'Manufacturing capabilities cannot be verified from generic page patterns.'
+   ]};
 }
