@@ -10,7 +10,8 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
-import {enrichWithLocalOllama,mergeOllamaProducts,probeOllama} from './ollama-mapping.mjs';
+import {probeOllama} from './ollama-mapping.mjs';
+import {enrichKnownProductsWithOllama,mergeKnownProductEnrichment} from './ollama-known-products.mjs';
 import {buildBusinessView,normalizeOsSnapshot,osSnapshotTemplate} from './lab-business.mjs';
 import {businessCss,businessMarkup} from './lab-business-shell.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
@@ -124,13 +125,17 @@ async function runJob(body){
     catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
   }
   const deterministic=extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
-  // Use the localhost-only model; keep deterministic extraction when Ollama is unavailable.
-  const ollama=await enrichWithLocalOllama({rootUrl:u.href,rawPages:rawProductEvidence,
-    taxonomyNodes,onProgress:logEvent});
-  const productIntelligence=mergeOllamaProducts(deterministic,ollama);
+  // Source-extracted products are authoritative IDs; local Ollama adds review-only
+  // component/material evidence and chooses from read-only taxonomy candidates.
+  const ollama=await enrichKnownProductsWithOllama({rootUrl:u.href,rawPages:rawProductEvidence,
+    knownProducts:deterministic.products,taxonomyNodes,onProgress:logEvent});
+  const productIntelligence=mergeKnownProductEnrichment(deterministic,ollama);
   return {...enriched,productIntelligence,lab:{ollama:{
     status:ollama.status,model:ollama.model||null,pagesAnalyzed:ollama.pagesAnalyzed||0,
-    candidatesAccepted:ollama.products?.length||0,reason:ollama.reason||null,
+    productsReviewed:ollama.productsReviewed||0,acceptedClaims:ollama.acceptedClaims||0,
+    rejectedClaims:ollama.rejectedClaims||0,
+    taxonomyStatus:ollama.taxonomy?.status||'not_loaded',
+    candidatesAccepted:ollama.acceptedClaims||0,reason:ollama.reason||null,
     localhostOnly:true,taxonomyMasterModified:false},runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
     taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest,
     localEditionVersion:workingEdition?.version||0,stage2AiConfigured:aiSettings.configured}};
