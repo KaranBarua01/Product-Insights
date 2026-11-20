@@ -247,6 +247,16 @@ async function handler(req,res){
     state.report=null;
     return json(res,{ok:true,...result});
   }
+  // Local authenticated read-only snapshot for the protected Cloudflare viewer.
+  // Uses original master, never the AI working edition; no file paths or secrets.
+  if(req.method==='POST'&&path==='/api/taxonomy/master-snapshot'){
+    if(!masterTaxonomy?.nodes?.length)return json(res,{status:'not_loaded',nodes:[],totalNodes:0,nodeHash:null});
+    const master=masterTaxonomy;
+    return json(res,{status:'installed',totalNodes:master.nodes.length,
+      nodeHash:master.manifest.nodeHash,sourceName:master.manifest.sourceName,
+      nodes:master.nodes.map(n=>({code:n.code,label:n.label,path:n.path,level:n.level})),
+      masterModified:false});
+  }
   if(req.method==='GET'&&path==='/api/taxonomy/manifest')return json(res,{loaded:taxonomyNodes.length>0,source:taxonomySource,manifest:taxonomyManifest});
   if(req.method==='GET'&&path==='/api/taxonomy'){
     const q=(u.searchParams.get('q')||'').toLowerCase().trim();
