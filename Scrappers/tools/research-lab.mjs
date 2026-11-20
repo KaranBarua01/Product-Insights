@@ -196,14 +196,16 @@ async function handler(req,res){
       const ref=await loadOemProcessReference();
       if(!ref)return json(res,{status:'not_loaded',sourceHash:null,counts:null,
         processNames:[],roles:[],prevalences:[],edgeRows:[]});
-      return json(res,{status:'loaded',sourceHash:ref.sourceSha256,counts:ref.counts,
-        processNames:ref.processNames,
-        roles:['primary shaping','secondary','joining','finishing','assembly'],
-        prevalences:['dominant','common','occasional'],
-        edgeRows:ref.nodes.filter(n=>n.level===3).map(n=>({
-          code:n.code,links:ref.decode(n.code,{max:80}).map(p=>({
-            name:p.name,role:p.role,prevalence:p.prevalence,
-            materialContext:p.materialContext}))}))});
+      const roles=['primary shaping','secondary','joining','finishing','assembly'],
+        prevalences=['dominant','common','occasional'];
+      const processIndex=new Map(ref.processNames.map((n,i)=>[n,i]));
+      return json(res,{schemaVersion:'pi-oem-process-snapshot/v1',status:'loaded',
+        sourceHash:ref.sourceSha256,counts:ref.counts,
+        processNames:ref.processNames,roles,prevalences,
+        edgeRows:ref.nodes.filter(n=>n.level===3).map(n=>[n.code,
+          ref.decode(n.code,{max:80}).map(p=>[processIndex.get(p.name),
+            roles.indexOf(p.role),prevalences.indexOf(p.prevalence),
+            p.materialContext||null])])});
     }catch(e){return json(res,{error:'OEM process reference unavailable',
       reason:String(e.message).slice(0,120)},503);}
   }
