@@ -20,7 +20,7 @@ $env:PI_AGENT_ALLOW_PRODUCTS_7 = '0'
 $env:PI_AGENT_ALLOW_U30 = '0'
 $ptr = [IntPtr]::Zero
 try {
-    Write-Host 'Product Insights fixed Ollama agent: health + 1UP only.' -ForegroundColor Cyan
+    Write-Host 'Ollama jobs: health and fixed 1UP. Legacy read-only taxonomy jobs also remain allowed.' -ForegroundColor Cyan
     Write-Host 'Private queue: KaranBarua01/PI-Agent-Queue'
     Write-Host 'Laptop model endpoint: http://127.0.0.1:11434'
     Write-Host 'The queue cannot send PowerShell commands or arbitrary URLs.'
