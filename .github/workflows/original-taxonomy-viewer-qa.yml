@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/full-taxonomy-explorer-target
+      - feat/operator-approved-any-company-tests
   workflow_dispatch:
 permissions:
   contents: read
