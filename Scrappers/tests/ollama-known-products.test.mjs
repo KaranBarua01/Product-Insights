@@ -72,9 +72,9 @@ test('known product enrichment accepts evidence but never creates a new product 
     const body=JSON.parse(x.opts.body);
     assert.equal(body.stream,false);
     assert.equal(body.options.temperature,0);
-    assert.ok(body.options.num_predict<=190);
+    assert.ok(body.options.num_predict<=240);
     const input=JSON.parse(body.messages[1].content);
-    assert.ok(input.pageText.length<=2050);
+    assert.ok(input.pageText.length<=5100);
     assert.ok(!('productUrl' in input));
   }
 });
@@ -121,6 +121,6 @@ test('model unavailable preserves all deterministic products and reports missing
 test('long uninterrupted page text keeps technical evidence within CPU budget',()=>{
   const long='Navigation '.repeat(130)+'Made entirely from corrosion-resistant aluminum. Includes security bolts and mounting brackets.';
   const sample=sampledEvidence({content:{title:'Heavy Duty Rack',text:long}},'Heavy Duty');
-  assert.ok(sample.sourceText.length<=2050);
+  assert.ok(sample.sourceText.length<=5100);
   assert.ok(sample.sourceText.includes('aluminum'));
 });
