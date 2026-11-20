@@ -343,7 +343,9 @@ test('Ollama queue jobs execute only the pinned runner and return bounded privat
       assert.ok(['ollama_health','ollama_1up'].includes(args[1]));
       const rel=args[3];
       assert.ok(rel.startsWith('local-data'));
-      const output=join(root,...rel.split(/[\\/]/));
+      // Windows temp paths may differ in canonical spelling (8.3 aliases / case).
+      // Compare and write against the SAME canonical workspace used by runner.
+      const output=join(resolved,...rel.split(/[\\/]/));
       assert.equal(inside(resolved,output),true);
       const status=args[1]==='ollama_health'
         ? {schemaVersion:'pi-ollama-agent-result/v1',action:'ollama_health',
