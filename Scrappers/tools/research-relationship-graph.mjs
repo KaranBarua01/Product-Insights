@@ -82,7 +82,7 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
    if(!classify(productId,name,sourceUrl,{product:name,suggestions:p.taxonomy?.suggestions||[]}))
      counts.unmappedProducts++;
    const partSeen=new Set();
-   const sourceParts=arr(p.components,7).map(x=>({name:clean(x.value||x.name,130),
+   const sourceParts=arr(p.components,7).map(x=>({name:clean(x.component||x.value||x.name,130),
      quote:clean(x.evidence?.quote,230),sourceUrl:x.evidence?.sourceUrl||sourceUrl,
      status:'source_mentioned_component_or_accessory'})).filter(x=>x.name&&x.quote&&validUrl(x.sourceUrl,root));
    const suggested=arr(approvedAI.get(norm(name)),4).map(x=>({
@@ -112,7 +112,7 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
      }
    }
    for(const mat of arr(p.materials,5)){
-     const name=clean(mat?.value||mat?.name,100),quote=clean(mat?.evidence?.quote,230),
+     const name=clean(mat?.material||mat?.value||mat?.name,100),quote=clean(mat?.evidence?.quote,230),
        url=mat?.evidence?.sourceUrl||sourceUrl;
      if(!name||!quote||!validUrl(url,root))continue;
      const matId=put({id:id('material',norm(name)),kind:'material',label:name,
