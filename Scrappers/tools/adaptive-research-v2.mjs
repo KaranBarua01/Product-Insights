@@ -75,7 +75,7 @@ export function rankPageLinks(links,rootHost,{parentRole='other',seenKinds={},li
    const label=clean(l?.label,150),kind=classifyLeadUrl(url);
    const path=new URL(url).pathname.toLowerCase();
    const depth=path.split('/').filter(Boolean).length;
-   const codeOrModel=/\b(?:[a-z]{1,6}[- ]?\d{2,6}|\d{4,}|[a-z0-9]+-[a-z0-9]{3,})\b/i.test(label+' '+decodeURIComponent(path));
+   const codeOrModel=/\b(?:[a-z]{1,6}[- ]?\d{2,6}|\d{4,}|[a-z0-9]+-[a-z0-9]{3,})\b/i.test(label+' '+path);
    const nameSpecific=label.length>=5&&label.length<=110&&!generic.test(label)&&
       token(label).length>=2;
    const guide=/\b(?:product|model|family|series|shop|catalog|browse|automation|equipment|components|bearing|sensor|pump|enclosure|printer|development|board)\b/i.test(label+' '+path);
