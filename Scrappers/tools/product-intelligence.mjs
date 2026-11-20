@@ -231,7 +231,7 @@ export function extractProductIntelligence({companyName,rootUrl,pages=[]}={}){
   if(!companyName||typeof companyName!=='string'||companyName.length>160)throw Error('Company name required');
   const root=canonicalPageUrl(rootUrl),host=root?new URL(root).hostname.toLowerCase():null;
   if(!root||!host)throw Error('Valid company website required');
-  if(!Array.isArray(pages)||pages.length>MAX_PAGES)throw Error('Product extraction requires at most 12 source pages');
+  if(!Array.isArray(pages)||pages.length>MAX_PAGES)throw Error('Product extraction requires at most '+MAX_PAGES+' source pages');
   const used=new Set(),results=[];
   for(const raw of pages){
     const url=canonicalPageUrl(raw?.url||raw?.sourceUrl);
