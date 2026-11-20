@@ -1,0 +1,36 @@
+name: Ollama Local Mapping QA
+on:
+  push:
+    branches: [feat/local-ollama-evidence-mapping-pilot]
+  pull_request:
+    branches: [fix/ai-recovery-ui-null-and-timeout]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-mapping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Syntax checks for local AI and bridge
+        run: |
+          node --check Scrappers/tools/ollama-mapping.mjs
+          node --check Scrappers/tools/research-lab.mjs
+          node --check live-lab/src/protocol.js
+          node --check live-lab/src/ui.js
+      - name: Install and execute existing Scrappers tests
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm test
+      - name: Test live Lab protocol
+        working-directory: live-lab
+        run: npm test
