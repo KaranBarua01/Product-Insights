@@ -65,6 +65,19 @@ test('a statement saying a part might be machined must NOT count as observed pro
  assert.equal(a.products[0].parts[0].processClaims.length,0);
  assert.equal(a.products[0].parts[0].materialClaims[0].name,'steel');
 });
+test('manufacturing process mentioned near two parts is attached only to its nearest part',()=>{
+  const url='https://maker.example.com/products/pump-100';
+  const sentence='Pump 100 includes a cast housing and a CNC machined shaft.';
+  const out=buildPartEvidenceReport({companyName:'PumpMaker',companyUrl:'https://maker.example.com',
+    products:[{name:'Pump 100',sourceUrl:url}],pages:[{
+      url,status:'completed',content:{headings:['Pump 100'],text:sentence}}]});
+  const record=out.products[0];
+  const housing=record.parts.find(p=>p.name==='housing');
+  const shaft=record.parts.find(p=>p.name==='shaft');
+  assert.ok(housing&&shaft);
+  assert.equal(housing.processClaims.some(p=>p.name==='CNC machining'),false);
+  assert.equal(shaft.processClaims.some(p=>p.name==='CNC machining'),true);
+});
 test('wrong D1 domain is ignored (identity protection)',()=>{
  const a=run({d1Record:{...d1,website:'different-company.com'}});
  assert.equal(a.d1,null);
