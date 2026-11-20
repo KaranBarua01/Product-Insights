@@ -272,7 +272,29 @@ export function sanitizeCompleted(data,expectedHost){
       'A product or material does not establish a manufacturing process or OEM ownership.',
       'No confirmed OS integration or existing OS record comparison is implemented.'
     ]};
-  const serialized=JSON.stringify(facts);
+  // Preserve the primary source extraction if an unusually large research graph
+  // would exceed the existing 165 KB Cloudflare result budget. Local JSON retains
+  // the FULL graph; Cloudflare receives a bounded view or safely falls back.
+  let serialized=JSON.stringify(facts);
+  if(serialized.length>158000&&facts.researchGraph){
+    const full=facts.researchGraph;
+    for(const [nodeLimit,linkLimit] of [[120,190],[75,120],[35,45],[0,0]]){
+      if(nodeLimit===0){facts.researchGraph=null;serialized=JSON.stringify(facts);break;}
+      const nodes=full.nodes.slice(0,nodeLimit),ids=new Set(nodes.map(n=>n.id));
+      const links=full.links.filter(x=>ids.has(x.from)&&
+        (ids.has(x.to)||String(x.to).startsWith('original:'))).slice(0,linkLimit);
+      facts.researchGraph={...full,nodes,links,
+        mappings:full.mappings.slice(0,24),gaps:full.gaps.slice(0,18),
+        counts:{products:nodes.filter(x=>x.kind==='product').length,
+          parts:nodes.filter(x=>x.kind==='part').length,
+          materials:nodes.filter(x=>x.kind==='material').length,
+          processCandidates:links.filter(x=>x.relation==='possible_manufacturing_process').length,
+          mappings:Math.min(24,full.mappings.length),gaps:Math.min(18,full.gaps.length)},
+        truncatedForCloudflare:true};
+      serialized=JSON.stringify(facts);
+      if(serialized.length<=158000)break;
+    }
+  }
   if(serialized.length>165000)throw Error('Result exceeds the bounded remote evidence payload');
   return facts;
 }
