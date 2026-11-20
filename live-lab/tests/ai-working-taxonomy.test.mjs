@@ -288,7 +288,7 @@ test('Previously queued AI request may be retried after timeout without losing r
  await s.fetch(req('/heartbeat',{}));
  const started=await(await s.fetch(req('/create',{url:website,maxPages:7}))).json();
  const id=started.run.id;await s.fetch(req('/next',{}));
- await s.fetch(req('/finish',{id,status:'completed',result:recoveryCase()});
+ await s.fetch(req('/finish',{id,status:'completed',result:recoveryCase()}));
  await backing.transaction(async txn=>{
   const state=await txn.get('state');
   const run=state.runs.find(x=>x.id===id);
@@ -307,7 +307,7 @@ test('Previously queued AI request may be retried after timeout without losing r
   schemaVersion:SCHEMA,status:'failed',reason:'Late old result'}}))).status,409);
  assert.equal((await s.fetch(req('/enrichment',{id,generation:1,enrichment:{
   schemaVersion:SCHEMA,status:'failed',reason:'Attempt 1 failed'}}))).status,200);
- assert.equal((await s.fetch(req('/reenrich',{id})).status),200);
+ assert.equal((await s.fetch(req('/reenrich',{id}))).status,200);
  assert.equal((await s.fetch(req('/enrichment',{id,generation:1,enrichment:{
   schemaVersion:SCHEMA,status:'completed'}}))).status,409);
  const final=await(await s.fetch(req('/run/'+id))).json();
