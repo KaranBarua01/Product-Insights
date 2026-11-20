@@ -82,9 +82,9 @@ test('known product enrichment does not copy evidence across distinct product pa
   const {fetcher}=fake([{materials:[claim('aluminum','made entirely from aluminum')],components:[]}]);
   const result=await enrichKnownProductsWithOllama({rootUrl:site,rawPages:[pages[1]],
     knownProducts:[p1,p2],fetcher});
-  assert.equal(result.enrichments[0].materials.length,0);
-  assert.equal(result.attempts[0].status,'no_source_page');
-  assert.equal(result.enrichments[1].materials.length,0);
+  assert.equal(result.enrichments.find(x=>x.name===p1.name).materials.length,0);
+  assert.equal(result.attempts.find(x=>x.product===p1.name).status,'no_source_page');
+  assert.equal(result.enrichments.find(x=>x.name===p2.name).materials.length,0);
 });
 test('taxonomy codes selected by AI must be a retrieved read-only candidate',async()=>{
   const nodes=[{code:'BIKE_RACK',label:'Heavy Duty Bike Rack',path:'Transport > Heavy Duty Bike Rack',level:3}];
