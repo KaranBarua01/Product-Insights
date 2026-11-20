@@ -1,5 +1,31 @@
 /* Shared, strict Cloudflare/laptop Live Lab contract. No site inference. */
 export const LIVE_SCHEMA='pi-cloud-laptop-live-lab/v1';
+export const ORIGINAL_TAXONOMY_SCHEMA='pi-original-taxonomy-snapshot/v1';
+/** Transfer only the checked, read-only taxonomy node catalog; never the original file or local path. */
+export function sanitizeOriginalTaxonomy(snapshot){
+  if(!snapshot||snapshot.status==='not_loaded')return {
+    schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,status:'not_loaded',totalNodes:0,
+    nodeHash:null,sourceName:null,nodes:[],masterModified:false};
+  if(snapshot.status!=='installed'||!Array.isArray(snapshot.nodes)||
+    snapshot.nodes.length<1||snapshot.nodes.length>12000||
+    snapshot.totalNodes!==snapshot.nodes.length||
+    !/^[a-f0-9]{64}$/i.test(snapshot.nodeHash||''))
+    throw Error('Invalid complete original taxonomy snapshot');
+  const used=new Set(),nodes=[];
+  for(const node of snapshot.nodes){
+    const code=String(node?.code||'').trim(),label=String(node?.label||'').trim(),
+      path=String(node?.path||'').trim(),level=node?.level;
+    if(!code||code.length>180||!label||label.length>240||!path||path.length>1200||
+      !Number.isInteger(level)||level<0||level>4||used.has(code))
+      throw Error('Invalid or duplicate original taxonomy node');
+    used.add(code);nodes.push({code,label,path,level});
+  }
+  return {schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,status:'installed',
+    totalNodes:nodes.length,nodeHash:snapshot.nodeHash.toLowerCase(),
+    sourceName:String(snapshot.sourceName||'Installed OEM taxonomy').split(/[\\/]/).pop().slice(0,100),
+    nodes,masterModified:false};
+}
+
 const s=(value,max=250)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 export function hostOf(raw){
   try{return new URL(raw).hostname.toLowerCase().replace(/^www\./,'');}catch{return null;}
