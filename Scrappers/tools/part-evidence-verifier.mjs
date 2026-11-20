@@ -87,11 +87,16 @@ function nearestMaterial(sentence,part){
   }
   return null;
 }
-function observedProcess(sentence,part){
+function observedProcess(sentence,part,allParts=[]){
   if(HYPOTHETICAL.test(sentence)||NEGATED.test(sentence))return [];
   return PROCESSES.filter(x=>x.re.test(sentence)&&PART_RELATION.test(sentence))
-    .filter(x=>{const m=sentence.match(x.re);return m&&Math.abs(m.index-part.index)<=120;})
-    .map(x=>x.name).filter(x=>x!=='Machining'||!PROCESSES[1].re.test(sentence));
+    .filter(x=>{
+      const m=sentence.match(x.re);if(!m||Math.abs(m.index-part.index)>120)return false;
+      // A process in a sentence mentioning multiple parts belongs only to
+      // its nearest part. Never assign a shaft's machining to a housing.
+      const distance=Math.abs(m.index-part.index);
+      return !allParts.some(other=>other!==part&&Math.abs(m.index-other.index)<=distance);
+    }).map(x=>x.name).filter(x=>x!=='Machining'||!PROCESSES[1].re.test(sentence));
 }
 /** Returns company-level D1 priors; NEVER a fact about a particular product/part. */
 export function normalizeD1Context(companyUrl,record){
@@ -146,7 +151,7 @@ export function buildPartEvidenceReport({companyName,companyUrl,products=[],page
         const hits=matchParts(line);
         if(hits.length)for(const part of hits){
           const material=nearestMaterial(line,part);
-          const processes=observedProcess(line,part);
+          const processes=observedProcess(line,part,hits);
           addPart(part.name,line,'part_mention',material,processes);
         }
         if((!hits.length||key(line).startsWith(key(name)))&&/\b(?:made from|made of|constructed from|material\s*:)\b/i.test(line)){
