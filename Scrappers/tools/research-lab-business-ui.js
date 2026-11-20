@@ -75,29 +75,29 @@
     const left=append(fields,'div');
     const cats=append(left,'div',undefined,'biz-field');
     append(cats,'h5','Category / product hierarchy');
-    if(p.categories?.length)list(cats,p.categories,'Not linked');
-    else append(cats,'p','Category relationship not established from this website sample.','biz-subtle');
+    if(p.categories?.length){for(const name of p.categories.slice(0,6))append(cats,'span',name,'biz-chip available');}
+    else append(cats,'div',"We couldn't bring this out. Category relationship not established.",'biz-missing');
     const s=append(left,'div',undefined,'biz-field');
     append(s,'h5','Specifications (published claims)');
-    if(!p.specifications?.length)append(s,'p','Not found in sampled product evidence.','biz-subtle');
+    if(!p.specifications?.length)append(s,'div',"We couldn't bring this out. No specification found in the sampled pages.",'biz-missing');
     for(const entry of (p.specifications||[]).slice(0,10)){
-      append(s,'strong',entry.name+': '+entry.value);
+      append(s,'div',entry.name+': '+entry.value,'biz-available');
       evidence(s,entry);
     }
     const right=append(fields,'div');
     const comp=append(right,'div',undefined,'biz-field');
     append(comp,'h5','Components mentioned (NOT confirmed BOM parts)');
-    if(!p.components?.length)append(comp,'p','No explicit inclusion mentions found.','biz-subtle');
+    if(!p.components?.length)append(comp,'div',"We couldn't bring this out. No sourced component inclusion mentions found.",'biz-missing');
     for(const entry of (p.components||[]).slice(0,10)){
-      append(comp,'strong',entry.name);evidence(comp,entry);
+      append(comp,'div',entry.name,'biz-available');evidence(comp,entry);
     }
     const mat=append(right,'div',undefined,'biz-field');
     append(mat,'h5','Materials explicitly stated');
-    if(!p.materials?.length)append(mat,'p','No explicit product material statements found.','biz-subtle');
+    if(!p.materials?.length)append(mat,'div',"We couldn't bring this out. No published product material statement found.",'biz-missing');
     for(const entry of (p.materials||[]).slice(0,10)){
-      append(mat,'strong',entry.name);evidence(mat,entry);
+      append(mat,'div',entry.name,'biz-available');evidence(mat,entry);
     }
-    append(body,'div','Parts/BOM: Not established. Manufacturing processes required for this product: Not established.','biz-warning');
+    append(body,'div','Needs human review. Parts/BOM not established; Manufacturing processes required for this product are not established. Component mentions are not an approved BOM.','biz-review');
     const identity=p.identityEvidence?.find(e=>e.quote);
     if(identity)append(body,'p','Identity evidence: "'+identity.quote+'"','biz-subtle');
     return detail;
@@ -183,7 +183,7 @@
       append(root,'p','When supported, JS5 will show product-relevant processes and JS6 will separately show company-performed capabilities.','biz-subtle');
       return;
     }
-    append(root,'p','Unverified source quotations only. Claims below are NOT linked to any product or factory.','biz-warning');
+    append(root,'p','Needs human review. Source quotations do not automatically establish a product, factory or company-performed process.','biz-review');
     for(const c of claims.slice(0,10)){
       const details=append(root,'details');
       append(details,'summary',(c.section==='JS5'?'JS5 · Product-relevant process':'JS6 · Claimed company capability')+' · '+c.claim.slice(0,95));
