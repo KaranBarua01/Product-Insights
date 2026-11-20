@@ -1,7 +1,8 @@
 # Starts the existing private GitHub Issues Local Agent, with Ollama testing enabled.
 # Does not publish a port, store the GitHub token on disk, or execute remote shell commands.
 $ErrorActionPreference = 'Stop'
-$workspace = Join-Path $env:USERPROFILE 'PI-ollama-queue-agent\Scrappers'
+# Resolve the agent's own Scrappers checkout; never silently launch another worktree.
+$workspace = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $runner = Join-Path $workspace 'tools\pi-local-agent\agent.mjs'
 $modelTest = Join-Path $workspace 'tools\pi-local-agent\ollama-job.mjs'
 if (-not (Test-Path -LiteralPath $runner -PathType Leaf) -or
