@@ -70,7 +70,8 @@ test('summary preserves source evidence without inventing processes or company o
   });
   assert.equal(result.schemaVersion,JOB_SCHEMA);
   assert.equal(result.acquisition.pagesVisited,1);
-  assert.equal(result.output.products,1);
+  assert.equal(result.output.productCount,1);
+  assert.equal(result.output.products.length,1);
   assert.equal(result.output.localAiProducts,1);
   assert.equal(result.taxonomy.masterChanged,false);
   assert.equal(result.output.products[0].reviewStatus,'unverified_source_candidate');
