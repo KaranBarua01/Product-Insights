@@ -1,0 +1,43 @@
+name: Real Unfamiliar Website Scraper Test
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/operator-approved-any-company-tests
+    paths:
+      - .github/workflows/real-unfamiliar-websites.yml
+      - Scrappers/tools/hosted-live-site-smoke.mjs
+permissions:
+  contents: read
+jobs:
+  unfamiliar-manufacturer-sites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Scrappers on isolated runner
+        working-directory: Scrappers
+        run: npm install --no-audit --no-fund
+      - name: Compile existing extraction engine
+        working-directory: Scrappers
+        run: npm run build
+      - name: Install genuine headless Chromium
+        working-directory: Scrappers
+        run: npx playwright install --with-deps chromium
+      - name: Run genuine public websites (no user laptop, no API keys)
+        timeout-minutes: 11
+        working-directory: Scrappers
+        run: node tools/hosted-live-site-smoke.mjs
+      - name: Publish complete measured source-result evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-unfamiliar-website-evidence
+          path: Scrappers/live-site-smoke-results/
+          if-no-files-found: warn
+          retention-days: 15
