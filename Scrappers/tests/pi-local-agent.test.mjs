@@ -367,7 +367,8 @@ test('Ollama queue jobs execute only the pinned runner and return bounded privat
     assert.equal(h.check,'inference_passed');
     const p=await executeAction('ollama_1up',{workspace:root,jobId:'safe_ollama_1up_001',run:fake,secret:'secret'});
     assert.equal(p.status,'completed');
-    assert.equal(p.results.products,1);
+    assert.equal(p.results.productCount,1);
+    assert.equal(p.results.products.length,1);
     assert.equal(p.taxonomy.nodes,1213);
     assert.equal(p.results.products[0].evidenceQuote,'Super Duty Rack');
     assert.equal(p.results.products[0].reviewStatus,'unverified');
