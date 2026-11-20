@@ -80,6 +80,22 @@ function processEvidence(report){
     claims:items.slice(0,20),
     guardrail:'JS5 product processes are not JS6 company capabilities. Neither can be assigned to a product or owned factory without explicit relationship evidence.'};
 }
+/** Read-only, unverified JS7-9 source-quoted claims for truthful Manuel coverage. */
+function optionalCompanyClaims(report,root){
+  const result=[];
+  for(const sec of arr(report?.stage2?.companyProfile?.sections,12)){
+    if(!['JS7','JS8','JS9'].includes(sec?.code))continue;
+    for(const c of arr(sec.claims,8)){
+      const url=safeUrl(c?.sourceUrl);
+      if(!url||hostname(url)!==hostname(root)||!limit(c.quote,240))continue;
+      result.push({code:sec.code,claim:limit(c.claim,260),evidence:source(c,url),
+        status:'ai_compiled_website_quote_requires_human_review'});
+      if(result.length>=20)break;
+    }
+  }
+  return result;
+}
+
 export function buildBusinessView(report,osSnapshot=null){
   if(!report||typeof report!=='object')throw Error('Research result required');
   const pi=report.productIntelligence||{},root=safeUrl(report.requestedUrl||pi.company?.website);
@@ -133,7 +149,7 @@ export function buildBusinessView(report,osSnapshot=null){
   const output={
     schemaVersion:LAB_BUSINESS_SCHEMA,mode:'real_website_research',
     company,coverage,categories:cats,products,
-    processEvidence:processes,taxonomy:mapped.all,
+    processEvidence:processes,otherSectionClaims:optionalCompanyClaims(report,root),taxonomy:mapped.all,
     acquisition:{
       status:report.status||'unknown',pageStatus:arr(report.pages,12).map(p=>({
         url:safeUrl(p.url),status:limit(p.status,50),strategy:limit(p.strategy,20)}))
