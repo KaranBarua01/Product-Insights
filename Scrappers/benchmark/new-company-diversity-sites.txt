@@ -1,0 +1,16 @@
+# DIVERSE COMPANY BENCHMARK — not part of the old six-domain demo
+# Each site has a materially different catalog/navigation/manufacturing profile.
+# All real laptop requests obey public DNS, robots and host restrictions.
+# Use --sites path/to/your-own-sites.txt to test ANY other eligible public companies.
+# Enclosures / transformers — electronics and sheet metal
+https://www.hammfg.com/
+# Motion polymers / bearings and cable management
+https://www.igus.com/
+# Scales / load cells / weighing systems
+https://www.ricelake.com/
+# Industrial dispensing / coating machinery
+https://www.nordson.com/
+# Industrial fluid transfer / pumps
+https://www.graco.com/us/en/in-plant-manufacturing.html
+# Pneumatic automation components
+https://www.festo.com/
