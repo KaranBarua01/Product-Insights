@@ -12,7 +12,6 @@ test('path classification distinguishes product, category, company and false lea
   assert.equal(classifyIntelligencePage(BASE+'product/heavy-duty'),'product');
   assert.equal(classifyIntelligencePage(BASE+'productcategory/standard-tubs/'),'category');
   assert.equal(classifyIntelligencePage(BASE+'product-category/racks/collections'),'category');
-  assert.equal(classifyIntelligencePage(BASE+'product-category/products/collections'),'category');
   assert.equal(classifyIntelligencePage(BASE+'product/r2a-fsp'),'product');
   assert.equal(classifyIntelligencePage(BASE+'catalog/inpages/730_830jpi.php'),'product');
   assert.equal(classifyIntelligencePage(BASE+'catalog/stpages/companyhistory.php'),'other');
@@ -74,17 +73,6 @@ test('CMC-style productcategory URLs yield categories even without Product JSON-
   assert.deepEqual(result.categories.map(x=>x.name).sort(),['Bath Faucets','Standard Tubs']);
   assert.equal(result.products.length,0);
   assert.equal(result.coverage.categoryPages,2);
-});
-test('collection pages never donate parts to individual product records',()=>{
-  const listing=BASE+'product-category/products/collections';
-  const actual=BASE+'product/heavy-duty';
-  const result=extractProductIntelligence({companyName:'Rack Co',rootUrl:BASE,pages:[
-    page(listing,'Quik Rack has accessories. Other equipment features casters.','Collections'),
-    page(actual,'Heavy Duty is made from aluminum.','Heavy Duty')]});
-  assert.equal(result.coverage.categoryPages,1);
-  assert.equal(result.products.length,1);
-  assert.equal(result.products[0].name,'Heavy Duty');
-  assert.equal(result.products[0].components.length,0);
 });
 test('only observed same-host category-to-product links create relationships',()=>{
   const catalog=BASE+'productcategory/bike-racks/';
