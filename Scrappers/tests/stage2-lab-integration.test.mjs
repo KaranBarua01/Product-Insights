@@ -52,9 +52,24 @@ test('Stage 2 local app serves a real installed taxonomy, review queue and safe 
     assert.match(html,/id="biz-product-tree"/);
     assert.match(html,/id="biz-processes"/);
     assert.match(html,/business-app\.js/);
+    assert.match(html,/id="biz-coverage-summary"/);
+    assert.match(html,/id="biz-categories"/);
+    assert.match(html,/id="biz-js-coverage"/);
+    assert.match(html,/id="biz-sources"/);
+    assert.match(html,/Result legend|RESULT LEGEND/);
+    assert.match(html,/Red = couldn.t bring this out/);
+    assert.match(html,/Green = extracted with source/);
+    assert.match(html,/OS does not provide a connected API or JSON export/);
+
     const businessJs=await fetch(origin+'/business-app.js');
     assert.equal(businessJs.status,200);
-    assert.match(await businessJs.text(),/manufacturing processes required for this product|Manufacturing processes required for this product/);
+    const businessScript=await businessJs.text();
+    assert.match(businessScript,/Manufacturing processes required for this product/);
+    assert.match(businessScript,/function renderStatuses\(b\)/);
+    assert.match(businessScript,/function renderCategories\(b\)/);
+    assert.match(businessScript,/function renderSources\(b\)/);
+    assert.match(businessScript,/function sectionRows\(b\)/);
+    assert.match(businessScript,/We couldn't bring this out/);
     const preflight=await (await fetch(origin+'/api/business')).json();
     assert.equal(preflight.business,null);
     assert.equal(preflight.osSnapshot,null);
