@@ -141,18 +141,44 @@ export function allowedHosts(value){
   return new Set(String(value||'').split(',').map(x=>x.trim().toLowerCase().replace(/^www\./,''))
     .filter(x=>/^[a-z0-9.-]+$/.test(x)&&x.includes('.')&&!x.startsWith('.')&&!x.endsWith('.')));
 }
-export function validateTarget(input,allowed){
-  if(typeof input!=='string'||input.length<8||input.length>500)throw Error('Use a short HTTPS company website URL');
-  let u;
-  try{u=new URL(input);}catch{throw Error('Invalid company website URL');}
-  if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash)throw Error('HTTPS website without credentials or custom port required');
-  const host=hostOf(u.href);
-  if(!host||!/^[a-z0-9.-]+$/.test(host)||!host.includes('.')||/^\d+(?:\.\d+){3}$/.test(host)||
-    host==='localhost'||host.endsWith('.local')||host.endsWith('.internal'))
-    throw Error('Only public DNS company hosts can be investigated');
-  if(!allowed.has(host))throw Error('This company host is not approved for the shared live Lab');
+/** HTTPS-only public company URL syntax. DNS/public-address checks run on the laptop.
+ * Cloudflare never authorizes a new domain itself: only the local operator can do so.
+ */
+export function validatePublicCompanyUrl(input){
+  if(typeof input!=='string'||input.length<8||input.length>500)
+    throw Error('Use a short HTTPS company website URL');
+  let u;try{u=new URL(input);}catch{throw Error('Invalid company website URL');}
+  if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash)
+    throw Error('Use HTTPS without credentials, fragments or custom ports');
+  const hostname=u.hostname.toLowerCase(),host=hostOf(u.href);
+  if(!host||!hostname||hostname.length>253||
+    !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/.test(hostname)||
+    host.split('.').some(x=>x.length>63)||/(^|\.)(localhost|internal|local|onion|lan)$/.test(host)||
+    /\.(?:test|invalid|example|localdomain)$/.test(host)||
+    /^\d+(?:\.\d+){3}$/.test(host)||/^\d+$/.test(host.split('.').at(-1)))
+    throw Error('Only public DNS company hostnames are allowed, not IPs or reserved names');
   u.hash='';u.search='';
   return {url:u.href,host};
+}
+/** Strictly bounded set of LOCAL-OPERATOR approved exact hosts. No arbitrary
+ * wildcard, subdomain pattern, IP address or port can be added from a cloud request.
+ */
+export function normalizeApprovedCompanyHosts(hosts,{max=45}={}){
+  if(!Array.isArray(hosts)||hosts.length>max)throw Error('Too many locally approved company hosts');
+  const result=new Set();
+  for(const value of hosts){
+    if(typeof value!=='string'||value.length<4||value.length>250||
+       /[:/\\*?#@\s]/.test(value))
+      throw Error('Approval must be an exact public DNS hostname');
+    const {host}=validatePublicCompanyUrl('https://'+value);
+    result.add(host);
+  }
+  return [...result].sort();
+}
+export function validateTarget(input,allowed){
+  const v=validatePublicCompanyUrl(input);
+  if(!allowed.has(v.host))throw Error('Website not yet approved by the laptop operator. Add it on the laptop using APPROVE-NEW-COMPANY.cmd and retry.');
+  return v;
 }
 export function validateStart(data,allowlist){
   if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Invalid investigation request');
