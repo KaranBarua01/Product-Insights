@@ -43,6 +43,6 @@ test('a nonstandard company navigation path gets visited instead of silently sto
    }});
  assert.ok(urls.length>=2,JSON.stringify(urls));
  assert.equal(urls[1],'https://www.example-company.com/innovations');
- assert.ok(result.warnings.some(x=>x.includes('Exploratory')));
+ assert.ok(result.warnings.some(x=>/exploratory/i.test(x)));
  assert.equal(result.coverage.visitedPages,2);
 });
