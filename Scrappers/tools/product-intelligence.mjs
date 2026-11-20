@@ -45,6 +45,10 @@ const RELATION_REJECT=/\b(?:optional(?:ly)?|sold separately|not included|compati
 function norm(s){return String(s||'').replace(/\s+/g,' ').trim();}
 function lower(s){return norm(s).toLocaleLowerCase('en-US');}
 function digest(s){return createHash('sha256').update(s).digest('hex').slice(0,16);}
+/** Reporting-only lexical family grouping: never merges actual SKU identities. */
+export function productFamilyKey(name){
+ return lower(name).replace(/\s*\(([a-z0-9][a-z0-9._/-]{4,})\)\s*$/i,'').trim();
+}
 function sameHost(url,host){try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)&&u.hostname.toLowerCase()===host;}catch{return false;}}
 export function canonicalPageUrl(raw){
   try{const u=new URL(raw);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)return null;
@@ -271,6 +275,15 @@ export function extractProductIntelligence({companyName,rootUrl,pages=[]}={}){
     return {...p,categoryIds,categoryLinkStatus:categoryIds.length?'linked_from_category_page_unverified':'unresolved',
       companyProductRole:'manufactured_vs_sold_not_determined'};
   });
+  const familyIndex=new Map();
+  for(const p of products){
+    const key=productFamilyKey(p.name);
+    if(!familyIndex.has(key))familyIndex.set(key,{name:p.name.replace(/\s*\([A-Z0-9][A-Z0-9._/-]{4,}\)\s*$/i,'').trim(),
+      productSkuCandidates:0});
+    familyIndex.get(key).productSkuCandidates++;
+  }
+  const productFamilies=[...familyIndex.values()].slice(0,80)
+    .map(p=>({...p,reviewStatus:'unreviewed_name_grouping_not_approved_product_family'}));
   const identityPages=pages.filter(x=>['completed','partial'].includes(x.status)&&sameHost(x.url||x.sourceUrl,host))
     .map(p=>({url:p.url||p.sourceUrl,status:p.status,title:p.content?.title||'',
       aiText:String(p.content?.text||'').slice(0,5500)}));
@@ -283,6 +296,8 @@ export function extractProductIntelligence({companyName,rootUrl,pages=[]}={}){
       productPages:results.filter(x=>x.kind==='product'&&x.status==='sampled').length,
       categoryPages:results.filter(x=>x.kind==='category'&&x.status==='sampled').length,
       products:products.length,categories:categories.length,
+      distinctProductFamilyLabels:productFamilies.length,
+      skuNamedProductCandidates:products.filter(x=>!!x.sku).length,
       productsWithSpecifications:products.filter(x=>x.specifications.length).length,
       productsWithComponents:products.filter(x=>x.components.length).length,
       productsWithMaterials:products.filter(x=>x.materials.length).length,
@@ -291,7 +306,7 @@ export function extractProductIntelligence({companyName,rootUrl,pages=[]}={}){
       materials:products.reduce((n,p)=>n+p.materials.length,0),
       catalogLinkCandidates:productLeads.length,
       unlinkedProducts:products.filter(x=>!x.categoryIds.length).length},
-    categories,products,productLeads,
+    categories,products,productLeads,productFamilies,
     limitations:[
       'Site claims are not independently verified; every product and attribute requires human review.',
       'Product links extracted from catalog cards are separate navigation candidates until their details or Product JSON-LD are retrieved.',
