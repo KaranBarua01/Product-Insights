@@ -12,12 +12,13 @@ const site=x=>{try{const u=new URL(x);return ['http:','https:'].includes(u.proto
 const validUrl=(u,host)=>typeof u==='string'&&u.length<700&&site(u)===host;
 const minmax=(n,a,b)=>Math.min(b,Math.max(a,n));
 export function buildResearchGraph({companyName,companyUrl,products=[],
-  processReference=null,aiParts=[],limitProducts=24}={}){
+  processReference=null,aiParts=[],partEvidence=null,limitProducts=24}={}){
  const root=site(companyUrl);
  if(!root)throw Error('A valid company website is required for a source-anchored graph');
  const nodes=[],links=[],mapped=[],gaps=[],seenNodes=new Set(),seenLinks=new Set();
  const counts={companies:1,products:0,observedParts:0,aiHypothesisParts:0,materials:0,
-   taxonomyMappings:0,processHypotheses:0,unmappedProducts:0,unmappedParts:0};
+   taxonomyMappings:0,processHypotheses:0,sourcePartProcessClaims:0,
+   uncorroboratedScraperPartsExcluded:0,unmappedProducts:0,unmappedParts:0};
  const companyId=id('company',root);
  const put=(n)=>{if(!seenNodes.has(n.id)){seenNodes.add(n.id);nodes.push(n);}return n.id;};
  const link=(from,to,relation,status,details={})=>{
@@ -66,6 +67,14 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
    }
    return true;
  };
+ // The verifier is the part-level gate when supplied. Existing historical
+ // graph inputs remain accepted for backwards-compatible comparison.
+ const verifiedByProduct=new Map();
+ if(partEvidence?.schemaVersion==='pi-part-evidence/v1')for(const entry of arr(partEvidence.products,60)){
+   if(typeof entry?.sourceUrl==='string'&&typeof entry?.name==='string')
+     verifiedByProduct.set(norm(entry.sourceUrl)+'|'+norm(entry.name),entry);
+ }
+ const evidenceGate=partEvidence?.schemaVersion==='pi-part-evidence/v1';
  const approvedAI=new Map();
  for(const p of arr(aiParts,5))if(p&&typeof p.productName==='string'){
    const key=norm(p.productName);
@@ -82,9 +91,18 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
    if(!classify(productId,name,sourceUrl,{product:name,suggestions:p.taxonomy?.suggestions||[]}))
      counts.unmappedProducts++;
    const partSeen=new Set();
-   const sourceParts=arr(p.components,7).map(x=>({name:clean(x.component||x.value||x.name,130),
-     quote:clean(x.evidence?.quote,230),sourceUrl:x.evidence?.sourceUrl||sourceUrl,
-     status:'source_mentioned_component_or_accessory'})).filter(x=>x.name&&x.quote&&validUrl(x.sourceUrl,root));
+   const evidenceEntry=verifiedByProduct.get(norm(sourceUrl)+'|'+norm(name))||null;
+   const sourceParts=(evidenceGate?arr(evidenceEntry?.parts,7).map(x=>({
+     name:clean(x.name,130),quote:clean(x.observations?.[0]?.quote,230),
+     sourceUrl:x.sourceUrl,materialClaims:arr(x.materialClaims,8),
+     processClaims:arr(x.processClaims,8),
+     status:'source_supported_part_candidate_requires_review'})):
+     arr(p.components,7).map(x=>({name:clean(x.component||x.value||x.name,130),
+       quote:clean(x.evidence?.quote,230),sourceUrl:x.evidence?.sourceUrl||sourceUrl,
+       status:'source_mentioned_component_or_accessory'})))
+       .filter(x=>x.name&&x.quote&&validUrl(x.sourceUrl,root));
+   if(evidenceGate)counts.uncorroboratedScraperPartsExcluded+=
+     arr(evidenceEntry?.uncorroboratedScraperMentions,30).length;
    const suggested=arr(approvedAI.get(norm(name)),4).map(x=>({
      name:clean(x.name,120),quote:null,sourceUrl,
      status:'ai_hypothetical_part_not_a_verified_bom',
@@ -97,6 +115,24 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
      link(productId,partId,'possible_part_or_accessory','unverified',{
        reason:part.status,sourceQuote:part.quote});
      if(part.suggestedProcesses)counts.aiHypothesisParts++;else counts.observedParts++;
+     // Part-specific material/process statements require a same-product source
+     // quote. These never assert a BOM, an RFQ or in-house capability.
+     for(const m of arr(part.materialClaims,8)){
+       const material=clean(m.name,110),quote=clean(m.evidence?.quote,230);
+       if(!material||!quote||!validUrl(m.evidence?.sourceUrl,root))continue;
+       const mid=put({id:id('material',norm(material)),kind:'material',label:material,
+         status:'published_part_material_candidate_not_verified'});
+       link(partId,mid,'source_mentions_part_material','needs_human_review',{
+         sourceUrl:m.evidence.sourceUrl,sourceQuote:quote});
+     }
+     for(const process of arr(part.processClaims,8)){
+       const label=clean(process.name,110),quote=clean(process.evidence?.quote,230);
+       if(!label||!quote||!validUrl(process.evidence?.sourceUrl,root))continue;
+       const pid=put({id:id('process',norm(label)),kind:'process',label,
+         status:'source_stated_process_not_plant_capability'});
+       link(partId,pid,'source_mentions_part_process','needs_human_review_not_in_house',{
+         sourceUrl:process.evidence.sourceUrl,sourceQuote:quote});
+     }
      const matched=classify(partId,part.name,part.sourceUrl,{product:name,part:part.name});
      if(!matched)counts.unmappedParts++;
      if(reference){
@@ -111,7 +147,7 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
        }
      }
    }
-   for(const mat of arr(p.materials,5)){
+   for(const mat of (evidenceGate?arr(evidenceEntry?.productMaterials,5):arr(p.materials,5))){
      const name=clean(mat?.material||mat?.value||mat?.name,100),quote=clean(mat?.evidence?.quote,230),
        url=mat?.evidence?.sourceUrl||sourceUrl;
      if(!name||!quote||!validUrl(url,root))continue;
@@ -124,6 +160,7 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
  counts.materials=nodes.filter(n=>n.kind==='material').length;
  counts.taxonomyMappings=mapped.length;
  counts.processHypotheses=links.filter(x=>x.relation==='possible_manufacturing_process').length;
+ counts.sourcePartProcessClaims=links.filter(x=>x.relation==='source_mentions_part_process').length;
  return {schemaVersion:RESEARCH_GRAPH_SCHEMA,company:{name:clean(companyName||root),host:root,
    url:companyUrl},originalTaxonomy:{status:reference?'available':'not_loaded',
      sourceHash:reference?.sourceSha256||null,masterModified:false},
