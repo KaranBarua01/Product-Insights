@@ -9,6 +9,7 @@ import {extract,limitedPatternAnalysis} from '../dist/engine.js';
 import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
+import {getResearchBudget} from './adaptive-research-v2.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
 import {probeOllama} from './ollama-mapping.mjs';
 import {enrichKnownProductsWithOllama,mergeKnownProductEnrichment} from './ollama-known-products.mjs';
@@ -57,7 +58,7 @@ function validRequest(req,method){
 function html(){return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="lab-token" content="${token}"><title>InsideJob · Local Research Lab</title><style>
 :root{--ink:#243146;--sub:#66778a;--accent:#097b86;--border:#dbe3eb;--surface:#fff;--bg:#f3f6fa}*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#16283e;color:white;padding:24px max(20px,calc((100vw - 1180px)/2));border-bottom:4px solid #087e85}header h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#bbd1e0}main{max-width:1200px;margin:auto;padding:24px 20px 60px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 3px 15px #24314608}h2{font-size:17px;margin:0 0 10px}label{display:block;font-weight:650;font-size:12px;color:#526277;margin:10px 0 5px}input,select,button{font:inherit}input[type=url],input[type=number],input[type=text],select{border:1px solid #bac8d6;border-radius:7px;padding:10px 9px;background:white;color:var(--ink);width:100%}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}button{border:1px solid #bccad7;border-radius:7px;background:#fff;padding:9px 12px;cursor:pointer;font-weight:650}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eff3f8;color:#526277;margin-right:6px}.warn{background:#fff6e9;color:#865b27;border:1px solid #f2daba;padding:9px;border-radius:7px;margin:8px 0}.ok{color:#087c5a}.small{color:var(--sub);font-size:12px}.stats{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.stats span{border:1px solid var(--border);background:#f7f9fb;border-radius:8px;padding:8px 12px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:12px}th{color:var(--sub);background:#f8fafc}a{color:#056b9b;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#456070;font-size:12px}.events{max-height:170px;overflow:auto;white-space:pre-wrap;background:#f7f9fb;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace}details{margin:7px 0;padding:10px;border:1px solid var(--border);border-radius:7px}summary{cursor:pointer;font-weight:650}input[type=file]{max-width:100%}@media(max-width:850px){.grid,.formgrid{grid-template-columns:1fr}} ${businessCss}</style></head><body>
 <header><div class="header-row"><div><h1>Product Insights · Intelligence Lab</h1><p>One real research engine · Two audience-specific views</p></div><nav class="mode-switch" aria-label="Choose intelligence display"><button type="button" id="mode-business" class="is-active" aria-pressed="true">Product Insights · Manuel</button><button type="button" id="mode-technical" aria-pressed="false">Technical View · Engineering</button></nav></div></header><main>${businessMarkup}<section id="technical-view" hidden aria-label="Technical investigation and evidence console">
-<div class="grid"><section class="card"><h2>Live company investigation</h2><form id="run-form"><label for="site">Company website</label><input id="site" type="url" required placeholder="https://manufacturer.example.com" value="https://www.hoshizakiamerica.com/" maxlength="2048"><div class="formgrid"><div><label for="pages">Page budget</label><input id="pages" type="number" min="1" max="${MAX_PAGES}" value="7"></div><div><label for="strategy">Extraction strategy</label><select id="strategy"><option value="auto">Auto: HTML → Browser</option><option value="S02">Chromium on every page</option><option value="S01">HTML only</option></select></div><div><label for="browser">Chromium display</label><select id="browser"><option value="headless">Background browser</option><option value="visible">Visible Chrome window</option><option value="none">Disabled</option></select></div></div><div class="actions"><button class="primary" id="start" type="submit">Research website</button><button type="button" id="cancel" disabled>Stop after current page</button><a id="export" href="/api/export" hidden download>Download evidence JSON</a></div></form></section>
+<div class="grid"><section class="card"><h2>Live company investigation</h2><form id="run-form"><label for="site">Company website</label><input id="site" type="url" required placeholder="https://manufacturer.example.com" value="https://www.hoshizakiamerica.com/" maxlength="2048"><div class="formgrid"><div><label for="pages">Page budget</label><input id="pages" type="number" min="1" max="${MAX_PAGES}" value="15"><div class="small">Adaptive profiles: Quick 5, Standard 15, Deep 30. Set another number for custom testing.</div></div><div><label for="strategy">Extraction strategy</label><select id="strategy"><option value="auto">Auto: HTML → Browser</option><option value="S02">Chromium on every page</option><option value="S01">HTML only</option></select></div><div><label for="browser">Chromium display</label><select id="browser"><option value="headless">Background browser</option><option value="visible">Visible Chrome window</option><option value="none">Disabled</option></select></div></div><div class="actions"><button class="primary" id="start" type="submit">Research website</button><button type="button" id="cancel" disabled>Stop after current page</button><a id="export" href="/api/export" hidden download>Download evidence JSON</a></div></form></section>
 <section class="card"><h2>OEM Taxonomy · Installed Reference</h2><p id="taxonomy-status" class="small" aria-live="polite">Checking installed taxonomy on this PC…</p><div id="taxonomy-details" class="small"></div><details id="taxonomy-install-panel"><summary>Install or replace taxonomy (one time per PC)</summary><p class="small">Choose the existing OEM Industry Taxonomy Explorer HTML or JSON once. The lab validates and stores normalized nodes on this PC, automatically reloads them on later starts, and never sends them to Cloudflare or commits them to the public repository.</p><label for="taxonomy-file">Local taxonomy file</label><input type="file" id="taxonomy-file" accept=".html,.json,.txt"></details><p class="small">The displayed initialization is real: loading an installed reference and validating its integrity. Mapping results are unverified suggestions; enrichment will require separate review.</p></section></div>
 <section class="card" id="stage2-card"><h2>Stage 2 · AI Research &amp; Taxonomy Enrichment</h2><p id="stage2-status" class="small">Checking available research intelligence...</p><div class="actions"><button type="button" id="stage2-refresh">Refresh proposals</button><button type="button" class="primary" id="stage2-publish">Publish approved working edition</button><a id="stage2-taxonomy-export" href="/api/stage2/taxonomy/export" download="insidejob-taxonomy-working-edition.json">Export working taxonomy JSON</a></div><div id="stage2-proposals"></div><p class="small">AI-generated taxonomy suggestions require a review decision. Publishing changes only a local, versioned working edition; the original master taxonomy is never rewritten and Cloudflare is not automatically updated.</p></section>
 <section class="card"><h2>Live execution</h2><p id="status" class="small">Ready. No website requests have been made.</p><div id="events" class="events" role="log" aria-live="polite"></div></section>
@@ -86,8 +87,9 @@ async function loadOptionalTaxonomy(){
 }
 async function runJob(body){
   const u=validatePublicUrl(body.url);
-  const maxPages=Number(body.maxPages||7);
-  if(!Number.isInteger(maxPages)||maxPages<1||maxPages>MAX_PAGES)throw Error(`maxPages must be 1-${MAX_PAGES}`);
+  const chosen=body.maxPages==null?undefined:Number(body.maxPages);
+  const budget=getResearchBudget({profile:body.researchProfile||'standard',maxPages:chosen});
+  const maxPages=budget.maxPages;
   const strategy=body.strategy||'auto',browserMode=body.browser||'headless';
   if(!['auto','S01','S02'].includes(strategy)||!['none','headless','visible'].includes(browserMode))throw Error('Invalid browser or strategy');
   if(strategy==='S02'&&browserMode==='none')throw Error('Chromium strategy requires a browser');
@@ -111,7 +113,8 @@ async function runJob(body){
     return fetch(input,init);
   };
   const rawProductEvidence=[];
-  const report=await runResearch({url:u.href,maxPages,delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
+  const report=await runResearch({url:u.href,maxPages,profile:budget.profile,
+    delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
     prioritizeLinks:aiSettings.configured?async({rootUrl,page,links})=>{
       const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
       return (planned.prioritizedIds||[]).map(id=>links[id-1]?.url).filter(Boolean);
@@ -132,8 +135,15 @@ async function runJob(body){
   // Source-extracted products are authoritative IDs; local Ollama adds review-only
   // component/material evidence and chooses from read-only taxonomy candidates.
   const ollama=await enrichKnownProductsWithOllama({rootUrl:u.href,rawPages:rawProductEvidence,
-    knownProducts:deterministic.products,taxonomyNodes,onProgress:logEvent});
+    knownProducts:deterministic.products,taxonomyNodes,onProgress:logEvent,
+    maxProducts:maxPages<=5?2:maxPages<=15?6:10,
+    timeBudgetMs:maxPages<=5?90_000:maxPages<=15?180_000:260_000});
   const productIntelligence=mergeKnownProductEnrichment(deterministic,ollama);
+  logEvent({status:'research_quality',reason:
+    report.coverage.usefulPages+' useful pages / '+report.coverage.visitedPages+
+    ' visited · '+productIntelligence.products.length+' products · '+
+    (productIntelligence.coverage.catalogLinkCandidates||0)+
+    ' catalog-only leads · stopped: '+report.coverage.stopReason});
   // The source file is a pinned, gitignored, local CODE asset. An absent or invalid
   // reference never blocks website research; no taxonomy / OS write is attempted.
   let processReference=null;
@@ -350,5 +360,5 @@ async function handler(req,res){
 }
 await loadOptionalTaxonomy().catch(e=>{process.stderr.write('Taxonomy could not be loaded; running without it: '+e.message+'\n');});
 const server=createServer((req,res)=>handler(req,res).catch(e=>json(res,{error:String(e?.message||e).slice(0,240)},400)));
-server.requestTimeout=180_000;
+server.requestTimeout=900_000;
 server.listen(port,host,()=>process.stdout.write(`InsideJob Research Lab: http://${host}:${port}\nLocal only. New domains are preflighted per run; Cloudflare allowlists are unchanged.\n`));
