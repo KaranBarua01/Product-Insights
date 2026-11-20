@@ -351,7 +351,7 @@ test('Ollama queue jobs execute only the pinned runner and return bounded privat
           durationMs:1000,acquisition:{status:'sampled',pagesVisited:3,pagesUsable:2,
             pages:[{url:'https://1up-usa.com/products/rack',status:'completed',textChars:600}]},
           model:{name:'qwen3:4b-instruct',status:'completed',pagesAnalyzed:2,acceptedCandidates:1},
-          taxonomy:{installed:true,nodes:1213},output:{products:1,productsWithMaterials:1,
+          taxonomy:{installed:true,nodes:1213},output:{productCount:1,productsWithMaterials:1,
             productsWithComponents:0,taxonomyProposals:1,products:[{
               name:'Super Duty Rack',method:'local_ollama_exact_source_quote',
               quote:'Super Duty Rack',sourceUrl:'https://1up-usa.com/products/rack',
