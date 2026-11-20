@@ -1,0 +1,31 @@
+name: Cloudflare AI Page Recovery QA
+on:
+  push:
+    branches:
+      - feat/ai-page-recovery-live-v1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ai-page-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install standalone live Lab dependencies
+        working-directory: live-lab
+        run: npm install --no-audit --no-fund
+      - name: Test Cloudflare AI invocation on real page titles and authenticated history retries
+        working-directory: live-lab
+        run: npm run check
+      - name: Bundle real Workers AI and Durable Object Worker, dry run only
+        working-directory: live-lab
+        run: npm run build:check
+      - name: Verify existing Windows bridge syntax is unchanged
+        working-directory: Scrappers
+        run: node --check tools/live-lab-bridge.mjs

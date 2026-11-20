@@ -50,7 +50,8 @@ function cleanStale(s,now){
 }
 function publicRun(run,full=false){
   if(!run)return null;
-  const aiTimedOut=run.enrichment?.status==='queued'&&run.finishedAt&&Date.now()-run.finishedAt>100000;
+  const queuedAt=run.enrichment?.queuedAt||run.finishedAt;
+  const aiTimedOut=run.enrichment?.status==='queued'&&queuedAt&&Date.now()-queuedAt>100000;
   const displayedEnrichment=aiTimedOut?{schemaVersion:ENRICHMENT_SCHEMA,status:'failed',
     reason:'Cloudflare AI enrichment exceeded the demo time limit; raw research remains available'}:run.enrichment;
   const base={id:run.id,url:run.url,status:run.status,createdAt:run.createdAt,
@@ -58,6 +59,7 @@ function publicRun(run,full=false){
     browser:'local_headless_browser',error:run.error||null,
     cancelRequested:!!run.cancelRequested,events:(run.events||[]).slice(-35),
     aiStatus:displayedEnrichment?.status||'not_started',
+    enrichmentAttempts:run.enrichmentAttempts||0,
     taxonomyNodesAdded:displayedEnrichment?.workingTaxonomy?.newWorkingNodes||0};
   if(full){base.result=run.result||null;base.enrichment=displayedEnrichment||null;}
   return base;
@@ -141,6 +143,28 @@ export class LabSession{
           return json({ok:true,cancelRequested:!!run.cancelRequested});
         });
       }
+      if(path==='/reenrich'){
+        return await this.update((s,now)=>{
+          const run=s.runs.find(x=>x.id===input.id);
+          if(!run||run.status!=='completed'||!run.result)
+            return json({error:'A completed real website investigation is required for AI recovery'},409);
+          const status=run.enrichment?.status||'not_started';
+          if(status==='queued')return json({error:'Cloudflare AI is already running for this test'},409);
+          const hasProposals=!!run.enrichment?.workingTaxonomy?.aiGeneratedNodes||
+            !!run.enrichment?.proposals?.titleProductCandidates?.length;
+          if(status==='completed'&&hasProposals)
+            return json({error:'AI working proposals already exist for this test'},409);
+          if((run.enrichmentAttempts||0)>=2)
+            return json({error:'AI retries are limited to two per investigation'},429);
+          const usable=(run.result.acquisition?.pages||[])
+            .some(p=>['completed','partial'].includes(p.status)&&p.url);
+          if(!usable)return json({error:'No usable website pages exist for AI recovery'},409);
+          run.enrichmentAttempts=(run.enrichmentAttempts||0)+1;
+          run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
+            message:'Workers AI is examining real visited page titles for missing product candidates'};
+          return json({ok:true,id:run.id,result:run.result});
+        });
+      }
       if(path==='/enrichment'){
         return await this.update(s=>{
           const run=s.runs.find(x=>x.id===input.id);
@@ -171,7 +195,7 @@ export class LabSession{
             const bytes=JSON.stringify(input.result);
             if(bytes.length>168000)return json({error:'Result too large'},413);
             run.result=input.result;
-            run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',
+            run.enrichment={schemaVersion:ENRICHMENT_SCHEMA,status:'queued',queuedAt:now,
               message:'Cloudflare Workers AI is generating an unverified working taxonomy'};
           }else run.error=clip(input.error||'Research failed or source access blocked',230);
           run.status=outcome;run.finishedAt=now;s.active=null;
@@ -222,6 +246,16 @@ export default {
         return doRequest(env,'/state');
       if(method==='GET'&&/^\/api\/runs\/[0-9a-f-]{36}$/.test(path))
         return doRequest(env,'/run/'+path.split('/').at(-1));
+      if(method==='POST'&&/^\/api\/runs\/[0-9a-f-]{36}\/recover-ai$/.test(path)){
+        if(!ctx?.waitUntil)return json({error:'Cloudflare background execution is unavailable'},503);
+        const id=path.split('/')[3];
+        const response=await doRequest(env,'/reenrich','POST',{id});
+        if(!response.ok)return response;
+        const data=await response.json();
+        ctx.waitUntil(completeAiEnrichment(env,id,data.result));
+        return json({ok:true,id,aiStatus:'queued',
+          message:'Workers AI recovery started from existing website evidence; no new laptop crawl required'});
+      }
       if(method==='POST'&&path==='/api/runs'){
         const data=await parse(request,4000);
         return doRequest(env,'/create','POST',data);
