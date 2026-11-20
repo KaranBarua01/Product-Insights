@@ -62,7 +62,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
     }catch(err){fetchErrors++;warnings.push(`Page ${next} failed: ${String(err instanceof Error?err.message:err)}`)}
   }
   if(pdfResponse)return {strategy:'S01',status:'unsupported',reason:'PDF response; delegate to S03',sourceUrl:firstUrl,content:{},evidence:[],warnings,next:'S03'};
-  const text=textParts.join('\n\n').slice(0,65_000);
+  const text=textParts.join('\n\n').slice(0,90_000);
   if(!pages.length)return {strategy:'S01',status:'failed',reason:warnings[0]||'No HTML pages could be retrieved',sourceUrl:firstUrl,content:{},evidence:[],warnings};
   const allTruncated=truncatedCount===pages.length;
   const sparse=text.trim().length<180;
