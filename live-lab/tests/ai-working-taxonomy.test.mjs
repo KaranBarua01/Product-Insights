@@ -279,6 +279,6 @@ test('AI retry rejects failed or evidence-free investigations without inventing 
  await s.fetch(req('/heartbeat',{}));
  const started=await(await s.fetch(req('/create',{url:website,maxPages:3}))).json();
  await s.fetch(req('/next',{}));
- await s.fetch(req('/finish',{id:started.run.id,status:'failed',error:'Site blocked'});
+ await s.fetch(req('/finish',{id:started.run.id,status:'failed',error:'Site blocked'}));
  assert.equal((await s.fetch(req('/reenrich',{id:started.run.id}))).status,409);
 });
