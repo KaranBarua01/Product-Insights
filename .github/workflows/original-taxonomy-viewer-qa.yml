@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/full-taxonomy-explorer-target
+      - feat/operator-approved-any-company-tests
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,6 +41,9 @@ jobs:
           node --check tools/research-relationship-graph.mjs
           node --check tools/research-edition-store.mjs
           node --check tools/ollama-relationships.mjs
-      - name: Test OEM local foundation without private taxonomy fixture
+          node --check tools/approved-company-sites.mjs
+          node --check tools/approve-company.mjs
+          node --check tools/test-diverse-company-websites.mjs
+      - name: Test OEM foundation and arbitrary public company approval/benchmarks
         working-directory: Scrappers
-        run: node --test tests/oem-foundation.test.mjs
+        run: node --test tests/oem-foundation.test.mjs tests/any-company-benchmark.test.mjs tests/cross-industry-navigation.test.mjs

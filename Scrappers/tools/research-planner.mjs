@@ -2,8 +2,8 @@
  * This module does not fetch pages or infer manufacturing processes itself.
  */
 const BAD=/(?:\/(?:cart|checkout|login|register|account|privacy|terms|cookies|careers|jobs|job-application|recruit(?:ment|ing)?|blog\/tag|wp-admin|feed)(?:\/|$)|\.(?:jpg|jpeg|png|gif|webp|svg|zip|docx?|xlsx?|mp4)(?:$|\?))/i;
-const GOOD=/(?:products?|categories|collections|catalog|specification|datasheet|downloads?|manuals?|documentation|capabilities|manufactur|applications?|industries|about|technology|services)/i;
-const BUY=/(?:products?|categories|collections|catalog|specification|datasheet)/i;
+const GOOD=/(?:products?|categories|collections|catalog(?:ue)?|specification|datasheet|downloads?|manuals?|documentation|capabilities|manufactur|applications?|industries|about|technology|services|shop|parts|components|machinery|machines|equipment|enclosures|automation|solutions|motion|portfolio|divisions|product-families)/i;
+const BUY=/(?:products?|categories|collections|catalog(?:ue)?|specification|datasheet|shop|parts|components|equipment|portfolio)/i;
 const STOP=new Set('a an the and or for with from into of by on to in is are product products series model models system systems assembly assemblies kit kits genuine new company solutions equipment industrial usa inc ltd'.split(' '));
 // Shared modifiers alone do not identify a product class (e.g. a Heavy Duty
 // bike rack is not a heavy-duty transmission).
@@ -35,6 +35,28 @@ export function rankResearchLink(link,rootHost){
   if(u.search)score-=2;
   return {url,score,reason:strong?'Product or catalog lead':'Company or technical evidence lead',label:String(link?.label||'').slice(0,120)};
 }
+/** Conservative fallback for unfamiliar website navigation labels.
+ * Used only when deterministic product paths discovered no usable leads.
+ * Does NOT bypass robots, exact-host restrictions or normal scraper policies.
+ */
+export function exploratoryCompanyLinks(links,rootHost,{max=6}={}){
+ const blocked=/(?:^|\/)(?:contact|support|jobs|careers|blog|news|press|events|privacy|terms|cookies|login|account|register|search|locations|faq|investors)(?:\/|$)/i;
+ const discovered=[],seen=new Set();
+ for(const item of (Array.isArray(links)?links:[]).slice(0,100)){
+   const url=safeCandidate(item?.url,rootHost);if(!url||seen.has(url))continue;
+   const u=new URL(url),segments=u.pathname.split('/').filter(Boolean);
+   if(segments.length<1||segments.length>3||blocked.test(u.pathname))continue;
+   if(u.searchParams.size>2||/\.(?:pdf|xml|json|zip|csv|html?)$/i.test(u.pathname))continue;
+   const label=String(item?.label||'').replace(/\s+/g,' ').trim();
+   if(label.length<3||label.length>125)continue;
+   if(/^(?:home|contact|learn more|read more|login|my account)$/i.test(label))continue;
+   seen.add(url);discovered.push({url,score:3,reason:'Exploratory same-company navigation lead',
+     label:label.slice(0,120)});
+   if(discovered.length>=Math.min(9,max))break;
+ }
+ return discovered;
+}
+
 export function extractStructuredProducts(data,sourceUrl){
   const out=[],seen=new Set(),stack=[...(Array.isArray(data)?data:[data])];let examined=0;
   while(stack.length&&examined++<120){
@@ -148,6 +170,13 @@ export async function runResearch({url,maxPages=7,extractPage,onProgress=()=>{},
     if(['completed','partial'].includes(page.status)){
       const candidates=[...(content.links||[]),...(content.documents||[]).map(x=>({url:x,label:'Technical document PDF'}))]
         .map(x=>rankResearchLink(x,root)).filter(Boolean);
+      // A site using unfamiliar navigation names should not silently stop at
+      // its home page. Explore a few low-priority, same-host public sections.
+      if(pages.length===1&&candidates.length<2){
+        const exploratory=exploratoryCompanyLinks(content.links||[],root,{max:6});
+        for(const item of exploratory)if(!candidates.some(c=>c.url===item.url))candidates.push(item);
+        if(exploratory.length)warnings.push('Unfamiliar navigation: added bounded exploratory public same-host links');
+      }
       if(pages.length===1&&typeof prioritizeLinks==='function'){
         try{
           const preferred=await prioritizeLinks({rootUrl:url,page,links:candidates.slice(0,35)});
