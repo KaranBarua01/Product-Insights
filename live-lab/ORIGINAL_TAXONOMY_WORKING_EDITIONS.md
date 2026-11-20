@@ -1,53 +1,59 @@
-# Original Taxonomy Explorer + AI Working Taxonomy — prototype design
+# Product Insights v1 — code-only foundation and end-to-end prototype
 
-## Decision: two separate data layers, one product intelligence workflow
+## Decision
 
-**Original taxonomy** is the installed OEM reference (expected 1,213 nodes, pending actual installation and count validation). Its codes, paths and hierarchy are immutable in this prototype. A category is a *type*, not an individual SKU. Do not add every new company product to the original hierarchy.
+**No taxonomy database.** The original 1,213-node taxonomy and its 220 manufacturing-process names / 10,388 draft process relationships live as a local JSON code reference, pinned by an exact file SHA-256. The repository is **public**, so this original reference must remain in the Windows laptop's gitignored `Scrappers/local-data`, not be committed or uploaded as source.
 
-**AI Working Taxonomy** is the automatically generated, unapproved graph of observed product instances, component mentions, material evidence, possible production processes, proposed classification edges and taxonomy gaps. It references existing original taxonomy codes where exact matches exist. Never overwrite an original node from an AI inference. Auto-add AI proposals to the working graph, not the original file or InsideJob OS.
+`1,213 nodes` = 8 sectors, 30 industries, 171 systems, 1,004 leaf product/component classes. **All 10,388 process relationships are unreviewed taxonomy priors, not a company's verified manufacturing capabilities.**
 
-JS1–JS10 remains **one company-level profile**. Products are instances linked into the relationship graph; no duplicated JS1–JS10 profile for every product.
+### Layers
 
-## UI behavior
+1. **Original OEM taxonomy:** fixed local JSON, read-only category codes + hierarchy + process associations. The laptop Lab exposes its version/manifest, a code-filtered preview, and an authenticated snapshot endpoint. No AI writes to the original.
+2. **Company research:** existing source-grounded local scraper and Qwen3 product enrichment. JS1–JS10 is **company-level only**, never duplicated per SKU.
+3. **Relationship graph:** known products, source-mentioned parts/accessories, material mentions, optional Qwen3 **hypothetical** BOM parts, proposed existing-category codes, and possible process requirements from the original code process dictionary or explicitly illustrative shape rules. Every edge remains review-only.
+4. **AI working edition:** append-only, gitignored JSON:
+   - `local-data/product-insights-working/runs/<sha256>.json`: immutable individual company research graphs and provenance.
+   - `local-data/product-insights-working/versions/edition-000N.json`: versioned cross-run candidate-node/relationship indexes.
+   - `local-data/product-insights-working/edition-manifest.json`: current accumulated working proposals, source sites and totals.
+   No database and no automatic publication to the original taxonomy.
+5. **Cloudflare viewer/control plane:** the existing Worker, Durable Object job/session state, authenticated browser and outbound-only laptop bridge. The original node tree and coded process association snapshot are **read-only viewer caches**, not a canonical database. Per-run source research and accumulated working-edition summaries are displayed. Cloudflare does not scrape websites or run the local Qwen3 model.
 
-The left sidebar has:
-- **Original taxonomy** — the actual searchable read-only master from the laptop, including L0–L4 hierarchy, code, full path, source hash, count and last synchronization. Also shows AI mapping candidates (product to existing taxonomy code) and the per-run working graph in separate areas.
-- **AI taxonomy** — the working graph of product, component/part and material claims, with any separately labeled inferred process hypotheses. Laptop results remain visible if optional Cloudflare Workers AI fails or exceeds its timeout.
+### Runtime configuration
 
-Each proposed relation is labeled observed source candidate, local AI mention, AI hypothesis, or unknown. A source quote is attribution, not independent truth. Unmapped codes remain explicit rather than inventing a category.
+New isolated source checkout: `%USERPROFILE%\PI-foundation-v1` (via separately supplied, pin-verified Windows launcher). New Lab port `127.0.0.1:8790`; original Lab on 8791 and previous agent worktrees are untouched.
 
-## Data flow / security
+Local Ollama model: `qwen3:4b-instruct`. The optional **part hypothesis** inference is only activated when `RESEARCH_LAB_RELATIONSHIP_AI=1`. It reviews up to two *already known* website product titles in a single bounded CPU request; unavailable model or timeout leaves the source-backed graph functional. Manufacturing process names must exist in the 220-process code reference.
 
-1. Local Research Lab on 127.0.0.1:8790 loads its original validated taxonomy. The protected POST taxonomy/master-snapshot endpoint requires the Lab CSRF token and emits code/label/path/level plus manifest hash only; no local paths, user records or secrets.
-2. Existing outbound-only Cloudflare bridge polls the protected snapshot on a throttled cadence, validates structure and synchronizes it only when the hash/status changes. This is separate from GitHub queue token.
-3. Cloudflare Worker accepts the snapshot on a separately authenticated agent-only endpoint and stores it in the Live Lab Durable Object; the viewer uses its independent key. There is no new inbound laptop listener.
-4. Every completed laptop investigation creates a bounded working graph in the Worker from the actual source-backed local result (products, components/material mentions, and only existing validated category codes). This graph works even when optional Cloudflare AI enrichment times out.
-5. Original tree and working graph are displayed in the dashboard. The master is not modified; no OS writes occur.
+### Module ownership
 
-The original taxonomy must actually be installed in the local Lab. A claimed total of 1,213 is not sufficient to manufacture missing nodes. The UI reports not installed until a real original file loads.
+| Module | Purpose |
+|---|---|
+| `Scrappers/tools/oem-process-reference.mjs` | Validated private local original code; exact SHA, type-safe category/process lookups and draft part-shape rules |
+| `Scrappers/tools/research-relationship-graph.mjs` | Company → product → part/material → possible process → proposed original code graph |
+| `Scrappers/tools/ollama-relationships.mjs` | Optional bounded local Qwen3 speculative part breakdown |
+| `Scrappers/tools/research-edition-store.mjs` | Append-only versioned cross-company working taxonomy JSON |
+| `Scrappers/tools/research-lab.mjs` | Coordinates extraction, local inference, code-reference lookup and working-edition writes |
+| `live-lab/src/protocol.js` | Validates and bounds the laptop-to-Cloudflare results and process snapshot |
+| `Scrappers/tools/live-lab-bridge.mjs` | Outbound-only authenticated original taxonomy/process viewer sync and live tests |
+| `live-lab/src/worker.js` | Protected viewer APIs and session-specific research graph |
+| `live-lab/src/ui.js` | Searchable original tree, clickable L3 process associations and AI working-edition growth |
 
-## Relationship model
+### API summary
 
-- Company to product: manufactures / distributes / sells, only if documented.
-- Product to part/accessory/tool: observed or hypothesized relation, separately typed.
-- Part or product to material: source-supported or AI-proposed claim.
-- Part to process: possible requirement, AI hypothesis, not proof of in-house production.
-- Product / part / process to original taxonomy: proposed classification edge only when applicable.
+- Laptop GET `/health`, GET `/api/process-reference/status`, GET `/api/working-edition/summary` (localhost only).
+- Laptop POST `/api/taxonomy/master-snapshot` and `/api/process-reference/snapshot` require the Lab CSRF session token.
+- Cloudflare GET `/api/original-taxonomy`, GET `/api/original-processes?code=...`, GET `/api/runs/{id}` require the **viewer** key.
+- Cloudflare POST `/api/agent/original-taxonomy` and `/api/agent/original-processes` require a **separate** agent key. The agent cannot send arbitrary commands or URLs; the source approvals and fixed job limits remain.
+- Cloudflare Durable Object only caches read-only viewer data and recent live test state. The authoritative taxonomy and all versioned cross-company working knowledge stay on the laptop as JSON code/files.
 
-The OEM industry taxonomy may not itself classify materials or manufacturing processes; keep separate working node types when no original taxonomy target exists.
+### Verification
 
-## Current implementation status
+Run `node --test Scrappers/tests/oem-foundation.test.mjs` and `cd live-lab && npm run check && npm run build:check` (Node >=24). CI repeats Linux and native Windows checks and bundling. The separate private taxonomy ZIP installer validates the real 1,213 nodes + 220 processes + 10,388 draft links using exact pinned SHA.
 
-Implemented in this draft: full read-only taxonomy sync; searchable original hierarchy; per-run mapping list; source-backed laptop working graph with product/component/material links; strict original-code validation; independent operation when Cloudflare Workers AI times out.
+### Limits / release boundary
 
-The local Research Lab currently reports 0 original nodes installed in the isolated 8790 checkout. Until installed, classification cannot target the real original master.
-
-Not yet implemented: local Ollama part-to-process hypothesis inference across all products, durable cross-run/cross-company accumulation of working editions, Cloudflare taxonomy review/approval/publishing, and deploying/synchronizing this revision to the Windows Lab and live Cloudflare Worker.
-
-## Next proof-of-concept milestone
-
-1. Install the real OEM taxonomy in the isolated laptop Lab.
-2. Run a permitted sample company through Cloudflare and confirm the original hierarchy appears in the new sidebar.
-3. Confirm products map only to original codes, gaps stay in the working layer.
-4. Extend Ollama with plausible part-to-process edges, labeled as hypotheses.
-5. Add append-only versioned working-edition history before accumulating knowledge across companies.
+- Real product ownership (manufacture vs distribute/resell), integral BOM part identity, raw material grade and plant-level production capabilities **are not verified**.
+- Unmapped products/parts remain explicit; AI must not invent an original code or turn a hypothesis into a source-backed fact.
+- The 250-run JSON working-edition cap is intentional. Review/approval, normalization/dedup semantics and database migration are **later** projects, not in this foundation.
+- This branch/PR and its CI do **not** deploy to the currently running Cloudflare Worker. The Windows startup bundle creates a separate approved source worktree and requires the old 8790 Lab/bridge window to stop; it does not overwrite their files or touch port 8791.
+- No OS integration, autonomous remote shell or arbitrary website browsing is enabled.
