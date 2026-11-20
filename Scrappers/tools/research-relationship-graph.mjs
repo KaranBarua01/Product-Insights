@@ -8,7 +8,7 @@ const clean=(x,n=150)=>String(x??'').replace(/\s+/g,' ').trim().slice(0,n);
 const id=(type,key)=>type+':'+createHash('sha256').update(key).digest('hex').slice(0,18);
 const norm=x=>clean(x).toLowerCase();
 const arr=(v,n)=>Array.isArray(v)?v.slice(0,n):[];
-const site=x=>{try{const u=new URL(x);return ['http:','https:'].includes(u.protocol)?u.hostname.toLowerCase():null;}catch{return null;}};
+const site=x=>{try{const u=new URL(x);return ['http:','https:'].includes(u.protocol)?u.hostname.toLowerCase().replace(/^www\./,''):null;}catch{return null;}};
 const validUrl=(u,host)=>typeof u==='string'&&u.length<700&&site(u)===host;
 const minmax=(n,a,b)=>Math.min(b,Math.max(a,n));
 export function buildResearchGraph({companyName,companyUrl,products=[],
@@ -59,7 +59,7 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
      if(!cat)continue;
      link(target,'original:'+cat.code,'proposed_existing_taxonomy_mapping','needs_review',{
        method:c.method,referencePath:cat.path,confidence:c.confidence});
-     mapped.push({item:name,kind:part?'part':'product',sourceUrl,targetCode:cat.code,
+     mapped.push({product,part,item:name,kind:part?'part':'product',sourceUrl,targetCode:cat.code,
        targetLabel:cat.label,method:c.method,status:'needs_review'});
      if(cat.level===3)for(const process of reference.decode(cat.code,{max:3}))
        addProcess(target,process,'existing_category_draft_prior',{product,part,code:cat.code});
