@@ -29,11 +29,20 @@ function pageIndex(pages,rootUrl){
 export function sampledEvidence(page,productName){
   const c=page?.content||{};
   const heading=[c.title,...(c.headings||[])].map(clean).filter(Boolean).slice(0,4);
-  const lines=String(c.text||'').split(/\r?\n/).map(clean)
-    .filter(x=>x.length>=8&&x.length<=650);
-  const signal=/\b(?:made|aluminum|aluminium|steel|carbon fiber|plastic|material|includes?|included|bolt|bracket|mount|arms?|frame|tray|wheels?|part|built|construction|security)\b/i;
-  const technical=lines.filter(x=>signal.test(x)&&!BAD.test(x));
-  const evidence=clean([...heading,...technical.slice(0,13),...lines.slice(0,5)].join('\n')).slice(0,2050);
+  const raw=String(c.text||'').slice(0,25000);
+  const lines=raw.split(/\r?\n/).map(clean).filter(x=>x.length>=8&&x.length<=650);
+  const signal=/\b(?:made|aluminum|aluminium|steel|carbon fiber|plastic|material|includes?|included|bolt|bracket|mount|arms?|frame|tray|wheels?|part|built|construction|security)\b/ig;
+  const technical=lines.filter(x=>{signal.lastIndex=0;return signal.test(x)&&!BAD.test(x);});
+  // Some pages contain no newlines. Capture bounded nearby verbatim context.
+  const windows=[],seen=new Set();
+  for(const match of raw.matchAll(signal)){
+    const quote=clean(raw.slice(Math.max(0,match.index-85),Math.min(raw.length,match.index+145)));
+    if(quote.length<14||BAD.test(quote)||seen.has(quote))continue;
+    seen.add(quote);windows.push(quote);
+    if(windows.length>=14)break;
+  }
+  const evidence=clean([...heading,...technical.slice(0,9),...windows.slice(0,9),
+    ...lines.slice(0,4)].join('\n')).slice(0,2050);
   return {productName,sourceText:evidence,heading:heading.slice(0,2).join(' / ').slice(0,180)};
 }
 async function infer(model,system,input,format,fetcher,tokenLimit=190){
