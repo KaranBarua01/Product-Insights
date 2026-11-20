@@ -1,0 +1,46 @@
+name: Manuel Live and Local Testing UI QA
+on:
+  push:
+    branches:
+      - feat/manuels-live-testing-ui-v2
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-and-local-interfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Cloudflare live Lab dependencies
+        working-directory: live-lab
+        run: npm install --no-audit --no-fund
+      - name: Run security, AI taxonomy and status-first UI tests
+        working-directory: live-lab
+        run: npm run check
+      - name: Check actual Cloudflare Worker bundle without deployment
+        working-directory: live-lab
+        run: npm run build:check
+      - name: Install and compile local Scrappers engine
+        working-directory: Scrappers
+        run: |
+          npm install --omit=optional --no-audit --no-fund
+          npm run build
+      - name: Check business presentation and both browser UIs
+        working-directory: Scrappers
+        run: |
+          node --check tools/research-lab-business-ui.js
+          node --check tools/research-lab-ui.js
+          node --check tools/lab-business.mjs
+          node --check tools/lab-business-shell.mjs
+      - name: Run complete Scrappers regression including real localhost UI
+        working-directory: Scrappers
+        run: npm test
+      - name: Confirm original 30-company frozen holdout unchanged
+        working-directory: Scrappers
+        run: node tools/universal-benchmark.mjs --dry-run

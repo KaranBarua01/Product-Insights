@@ -163,3 +163,30 @@ test('Live browser UI is valid JavaScript and exposes true original vs AI taxono
   assert.match(uiJs,/original taxonomy|Original taxonomy/i);
   assert.match(uiJs,/status==='ai_inferred'/);
 });
+
+test('Manuel live testing UI exposes source/review/missing states without prerecorded results',()=>{
+  assert.match(uiHtml,/id="coverage-summary"/);
+  assert.match(uiHtml,/id="category-list"/);
+  assert.match(uiHtml,/id="product-tree"/);
+  assert.match(uiHtml,/id="taxonomy-panel"/);
+  assert.match(uiHtml,/id="js-sections"/);
+  assert.match(uiHtml,/id="source-list"/);
+  assert.match(uiHtml,/id="technical"/);
+  assert.match(uiHtml,/id="run-form"/);
+  assert.match(uiHtml,/id="history"/);
+  assert.match(uiHtml,/id="os-note-form"/);
+  assert.match(uiHtml,/Green:.*extracted with source/);
+  assert.match(uiHtml,/Amber:.*needs human review/);
+  assert.match(uiHtml,/Red:.*couldn.t bring this out/);
+  assert.match(uiJs,/function renderState\(\)/);
+  assert.match(uiJs,/function drawBusiness\(run\)/);
+  assert.match(uiJs,/function drawTechnical\(run\)/);
+  assert.match(uiJs,/function sectionTone\(status\)/);
+  assert.match(uiJs,/sectionTone\(s.status\)/);
+  assert.match(uiJs,/function drawSources\(r\)/);
+  assert.match(uiJs,/function drawCategories\(r\)/);
+  assert.match(uiJs,/function drawProcesses\(r,run\)/);
+  assert.match(uiJs,/function renderState\(\)[\s\S]*?history.replaceChildren\(\)/);
+  assert.doesNotMatch(uiHtml,/Aircraft Spruce/);
+  assert.doesNotThrow(()=>new Script(uiJs,{filename:'new-live-testing-ui.js'}));
+});

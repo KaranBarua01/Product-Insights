@@ -75,29 +75,29 @@
     const left=append(fields,'div');
     const cats=append(left,'div',undefined,'biz-field');
     append(cats,'h5','Category / product hierarchy');
-    if(p.categories?.length)list(cats,p.categories,'Not linked');
-    else append(cats,'p','Category relationship not established from this website sample.','biz-subtle');
+    if(p.categories?.length){for(const name of p.categories.slice(0,6))append(cats,'span',name,'biz-chip available');}
+    else append(cats,'div',"We couldn't bring this out. Category relationship not established.",'biz-missing');
     const s=append(left,'div',undefined,'biz-field');
     append(s,'h5','Specifications (published claims)');
-    if(!p.specifications?.length)append(s,'p','Not found in sampled product evidence.','biz-subtle');
+    if(!p.specifications?.length)append(s,'div',"We couldn't bring this out. No specification found in the sampled pages.",'biz-missing');
     for(const entry of (p.specifications||[]).slice(0,10)){
-      append(s,'strong',entry.name+': '+entry.value);
+      append(s,'div',entry.name+': '+entry.value,'biz-available');
       evidence(s,entry);
     }
     const right=append(fields,'div');
     const comp=append(right,'div',undefined,'biz-field');
     append(comp,'h5','Components mentioned (NOT confirmed BOM parts)');
-    if(!p.components?.length)append(comp,'p','No explicit inclusion mentions found.','biz-subtle');
+    if(!p.components?.length)append(comp,'div',"We couldn't bring this out. No sourced component inclusion mentions found.",'biz-missing');
     for(const entry of (p.components||[]).slice(0,10)){
-      append(comp,'strong',entry.name);evidence(comp,entry);
+      append(comp,'div',entry.name,'biz-available');evidence(comp,entry);
     }
     const mat=append(right,'div',undefined,'biz-field');
     append(mat,'h5','Materials explicitly stated');
-    if(!p.materials?.length)append(mat,'p','No explicit product material statements found.','biz-subtle');
+    if(!p.materials?.length)append(mat,'div',"We couldn't bring this out. No published product material statement found.",'biz-missing');
     for(const entry of (p.materials||[]).slice(0,10)){
-      append(mat,'strong',entry.name);evidence(mat,entry);
+      append(mat,'div',entry.name,'biz-available');evidence(mat,entry);
     }
-    append(body,'div','Parts/BOM: Not established. Manufacturing processes required for this product: Not established.','biz-warning');
+    append(body,'div','Needs human review. Parts/BOM not established; Manufacturing processes required for this product are not established. Component mentions are not an approved BOM.','biz-review');
     const identity=p.identityEvidence?.find(e=>e.quote);
     if(identity)append(body,'p','Identity evidence: "'+identity.quote+'"','biz-subtle');
     return detail;
@@ -109,7 +109,7 @@
     if(cmp.status==='os_not_connected'){
       append(os,'h4','Not connected');
       append(os,'p','No OS data has been imported. Do not interpret this as zero existing records.','biz-subtle');
-      append(os,'p','Use an actual OS company JSON export to make this comparison.','biz-subtle');
+      append(os,'p','OS provides no connected export/API to this Lab. This does not imply OS contains zero products.','biz-missing');
     }else{
       append(os,'h4',cmp.osCompany?.name||'Imported OS company');
       if(cmp.status==='company_mismatch')
@@ -162,7 +162,7 @@
     const root=$('biz-taxonomy');root.replaceChildren();
     const entries=(b.taxonomy||[]).filter(x=>x.suggestions?.length).slice(0,12);
     if(!entries.length){
-      append(root,'div','No source-backed taxonomy matches can be presented as approved. Install the taxonomy to see candidate mappings; its absence is not a missing category.','biz-warning');
+      append(root,'div',"We couldn't bring out approved taxonomy mappings. The taxonomy may be uninstalled or the site terminology may not match. Product categories are a separate finding.",'biz-missing');
       return;
     }
     append(root,'p','These are lexical / proposed matches. No classification has been approved by OS.','biz-subtle');
@@ -179,11 +179,11 @@
     const root=$('biz-processes');root.replaceChildren();
     const process=b.processEvidence||{},claims=process.claims||[];
     if(!claims.length){
-      append(root,'div','Manufacturing process evidence has not been established. Do not infer machining, fabrication, injection molding or assembly from product names, parts or materials.','biz-warning');
+      append(root,'div',"We couldn't bring this out. No product-to-process or in-house manufacturing relationship was established by website evidence.",'biz-missing');
       append(root,'p','When supported, JS5 will show product-relevant processes and JS6 will separately show company-performed capabilities.','biz-subtle');
       return;
     }
-    append(root,'p','Unverified source quotations only. Claims below are NOT linked to any product or factory.','biz-warning');
+    append(root,'p','Needs human review. Source quotations do not automatically establish a product, factory or company-performed process.','biz-review');
     for(const c of claims.slice(0,10)){
       const details=append(root,'details');
       append(details,'summary',(c.section==='JS5'?'JS5 · Product-relevant process':'JS6 · Claimed company capability')+' · '+c.claim.slice(0,95));
@@ -191,13 +191,110 @@
       evidence(details,{evidence:c.evidence});
     }
   }
+  /** Visual states reflect evidence availability, not truth of source claims. */
+  function badge(id,tone,label){
+    const el=$(id);el.className='biz-chip '+tone;el.textContent=label;
+  }
+  function sectionRows(b){
+    const n=b.coverage||{},other=b.otherSectionClaims||[],process=b.processEvidence?.claims||[];
+    const pageRows=b.acquisition?.pageStatus||[];
+    const sites=pageRows.filter(x=>x.url&&['completed','partial'].includes(x.status));
+    const have=(code)=>other.some(x=>x.code===code&&x.evidence?.sourceUrl&&x.evidence?.quote);
+    return [
+      {code:'JS1',name:'Company overview & identity',tone:n.pagesVisited>0?'review':'unavailable',
+       text:n.pagesVisited>0?'Website identity retrieved; OEM/distributor role is a candidate and needs review.':'No usable company overview could be established.'},
+      {code:'JS2',name:'Product categories',tone:n.categories?'available':'unavailable',
+       text:n.categories+' category candidates extracted from website sources.'},
+      {code:'JS3',name:'Product & component hierarchy',tone:n.products?'available':'unavailable',
+       text:n.products+' product candidates; '+n.componentMentions+' component mentions. Complete BOM is not established.'},
+      {code:'JS4',name:'Materials',tone:n.materialClaims?'available':'unavailable',
+       text:n.materialClaims+' explicitly published material claims; product-to-material coverage remains incomplete.'},
+      {code:'JS5',name:'Product manufacturing process requirements',tone:process.some(x=>x.section==='JS5')?'review':'unavailable',
+       text:'Product process claims need review; no verified product-to-process map exists.'},
+      {code:'JS6',name:'Actual in-house manufacturing capability',tone:process.some(x=>x.section==='JS6')?'review':'unavailable',
+       text:'In-house processes cannot be inferred from parts or product names. Only website claims can be shown.'},
+      {code:'JS7',name:'Supply chain intelligence',tone:have('JS7')?'review':'unavailable',
+       text:have('JS7')?'Source-quoted supply chain candidates; supplier/purchase details need review.':'Specific supplier and purchase relationships were not established.'},
+      {code:'JS8',name:'Industries & target markets',tone:have('JS8')?'review':'unavailable',
+       text:have('JS8')?'Website-quoted market/application candidates require review.':'Target markets could not be supported in the available findings.'},
+      {code:'JS9',name:'Differentiators',tone:have('JS9')?'review':'unavailable',
+       text:have('JS9')?'Source-quoted differentiators require review.':'Competitive differentiators could not be supported in the available findings.'},
+      {code:'JS10',name:'Evidence & confidence',tone:sites.length?'available':'unavailable',
+       text:sites.length+' usable source page(s); traceability is not independent fact verification.'}
+    ];
+  }
+  function renderStatuses(b){
+    const rows=sectionRows(b),totals={
+      available:rows.filter(r=>r.tone==='available').length,
+      review:rows.filter(r=>r.tone==='review').length,
+      unavailable:rows.filter(r=>r.tone==='unavailable').length
+    };
+    const root=$('biz-coverage-summary');root.replaceChildren();
+    function tile(value,label,tone,description){
+      const card=append(root,'div',undefined,'biz-coverage-tile '+tone);
+      append(card,'span',label);append(card,'strong',value);append(card,'small',description);
+    }
+    tile(totals.available,'Extracted information','available','Source found · not independently verified');
+    tile(totals.review,'Needs human review','review','Website claim / AI interpretation');
+    tile(totals.unavailable,"Couldn't bring out",'unavailable','No defensible finding this run');
+    tile((b.acquisition?.pageStatus||[]).filter(x=>x.url&&['completed','partial'].includes(x.status)).length,
+      'Usable page sources','blue','Actual website evidence');
+    const sections=$('biz-js-coverage');sections.replaceChildren();
+    for(const row of rows){
+      const card=append(sections,'div',undefined,'biz-js-row '+row.tone);
+      append(card,'b',row.code);
+      const info=append(card,'div');
+      append(info,'strong',row.name);
+      append(info,'span',row.tone==='available'?'Extracted':row.tone==='review'?'Needs human review':"Couldn't bring this out",
+        'biz-status '+row.tone);
+      append(info,'p',row.tone==='unavailable'?"We couldn't bring this out. "+row.text:row.text,'biz-subtle');
+    }
+  }
+  function renderCategories(b){
+    const root=$('biz-categories');root.replaceChildren();
+    badge('biz-categories-status',b.categories?.length?'available':'unavailable',
+      b.categories?.length?'Extracted · requires verification':"Couldn't bring this out");
+    if(!b.categories?.length){
+      append(root,'div',"We couldn't bring this out. No product categories were extracted from the pages visited.",'biz-missing');return;
+    }
+    for(const category of b.categories.slice(0,40)){
+      const card=append(root,'div',undefined,'biz-catcard');
+      append(card,'strong',category.name);
+      const linked=b.products.filter(p=>(p.categories||[]).includes(category.name));
+      append(card,'p',linked.length?linked.length+' related product candidate(s)':'Category extracted; product relationships not established');
+      if(category.sourceUrl)card.append(link(category.sourceUrl,'Open category source'));
+    }
+  }
+  function renderSources(b){
+    const root=$('biz-sources');root.replaceChildren();
+    const pages=b.acquisition?.pageStatus||[];
+    const successful=pages.filter(x=>x.url&&['completed','partial'].includes(x.status));
+    badge('biz-sources-status',successful.length?'available':'unavailable',
+      successful.length?successful.length+' usable pages':"Couldn't bring this out");
+    if(!pages.length){append(root,'div',"We couldn't bring this out. The website did not provide page records.",'biz-missing');return;}
+    for(const p of pages){
+      const box=append(root,'div',undefined,'biz-sourceitem');
+      if(p.url)box.append(link(p.url,'Source: '+p.url));
+      append(box,'div','Result: '+(p.status||'unknown')+' · Strategy: '+(p.strategy||'unknown'),
+        ['completed','partial'].includes(p.status)?'biz-available':'biz-missing');
+    }
+  }
+
   function renderBusiness(b){
     if(!b||b.schemaVersion!=='pi-lab-business-view/v1')return;
     current=b;$('biz-results').hidden=false;$('biz-empty').hidden=true;
     $('biz-company').textContent=b.company.name;
     $('biz-role').textContent='Website: '+b.company.website+
       ' · Business role candidate: '+b.company.roleCandidate+' (unverified)';
-    $('biz-run-status').textContent=b.acquisition.status==='sampled'?'Sampled website':'Limited / blocked research';
+    badge('biz-run-status',b.coverage.pagesVisited?'review':'unavailable',
+      b.coverage.pagesVisited?'Source sample · needs review':"Couldn't bring this out");
+    $('biz-company-summary').textContent=b.coverage.pagesVisited?
+      'This live investigation attempted '+b.coverage.pagesVisited+' pages, identified '+b.coverage.products+
+      ' product candidates, '+b.coverage.categories+' categories, '+b.coverage.specifications+
+      ' technical specifications and '+(b.coverage.componentMentions+b.coverage.materialClaims)+
+      ' component/material mentions. Results cover only the sampled pages.':
+      "We couldn't bring out usable product intelligence from the investigated website pages.";
+    renderStatuses(b);renderCategories(b);renderSources(b);
     const stats=$('biz-summary');stats.replaceChildren();
     metric(stats,b.coverage.pagesVisited,'Pages investigated');
     metric(stats,b.coverage.categories,'Candidate categories');
@@ -206,7 +303,7 @@
     metric(stats,b.coverage.componentMentions+b.coverage.materialClaims,'Component / material mentions');
     $('biz-product-count').textContent=b.products.length+' source candidates';
     const hierarchy=$('biz-product-tree');hierarchy.replaceChildren();
-    if(!b.products.length)append(hierarchy,'div','No defensible product entities found in sampled pages. This is NOT proof the company has no products.','biz-warning');
+    if(!b.products.length)append(hierarchy,'div',"We couldn't bring this out. No defensible product entities were found on sampled pages. This does not prove the company has no products.",'biz-missing');
     else{
       for(const [i,p] of b.products.slice(0,45).entries())hierarchy.append(productPanel(p,i));
       if(b.products.length>45)append(hierarchy,'p','Showing first 45 records. Download the complete candidate JSON.','biz-subtle');
