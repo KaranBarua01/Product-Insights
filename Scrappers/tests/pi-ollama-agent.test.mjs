@@ -44,6 +44,8 @@ test('1UP job does not contact a website unless the fixed model is ready',async(
 test('fixed output paths disallow traversal, arbitrary paths and unsupported actions',()=>{
   assert.match(fixedOutputPath('ollama_health','local-data/pi-local-agent/outputs/health_job_123-ollama_health.json'),
     /health_job_123-ollama_health\.json$/);
+  assert.match(fixedOutputPath('ollama_health','local-data\\pi-local-agent\\outputs\\health_job_123-ollama_health.json'),
+    /health_job_123-ollama_health\.json$/);
   for(const p of ['../../outside.json','local-data/pi-local-agent/outputs/not.txt',
     'local-data/pi-local-agent/outputs/short-ollama_health.json',
     'local-data/pi-local-agent/outputs/job_12345678-ollama_1up.json',
