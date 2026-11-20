@@ -10,6 +10,7 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
+import {enrichWithLocalOllama,mergeOllamaProducts,probeOllama} from './ollama-mapping.mjs';
 import {buildBusinessView,normalizeOsSnapshot,osSnapshotTemplate} from './lab-business.mjs';
 import {businessCss,businessMarkup} from './lab-business-shell.mjs';
 import {installTaxonomy,loadInstalledTaxonomy,makeManifest} from './research-taxonomy-store.mjs';
@@ -122,8 +123,15 @@ async function runJob(body){
     try{enriched.stage2.queue=await enqueueTaxonomyProposals(enriched.stage2.proposals,{baseNodeHash:masterTaxonomy.manifest.nodeHash});}
     catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
   }
-  const productIntelligence=extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
-  return {...enriched,productIntelligence,lab:{runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
+  const deterministic=extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
+  // Use the localhost-only model; keep deterministic extraction when Ollama is unavailable.
+  const ollama=await enrichWithLocalOllama({rootUrl:u.href,rawPages:rawProductEvidence,
+    taxonomyNodes,onProgress:logEvent});
+  const productIntelligence=mergeOllamaProducts(deterministic,ollama);
+  return {...enriched,productIntelligence,lab:{ollama:{
+    status:ollama.status,model:ollama.model||null,pagesAnalyzed:ollama.pagesAnalyzed||0,
+    candidatesAccepted:ollama.products?.length||0,reason:ollama.reason||null,
+    localhostOnly:true,taxonomyMasterModified:false},runtime:'Node.js localhost',execution:'existing Scrappers extract()',strategy,browser:browserMode,patternStatus,
     taxonomy:taxonomySource,taxonomyNodeCount:taxonomyNodes.length,taxonomyManifest,
     localEditionVersion:workingEdition?.version||0,stage2AiConfigured:aiSettings.configured}};
 }
@@ -133,6 +141,7 @@ async function handler(req,res){
   if(req.method==='GET'&&path==='/')return send(res,html(),200,{'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':CSP});
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/business-app.js')return send(res,await readFile(join(BASE,'research-lab-business-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
+  if(req.method==='GET'&&path==='/api/ollama/status')return json(res,await probeOllama());
   if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/report')return json(res,state.report||{error:'No finished research run'},state.report?200:404);
