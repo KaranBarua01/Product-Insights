@@ -127,9 +127,10 @@ export function buildPartEvidenceReport({companyName,companyUrl,products=[],page
     const usable=!!raw&&primaryMatches(p,raw);
     const parts=[],productMaterials=[],uncorroborated=[];
     const addPart=(name,quote,source,material=null,processes=[])=>{
-      const k=key(name);if(!k||ACCESSORY.test(quote)||NEGATED.test(quote)||(!PART_RELATION.test(quote)&&!material&&!processes.length))return;
+      const canonicalName=clean(name,100).replace(/^(?:(?:stainless|carbon) steel|steel|polyurethane|polypropylene|aluminum|aluminium|plastic|fiber|injection[- ]molded|injection[- ]moulded)\s+/i,'');
+      const k=key(canonicalName);if(!k||ACCESSORY.test(quote)||NEGATED.test(quote)||(!PART_RELATION.test(quote)&&!material&&!processes.length))return;
       let part=parts.find(x=>key(x.name)===k);
-      if(!part){part={id:'part:'+hash(url+'|'+k),name,sourceUrl:url,
+      if(!part){part={id:'part:'+hash(url+'|'+k),name:canonicalName,sourceUrl:url,
         relationship:'source_mentioned_part_requires_review',
         isVerifiedBom:false,isCompanyCapability:false,observations:[],materialClaims:[],processClaims:[]};parts.push(part);}
       if(!part.observations.some(x=>key(x.quote)===key(quote)))part.observations.push(evidence(url,quote,source));
