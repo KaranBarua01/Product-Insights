@@ -1,7 +1,7 @@
 /* Hosted Cloudflare control-plane for real laptop-run website research.
  * No Cloudflare-side crawling, no raw scraped HTML, no OS writes.
  */
-import {validateStart,hostOf,LIVE_SCHEMA} from './protocol.js';
+import {validateStart,hostOf,LIVE_SCHEMA,sanitizeOriginalTaxonomy,ORIGINAL_TAXONOMY_SCHEMA} from './protocol.js';
 import {uiHtml,uiJs,uiCss} from './ui.js';
 import {runEnrichment,SCHEMA as ENRICHMENT_SCHEMA} from './ai-enrichment.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{
@@ -39,7 +39,7 @@ async function parse(req,max=10000){
   return JSON.parse(raw);
 }
 const RUN_LIMIT=8,STALE_MS=9*60*1000,AI_STALE_MS=100_000;
-function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],revision:0};}
+function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],originalTaxonomy:null,revision:0};}
 function cleanStale(s,now){
   const run=s.runs.find(x=>x.id===s.active);
   if(!run){s.active=null;return;}
@@ -87,6 +87,11 @@ export class LabSession{
         activeRunId:s.active,
         runs:s.runs.map(x=>publicRun(x,false)),revision:s.revision});
     }
+    if(method==='GET'&&path==='/original-taxonomy'){
+      const state=(await this.ctx.storage.get('state'))||initial();
+      return json(state.originalTaxonomy||{schemaVersion:ORIGINAL_TAXONOMY_SCHEMA,
+        status:'not_loaded',totalNodes:0,nodeHash:null,nodes:[],masterModified:false,syncedAt:null});
+    }
     if(method==='GET'&&path.startsWith('/run/')){
       const state=(await this.ctx.storage.get('state'))||initial();
       const run=state.runs.find(r=>r.id===path.slice('/run/'.length));
@@ -94,8 +99,17 @@ export class LabSession{
     }
     if(method!=='POST')return notFound();
     let input={};
-    try{input=await parse(req,180000);}catch(e){return json({error:clip(e.message)},400);}
+    try{input=await parse(req,path==='/original-taxonomy'?1_600_000:180000);}catch(e){return json({error:clip(e.message)},400);}
     try{
+      if(path==='/original-taxonomy'){
+        // Protected bridge may synchronize the real catalog, never invent or mutate nodes.
+        const snapshot=sanitizeOriginalTaxonomy(input.snapshot);
+        return await this.update((state,now)=>{
+          state.originalTaxonomy={...snapshot,syncedAt:now};
+          return json({ok:true,status:snapshot.status,totalNodes:snapshot.totalNodes,
+            nodeHash:snapshot.nodeHash,masterModified:false});
+        });
+      }
       if(path==='/create'){
         const v=validateStart(input,this.env.ALLOWED_TEST_HOSTS);
         return await this.update((s,now)=>{
@@ -258,6 +272,8 @@ export default {
           String(env.ALLOWED_TEST_HOSTS||'').split(',').map(x=>x.trim()).filter(Boolean))]});
       if(method==='GET'&&path==='/api/state')
         return doRequest(env,'/state');
+      if(method==='GET'&&path==='/api/original-taxonomy')
+        return doRequest(env,'/original-taxonomy');
       if(method==='GET'&&/^\/api\/runs\/[0-9a-f-]{36}$/.test(path))
         return doRequest(env,'/run/'+path.split('/').at(-1));
       if(method==='POST'&&/^\/api\/runs\/[0-9a-f-]{36}\/recover-ai$/.test(path)){
@@ -277,6 +293,10 @@ export default {
       if(method==='POST'&&path==='/api/cancel')
         return doRequest(env,'/cancel','POST',{});
       if(agent&&method==='POST'){
+        if(path==='/api/agent/original-taxonomy'){
+          const payload=await parse(request,1_600_000);
+          return doRequest(env,'/original-taxonomy','POST',{snapshot:sanitizeOriginalTaxonomy(payload.snapshot)});
+        }
         if(path==='/api/agent/heartbeat')return doRequest(env,'/heartbeat','POST',{});
         if(path==='/api/agent/next')return doRequest(env,'/next','POST',{});
         if(path==='/api/agent/progress'){
