@@ -255,7 +255,13 @@ export function sanitizeCompleted(data,expectedHost){
   const categories=(Array.isArray(pi.categories)?pi.categories:[]).slice(0,40)
     .map(x=>({id:s(x.id,80),name:s(x.name,140),sourceUrl:webUrl(x.sourceUrl,expectedHost)}))
     .filter(x=>x.name&&x.sourceUrl);
-  const pages=(Array.isArray(report.pages)?report.pages:[]).slice(0,12).map(p=>({
+  const catalogLeads=(Array.isArray(pi.productLeads)?pi.productLeads:[]).slice(0,20)
+    .map(p=>({name:s(p.name,140),
+      sourceUrl:webUrl(p.sourceUrl,expectedHost),
+      sourcePageUrl:webUrl(p.sourcePageUrl,expectedHost),
+      status:'unverified_catalog_link_needs_detail'}))
+    .filter(p=>p.name&&p.sourceUrl&&p.sourcePageUrl);
+  const pages=(Array.isArray(report.pages)?report.pages:[]).slice(0,30).map(p=>({
     url:webUrl(p.url,expectedHost),status:s(p.status,40),strategy:s(p.strategy,16),
     title:s(p.title,120),textChars:Number(p.textChars||0),
     warning:(Array.isArray(p.warnings)?p.warnings:[]).slice(0,2).map(x=>s(x,180))
@@ -272,6 +278,12 @@ export function sanitizeCompleted(data,expectedHost){
       roleStatus:'unverified'},
     acquisition:{status:s(report.status,50),pagesVisited:Number(report.coverage?.visitedPages||pages.length),
       pagesUsable:pages.filter(p=>['completed','partial'].includes(p.status)).length,
+      requestedPages:Number(report.requestedPages||data?.maxPages||0),
+      researchProfile:s(report.researchProfile||'legacy',20),
+      usefulPages:Number(report.coverage?.usefulPages||0),
+      productDetailPages:Number(report.coverage?.productPages||0),
+      catalogPages:Number(report.coverage?.catalogPages||0),
+      stopReason:s(report.coverage?.stopReason||'unreported',40),
       pages},
     taxonomyReference:safeReference(data.taxonomyReference),
     researchGraph:sanitizeResearchGraph(report.researchGraph,expectedHost),
@@ -280,11 +292,15 @@ export function sanitizeCompleted(data,expectedHost){
       attemptedProducts:Number(report.relationshipAi?.attemptedProducts||0),
       hypotheses:Number(report.relationshipAi?.hypotheses||0)},
     productIntelligence:{categories,products:resultProducts,
+      unverifiedCatalogLeads:catalogLeads,
       publishedCounts:{products:Number(coverage.products||resultProducts.length),
         categories:Number(coverage.categories||categories.length),
         specifications:Number(coverage.specifications||0),
-        components:Number(coverage.components||0),materials:Number(coverage.materials||0)},
-      note:'Source-supported candidates are not verified OS products, parts or manufacturing capabilities.'},
+        components:Number(coverage.components||0),materials:Number(coverage.materials||0),
+        distinctFamilyLabels:Number(coverage.distinctProductFamilyLabels||0),
+        skuCandidates:Number(coverage.skuNamedProductCandidates||0),
+        catalogLeads:Number(coverage.catalogLinkCandidates||0)},
+      note:'Source-supported product records and catalog-card links remain separate and require review; SKU variants are not distinct product families.'},
     manufacturing:{status:processClaims.length?'unverified_claims':'not_established',
       claims:processClaims,
       productPartsStatus:'not_established',
@@ -294,7 +310,13 @@ export function sanitizeCompleted(data,expectedHost){
     technical:{strategy:s(report.lab?.strategy,30),browser:s(report.lab?.browser,30),
       patternStatus:s(report.lab?.patternStatus,60),
       stage2Status:s(report.stage2?.aiStatus||report.stage2?.companyProfile?.status,60),
-      localOllama:{status:s(report.lab?.ollama?.status||'not_run',48),model:s(report.lab?.ollama?.model||'',90),pagesAnalyzed:Number(report.lab?.ollama?.pagesAnalyzed||0),candidatesAccepted:Number(report.lab?.ollama?.candidatesAccepted||0)},
+      localOllama:{status:s(report.lab?.ollama?.status||'not_run',48),
+        model:s(report.lab?.ollama?.model||'',90),
+        pagesAnalyzed:Number(report.lab?.ollama?.pagesAnalyzed||0),
+        productsReviewed:Number(report.lab?.ollama?.productsReviewed||0),
+        acceptedClaims:Number(report.lab?.ollama?.acceptedClaims||0),
+        rejectedClaims:Number(report.lab?.ollama?.rejectedClaims||0),
+        candidatesAccepted:Number(report.lab?.ollama?.candidatesAccepted||0)},
       errors:(Array.isArray(report.stage2?.errors)?report.stage2.errors:[]).slice(0,5).map(x=>s(x,180))},
     limitations:[
       'This is a real bounded website investigation, not a complete catalog.',
