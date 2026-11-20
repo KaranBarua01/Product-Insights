@@ -231,7 +231,7 @@ export async function runResearch({url,maxPages,profile='auto',extractPage,
      // Earlier independent QA requires an About page before detailed products
      // at >=3 pages; a two-page product-first run remains unchanged.
      if(pages.length===1&&limit>=3){
-       const identity=candidates.find(c=>/\\/(?:about|about-us|company|our-story)(?:\\/|$)/i.test(new URL(c.url).pathname));
+       const identity=candidates.find(c=>['about','about-us','company','our-story'].includes(new URL(c.url).pathname.split('/').filter(Boolean)[0]?.toLowerCase()));
        if(identity)identity.score=Math.max(identity.score,240);
      }
      // Give the first catalog path priority over marketing/about pages.
