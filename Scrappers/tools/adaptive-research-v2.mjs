@@ -4,7 +4,7 @@
  * enforcement. Leads/card mentions are hypotheses until detail evidence exists.
  */
 export const RESEARCH_PROFILES=Object.freeze({quick:5,standard:15,deep:30});
-export const MAX_ADAPTIVE_PAGES=30;
+export const MAX_ADAPTIVE_PAGES=50;
 const clean=(s,max=180)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,max);
 const generic=/^(?:home|read more|learn more|view all|shop now|shop|products?|all products|see more|details|explore|about|company|support|contact|solutions|catalogue?|new|featured|view product|discover more)$/i;
 const reject=/(?:^|\/)(?:contact|support|login|account|cart|checkout|careers|jobs|privacy|terms|cookies|faq|faqs|search|news|blog|events|webinar|demo|book|request-quote|quote|dealer|locator|press|investors)(?:\/|$)|\.(?:jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|css|js)(?:\?|$)/i;
