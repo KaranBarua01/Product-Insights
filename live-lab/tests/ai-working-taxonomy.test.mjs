@@ -268,7 +268,7 @@ test('Cloudflare session permits bounded retry of AI from stored real test, no n
  assert.equal(during.aiStatus,'queued');
  assert.equal(during.enrichmentAttempts,1);
  assert.equal((await s.fetch(req('/reenrich',{id}))).status,409,'Cannot duplicate a running AI request');
- assert.equal((await s.fetch(req('/enrichment',{id,enrichment:{
+ assert.equal((await s.fetch(req('/enrichment',{id,generation:1,enrichment:{
   schemaVersion:SCHEMA,status:'failed',reason:'Model returned no data'}}))).status,200);
  assert.equal((await s.fetch(req('/reenrich',{id}))).status,200);
  assert.equal((await s.fetch(req('/reenrich',{id}))).status,409);
@@ -281,4 +281,44 @@ test('AI retry rejects failed or evidence-free investigations without inventing 
  await s.fetch(req('/next',{}));
  await s.fetch(req('/finish',{id:started.run.id,status:'failed',error:'Site blocked'}));
  assert.equal((await s.fetch(req('/reenrich',{id:started.run.id}))).status,409);
+});
+
+test('Previously queued AI request may be retried after timeout without losing real source pages',async()=>{
+ const backing=storage(),s=new LabSession({storage:backing},{ALLOWED_TEST_HOSTS:'1up-usa.com'});
+ await s.fetch(req('/heartbeat',{}));
+ const started=await(await s.fetch(req('/create',{url:website,maxPages:7}))).json();
+ const id=started.run.id;await s.fetch(req('/next',{}));
+ await s.fetch(req('/finish',{id,status:'completed',result:recoveryCase()});
+ await backing.transaction(async txn=>{
+  const state=await txn.get('state');
+  const run=state.runs.find(x=>x.id===id);
+  run.enrichment.queuedAt=Date.now()-110000;
+  await txn.put('state',state);
+ });
+ const timed=await(await s.fetch(req('/run/'+id))).json();
+ assert.equal(timed.aiStatus,'failed');
+ assert.match(timed.enrichment.reason,/exceeded/);
+ const response=await s.fetch(req('/reenrich',{id}));
+ assert.equal(response.status,200);
+ const result=await response.json();
+ assert.equal(result.generation,1);
+ assert.equal(result.result.acquisition.pages.length,6);
+ assert.equal((await s.fetch(req('/enrichment',{id,generation:0,enrichment:{
+  schemaVersion:SCHEMA,status:'failed',reason:'Late old result'}}))).status,409);
+ assert.equal((await s.fetch(req('/enrichment',{id,generation:1,enrichment:{
+  schemaVersion:SCHEMA,status:'failed',reason:'Attempt 1 failed'}}))).status,200);
+ assert.equal((await s.fetch(req('/reenrich',{id})).status),200);
+ assert.equal((await s.fetch(req('/enrichment',{id,generation:1,enrichment:{
+  schemaVersion:SCHEMA,status:'completed'}}))).status,409);
+ const final=await(await s.fetch(req('/run/'+id))).json();
+ assert.equal(final.enrichmentAttempts,2);
+ assert.equal(final.aiStatus,'queued');
+ assert.equal(final.result.acquisition.pages[1].title,'Heavy Duty Hitch Bike Rack | E-Bike & RV Rated | 1UP USA');
+});
+test('Hosted UI guards missing optional AI buttons in mixed-version HTML and JS',()=>{
+ assert.match(uiJs,/if\(recoverButton\)/);
+ assert.match(uiJs,/\$\('recover-ai'\)\?\.addEventListener/);
+ assert.match(uiHtml,/id="recover-ai"/);
+ assert.match(uiHtml,/app.js\?release=/);
+ assert.doesNotThrow(()=>new Script(uiJs,{filename:'null-safe-live.js'}));
 });
