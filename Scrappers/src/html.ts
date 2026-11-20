@@ -40,12 +40,21 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
   }
   const links:{url:string;label:string}[]=[],documents:string[]=[],seen=new Set<string>();
   const base=new URL(sourceUrl);
-  for(const m of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
-    const href=attr(m[1]??'','href');if(!href)continue;
-    let url:URL;try{url=new URL(href,base)}catch{continue}
-    if(!['https:','http:'].includes(url.protocol))continue;url.hash='';
-    if(!seen.has(url.href)&&links.length<160){links.push({url:url.href,label:stripMarkup(m[2]??'').slice(0,120)});seen.add(url.href)}
-    if(/\.pdf(?:$|\?)/i.test(url.href)&&!documents.includes(url.href)&&documents.length<35)documents.push(url.href);
+  // Parse the main content before global navigation/footer. On big commerce
+  // pages, the first 160 anchors can all be menu links and hide product cards.
+  const mainRegion=/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i.exec(html)?.[1]
+    ??/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i.exec(html)?.[1]??'';
+  for(const region of (mainRegion?[mainRegion,html]:[html])){
+    for(const m of region.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+      const href=attr(m[1]??'','href');if(!href)continue;
+      let url:URL;try{url=new URL(href,base)}catch{continue}
+      if(!['https:','http:'].includes(url.protocol))continue;url.hash='';
+      if(!seen.has(url.href)&&links.length<320){
+        links.push({url:url.href,label:stripMarkup(m[2]??'').slice(0,140)});
+        seen.add(url.href);
+      }
+      if(/\.pdf(?:$|\?)/i.test(url.href)&&!documents.includes(url.href)&&documents.length<35)documents.push(url.href);
+    }
   }
   const jsonLd=scripts(html,/type\s*=\s*['"]?application\/ld\+json/i,16);
   const appState=scripts(html,/(?:id\s*=\s*['"]?__NEXT_DATA__|type\s*=\s*['"]?application\/json)/i,4);
@@ -65,7 +74,8 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
     ??/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(headingDocument);
   const primaryHeading=pageHeading?stripMarkup(pageHeading[1]??'').slice(0,200):'';
   if(primaryHeading&&!headings.includes(primaryHeading))headings.unshift(primaryHeading);
-  const text=stripMarkup(region).slice(0,35_000);
+  // Keep late-page technical evidence; bounded by 1.5 MB input and 90k text.
+  const text=stripMarkup(region).slice(0,90_000);
   const evidence:ExtractionEvidence[]=[];
   if(title)evidence.push({sourceUrl,locator:'html > head > title',excerpt:title.slice(0,210),method});
   if(headings[0])evidence.push({sourceUrl,locator:'main/section heading',excerpt:headings[0].slice(0,210),method});
