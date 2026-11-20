@@ -125,3 +125,39 @@ sample candidates, public source URLs and review caveats returns to the PRIVATE
 GitHub issue. No private taxonomy, AI secrets, RFQ data, production OS writes, or
 manufacturing-process assertions are included. Public GitHub receives code and
 synthetic tests only.
+
+
+## Fixed Ollama mapping jobs (Windows, 20 Nov 2026)
+
+The two new actions **ollama_health** and **ollama_1up** use this same restricted private GitHub Issues queue. They do not provide arbitrary PowerShell, RDP, a shell API or a background ChatGPT process.
+
+| Action | Local behavior | Limits |
+|---|---|---|
+| ollama_health | Verify qwen3:4b-instruct is installed on 127.0.0.1:11434 and perform a real minimal JSON generation | No website calls, 100-second inference abort |
+| ollama_1up | With local opt-in, collect up to seven pages from exactly https://1up-usa.com/ via existing policy-aware S01/S02/S03; run source-grounded Ollama extraction and read-only taxonomy matching | Fixed host, robots.txt enforced, 720-second process ceiling, no private inputs or custom prompts |
+
+**ollama_1up is disabled until PI_AGENT_ALLOW_OLLAMA_1UP=1 is set locally on Windows.** The original taxonomy is never modified. Only a bounded source-linked summary goes to the PRIVATE GitHub queue. More detailed page-level diagnostics stay under the PC's gitignored Scrappers/local-data/pi-local-agent/outputs directory.
+
+### Isolated setup (leave the current 8791 Research Lab untouched)
+
+Create a separate Git worktree from branch **feat/local-agent-ollama-fixed-jobs** at **%USERPROFILE%\PI-ollama-queue-agent**. Run npm install and npm run build in its Scrappers directory. If available, copy the existing original taxonomy into that worktree's gitignored Scrappers/local-data/installed-taxonomy.json.
+
+Run the checked-in **Scrappers/tools/pi-local-agent/start-ollama-agent.ps1** using PowerShell. It configures the existing private queue **KaranBarua01/PI-Agent-Queue**, enables only ollama_1up, and prompts for the fine-grained token through a hidden prompt. Do not paste the token into ChatGPT, source control or shared logs. The launcher clears the token when it exits.
+
+Each remote job is an existing pi-local-agent/job-v1 JSON issue body, with the pi-local-agent-job label, exactly four allowed fields, and a lifetime no longer than 15 minutes:
+
+~~~json
+{
+  "schemaVersion": "pi-local-agent/job-v1",
+  "jobId": "ollama_health_demo_001",
+  "action": "ollama_health",
+  "issuedAt": "2026-11-20T10:00:00Z",
+  "expiresAt": "2026-11-20T10:10:00Z"
+}
+~~~
+
+This example is intentionally expired. The agent rejects extra fields such as command, url, model, path, prompt, and all expired jobs.
+
+Results return as private GitHub issue comments. The site test does not auto-start until its own user-side opt-in. Model inference may consume significant CPU on a 16 GB RAM/no-GPU laptop; keep the laptop awake and avoid overlapping research runs.
+
+**Evidence-first limitation:** A supporting quote in sampled website text is not independent validation. AI taxonomy suggestions require review. No manufacturing-process ownership, confirmed BOM, supplier matching or production OS integration is created by these operations.
