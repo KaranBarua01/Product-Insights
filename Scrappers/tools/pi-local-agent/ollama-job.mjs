@@ -31,8 +31,9 @@ function safeCode(e){
 }
 export function fixedOutputPath(action,out){
   if(!['ollama_health','ollama_1up'].includes(action))throw Error('Unknown fixed action');
-  if(typeof out!=='string'||isAbsolute(out)||out.includes('..')||out.includes('\\'))throw Error('Invalid local output path');
-  const target=resolve(SCRAPPERS,out);
+  if(typeof out!=='string'||!/^local-data[\\/]+pi-local-agent[\\/]+outputs[\\/]+[-_a-zA-Z0-9]{8,64}-ollama_(?:health|1up)\.json$/.test(out))
+    throw Error('Invalid local output path');
+  const target=resolve(SCRAPPERS,...out.split(/[\\/]/));
   if(dirname(target)!==OUTPUTS||!/^[-_a-zA-Z0-9]{8,64}-ollama_(?:health|1up)\.json$/.test(basename(target))||
     !basename(target).endsWith('-'+action+'.json'))throw Error('Output must be a fixed job file');
   return target;
