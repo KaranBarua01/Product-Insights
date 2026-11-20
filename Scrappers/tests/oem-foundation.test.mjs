@@ -93,6 +93,11 @@ test('append-only JSON editions accumulate companies without modifying original 
  const current=await readResearchEdition({directory:dir});
  assert.equal(current.version,2);assert.equal(current.runs.length,2);
  assert.equal(current.totals.companies,2);
+ assert.ok(current.totals.candidateNodes>=2);
+ assert.ok(current.totals.candidateRelations>=1);
+ assert.ok(current.workingNodes.some(x=>x.kind==='part'&&x.occurrences>=1));
+ assert.ok(current.workingRelations.some(x=>x.relation==='possible_manufacturing_process'));
+ assert.equal(publicEditionSummary(current).candidateNodes,current.workingNodes.length);
  assert.equal(current.status,'proposals_unreviewed_no_original_mutations');
  assert.equal(publicEditionSummary(current).totals.companies,2);
  assert.equal((await readdir(join(dir,'versions'))).length,2);
