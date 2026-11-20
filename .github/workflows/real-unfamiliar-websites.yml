@@ -11,6 +11,10 @@ permissions:
   contents: read
 jobs:
   unfamiliar-manufacturer-sites:
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [industrial, hardware]
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -32,12 +36,14 @@ jobs:
       - name: Run genuine public websites (no user laptop, no API keys)
         timeout-minutes: 11
         working-directory: Scrappers
+        env:
+          PI_SITE_BATCH: ${{ matrix.batch }}
         run: node tools/hosted-live-site-smoke.mjs
       - name: Publish complete measured source-result evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: real-unfamiliar-website-evidence
+          name: real-unfamiliar-website-evidence-${{ matrix.batch }}
           path: Scrappers/live-site-smoke-results/
           if-no-files-found: warn
           retention-days: 15
