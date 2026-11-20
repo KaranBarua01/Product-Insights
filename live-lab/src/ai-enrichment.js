@@ -102,7 +102,7 @@ export function workingTaxonomy(facts,p){
   if(map.has(key))return map.get(key);
   const id='working:'+String(nodes.length+1).padStart(4,'0');
   nodes.push({id,code:null,label:name,kind,parentId,sourceUrl:sourceUrl||null,
-    reason:reason||null,status,addedByAi:status.startsWith('ai_')||status==='title_derived_needs_review'});
+    reason:reason||null,status,addedByAi:status.startsWith('ai_'),needsHumanReview:status==='title_derived_needs_review'});
   map.set(key,id);
   if(parentId)links.push({from:parentId,to:id,
     relation:kind==='part'?'possible_component_of':kind==='process'?'potential_process_for':
