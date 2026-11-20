@@ -169,7 +169,8 @@ async function runJob(body){
     enabled:process.env.RESEARCH_LAB_RELATIONSHIP_AI==='1'&&!!processReference,
     model:'qwen3:4b-instruct'});
   const researchGraph=buildResearchGraph({companyName:u.hostname,companyUrl:u.href,
-    products:productIntelligence.products,processReference,aiParts:relationshipAi.proposals});
+    products:productIntelligence.products,processReference,aiParts:relationshipAi.proposals,
+    partEvidence});
   let editionResult=null,editionSummary=null;
   try{
     editionResult=await appendResearchEdition(researchGraph);
