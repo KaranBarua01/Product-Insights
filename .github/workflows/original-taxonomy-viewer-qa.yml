@@ -31,8 +31,15 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         working-directory: live-lab
         run: npm run build:check
-      - name: Validate local Lab and laptop bridge JavaScript
+      - name: Validate all local relationship and bridge JavaScript
         working-directory: Scrappers
         run: |
           node --check tools/research-lab.mjs
           node --check tools/live-lab-bridge.mjs
+          node --check tools/oem-process-reference.mjs
+          node --check tools/research-relationship-graph.mjs
+          node --check tools/research-edition-store.mjs
+          node --check tools/ollama-relationships.mjs
+      - name: Test OEM local foundation without private taxonomy fixture
+        working-directory: Scrappers
+        run: node --test tests/oem-foundation.test.mjs
