@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createOemProcessReference,loadOemProcessReference} from '../tools/oem-process-reference.mjs';
 import {buildResearchGraph} from '../tools/research-relationship-graph.mjs';
+import {buildPartEvidenceReport} from '../tools/part-evidence-verifier.mjs';
 import {proposePartHypotheses} from '../tools/ollama-relationships.mjs';
 import {appendResearchEdition,readResearchEdition,publicEditionSummary} from '../tools/research-edition-store.mjs';
 
@@ -53,6 +54,25 @@ test('company/product/part/material/process graph contains only original code ca
  assert.ok(graph.nodes.some(x=>x.kind==='part'&&x.evidenceQuote.includes('Mounting Brackets')));
  assert.equal(graph.originalMasterModified,false);assert.equal(graph.osWritePerformed,false);
  assert.deepEqual(referenceData,original);
+});
+test('evidence-gated graph links only corroborated parts, material and process claims',()=>{
+ const sourceUrl='https://example.com/product/fixture-rack';
+ const products=[{name:'Fixture Rack',sourceUrl,components:[{component:'casters',
+   evidence:{sourceUrl:'https://example.com/product-category/collections',quote:'Other products feature casters.'}}]}];
+ const pages=[{url:sourceUrl,status:'completed',content:{headings:['Fixture Rack'],
+   text:'The Fixture Rack includes steel mounting brackets. The mounting brackets are CNC machined.'}}];
+ const proof=buildPartEvidenceReport({companyName:'Fixture Maker',companyUrl:'https://example.com/',
+   d1Record:{website:'example.com',commodity:'CNC machining, casting',materials_required:'Steel, aluminum'},
+   products,pages});
+ const graph=buildResearchGraph({companyName:'Fixture Maker',companyUrl:'https://example.com/',
+   products,partEvidence:proof,processReference:null});
+ assert.ok(graph.nodes.some(n=>n.kind==='part'&&n.label==='mounting brackets'));
+ assert.equal(graph.nodes.some(n=>n.kind==='part'&&n.label==='casters'),false);
+ assert.equal(graph.counts.uncorroboratedScraperPartsExcluded,1);
+ assert.ok(graph.links.some(x=>x.relation==='source_mentions_part_material'&&x.sourceQuote.includes('steel')));
+ assert.ok(graph.links.some(x=>x.relation==='source_mentions_part_process'&&x.sourceQuote.includes('CNC machined')));
+ assert.equal(graph.counts.sourcePartProcessClaims,1);
+ assert.ok(!graph.links.some(x=>x.status==='verified_in_house_capability'));
 });
 test('unmapped products and parts remain explicit; no invented OEM classification code',()=>{
  const graph=buildResearchGraph({companyName:'Other',companyUrl:'https://example.org',

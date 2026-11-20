@@ -11,6 +11,8 @@ import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {getResearchBudget} from './adaptive-research-v2.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
+import {buildPartEvidenceReport} from './part-evidence-verifier.mjs';
+import {loadD1CompanyContext} from './d1-company-context.mjs';
 import {probeOllama} from './ollama-mapping.mjs';
 import {enrichKnownProductsWithOllama,mergeKnownProductEnrichment} from './ollama-known-products.mjs';
 import {buildBusinessView,normalizeOsSnapshot,osSnapshotTemplate} from './lab-business.mjs';
@@ -139,6 +141,17 @@ async function runJob(body){
     maxProducts:maxPages<=5?2:maxPages<=15?6:10,
     timeBudgetMs:maxPages<=5?90_000:maxPages<=15?180_000:260_000});
   const productIntelligence=mergeKnownProductEnrichment(deterministic,ollama);
+  let d1Record=null;
+  try{d1Record=await loadD1CompanyContext({companyUrl:u.href});}
+  catch(e){logEvent({status:'d1_context_warning',reason:String(e?.message||e).slice(0,150)});}
+  const partEvidence=buildPartEvidenceReport({
+    companyName:u.hostname,companyUrl:u.href,products:productIntelligence.products,
+    pages:rawProductEvidence,d1Record});
+  logEvent({status:'part_evidence',reason:
+    partEvidence.counts.partEvidenceCandidates+' source-mentioned parts / '+
+    partEvidence.counts.partMaterialCandidates+' part-material links / '+
+    partEvidence.counts.partProcessCandidates+' part-process source claims; D1 '+
+    (partEvidence.d1?'matched as hypotheses':'not loaded')});
   logEvent({status:'research_quality',reason:
     report.coverage.usefulPages+' useful pages / '+report.coverage.visitedPages+
     ' visited · '+productIntelligence.products.length+' products · '+
@@ -156,7 +169,8 @@ async function runJob(body){
     enabled:process.env.RESEARCH_LAB_RELATIONSHIP_AI==='1'&&!!processReference,
     model:'qwen3:4b-instruct'});
   const researchGraph=buildResearchGraph({companyName:u.hostname,companyUrl:u.href,
-    products:productIntelligence.products,processReference,aiParts:relationshipAi.proposals});
+    products:productIntelligence.products,processReference,aiParts:relationshipAi.proposals,
+    partEvidence});
   let editionResult=null,editionSummary=null;
   try{
     editionResult=await appendResearchEdition(researchGraph);
@@ -166,7 +180,7 @@ async function runJob(body){
       researchGraph.counts.processHypotheses+' possible process links'});
   }catch(e){logEvent({status:'working_edition_warning',
     reason:String(e?.message||e).slice(0,150)});}
-  return {...enriched,productIntelligence,researchGraph,
+  return {...enriched,productIntelligence,partEvidence,researchGraph,
     relationshipAi:{status:relationshipAi.status,model:relationshipAi.model,
       attemptedProducts:relationshipAi.attemptedProducts,
       hypotheses:relationshipAi.proposals.length,reason:relationshipAi.reason||null},

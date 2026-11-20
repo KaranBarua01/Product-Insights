@@ -227,6 +227,21 @@ export async function runResearch({url,maxPages,profile='auto',extractPage,
        }catch(e){warnings.push('Optional link planning unavailable; deterministic ranking retained: '+
          String(e?.message||e).slice(0,120));}
      }
+     // Reserve a company-identity source only when there is enough page budget.
+     // Earlier independent QA requires an About page before detailed products
+     // at >=3 pages; a two-page product-first run remains unchanged.
+     if(pages.length===1&&limit>=3&&limit<=4){
+       const identity=candidates.find(c=>['about','about-us','company','our-story'].includes(new URL(c.url).pathname.split('/').filter(Boolean)[0]?.toLowerCase()));
+       if(identity)identity.score=Math.max(identity.score,240);
+       for(const lead of candidates){
+         const p=new URL(lead.url).pathname.toLowerCase();
+         if(p.includes('/product-category/'))lead.score=Math.min(lead.score,55);
+         else if(/^\/product\/[^/]+\/?$/.test(p)){
+           const originalIndex=(content.links||[]).findIndex(l=>l.url===lead.url);
+           lead.score=Math.max(lead.score,190-Math.max(0,originalIndex));
+         }
+       }
+     }
      // Give the first catalog path priority over marketing/about pages.
      // A category page must not win solely because it contains generic "solutions".
      for(const card of cards){
