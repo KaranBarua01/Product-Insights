@@ -128,7 +128,7 @@ export async function executeAction(action,{workspace,jobId,secret='',run=runPro
         reason:String(m.reason||'').slice(0,130)},
       taxonomy:{installed:Boolean(t.installed),nodes:Number(t.nodes||0),
         masterChanged:false},
-      results:{products:Number(o.products||0),productsWithMaterials:Number(o.productsWithMaterials||0),
+      results:{productCount:Number(o.productCount||0),productsWithMaterials:Number(o.productsWithMaterials||0),
         productsWithComponents:Number(o.productsWithComponents||0),
         taxonomyProposals:Number(o.taxonomyProposals||0),products},
       localDetailsPath:'local-data/pi-local-agent/outputs/'+name.replace(/\.json$/,'-evidence.json'),
