@@ -1,7 +1,7 @@
 /* Hosted Cloudflare control-plane for real laptop-run website research.
  * No Cloudflare-side crawling, no raw scraped HTML, no OS writes.
  */
-import {validateStart,hostOf,LIVE_SCHEMA,sanitizeOriginalTaxonomy,ORIGINAL_TAXONOMY_SCHEMA,sanitizeProcessReference} from './protocol.js';
+import {validateStart,hostOf,allowedHosts,normalizeApprovedCompanyHosts,LIVE_SCHEMA,sanitizeOriginalTaxonomy,ORIGINAL_TAXONOMY_SCHEMA,sanitizeProcessReference} from './protocol.js';
 import {uiHtml,uiJs,uiCss} from './ui.js';
 import {runEnrichment,SCHEMA as ENRICHMENT_SCHEMA} from './ai-enrichment.js';
 import {buildLaptopWorkingGraph} from './local-working-graph.js';
@@ -40,7 +40,7 @@ async function parse(req,max=10000){
   return JSON.parse(raw);
 }
 const RUN_LIMIT=8,STALE_MS=9*60*1000,AI_STALE_MS=100_000;
-function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],originalTaxonomy:null,revision:0};}
+function initial(){return{schemaVersion:LIVE_SCHEMA,lastAgentAt:0,active:null,runs:[],originalTaxonomy:null,approvedHosts:[],approvedHostsAt:null,revision:0};}
 function cleanStale(s,now){
   const run=s.runs.find(x=>x.id===s.active);
   if(!run){s.active=null;return;}
@@ -87,6 +87,15 @@ export class LabSession{
         laptop:{online:Date.now()-s.lastAgentAt<22000,lastSeenAt:s.lastAgentAt||null},
         activeRunId:s.active,
         runs:s.runs.map(x=>publicRun(x,false)),revision:s.revision});
+    }
+    if(method==='GET'&&path==='/approved-hosts'){
+      const state=(await this.ctx.storage.get('state'))||initial();
+      const defaultHosts=[...allowedHosts(this.env.ALLOWED_TEST_HOSTS)];
+      const locallyApproved=normalizeApprovedCompanyHosts(state.approvedHosts||[]);
+      return json({schemaVersion:'pi-operator-approved-sites/v1',
+        allowedHosts:[...new Set([...defaultHosts,...locallyApproved])].sort(),
+        addedHosts:locallyApproved,approvedHostsAt:state.approvedHostsAt||null,
+        approvalMode:'only_the_laptop_operator_can_approve'});
     }
     if(method==='GET'&&path==='/original-taxonomy'){
       const state=(await this.ctx.storage.get('state'))||initial();
@@ -147,9 +156,22 @@ export class LabSession{
         return json({ok:true,status:snapshot.status,
           links:snapshot.counts?.links||0,originalMasterModified:false});
       }
-      if(path==='/create'){
-        const v=validateStart(input,this.env.ALLOWED_TEST_HOSTS);
+      if(path==='/approved-hosts'){
+        const hosts=normalizeApprovedCompanyHosts(input?.hosts);
         return await this.update((s,now)=>{
+          s.approvedHosts=hosts;s.approvedHostsAt=now;
+          return json({ok:true,addedHosts:hosts.length,approvedHostsAt:now,
+            message:'Exact company domains approved by laptop agent only'});
+        });
+      }
+      if(path==='/create'){
+        return await this.update((s,now)=>{
+          // Cloudflare viewers cannot approve a host. The agent publishes only
+          // local-operator-approved exact public domains, and the laptop performs
+          // public DNS preflight again before fetching.
+          const permitted=[...allowedHosts(this.env.ALLOWED_TEST_HOSTS),
+            ...normalizeApprovedCompanyHosts(s.approvedHosts||[])].join(',');
+          const v=validateStart(input,permitted);
           if(s.active)return json({error:'One investigation at a time; finish or cancel the current run'},409);
           if(now-s.lastAgentAt>=22000)return json({error:'Laptop browser worker is offline. Start the laptop bridge first.'},503);
           const run={id:crypto.randomUUID(),...v,createdAt:now,startedAt:null,finishedAt:null,
@@ -305,9 +327,16 @@ export default {
       if(origin&&origin!==url.origin)return json({error:'Cross-origin modification denied'},403);
     }
     try{
-      if(method==='GET'&&path==='/api/session')
-        return json({ok:true,schemaVersion:LIVE_SCHEMA,allowedHosts:[...new Set(
-          String(env.ALLOWED_TEST_HOSTS||'').split(',').map(x=>x.trim()).filter(Boolean))]});
+      if(method==='GET'&&path==='/api/session'){
+        const result=await doRequest(env,'/approved-hosts');
+        if(!result.ok)return result;
+        const body=await result.json();
+        return json({ok:true,schemaVersion:LIVE_SCHEMA,
+          allowedHosts:body.allowedHosts,addedHosts:body.addedHosts,
+          approvalMode:body.approvalMode,approvedHostsAt:body.approvedHostsAt});
+      }
+      if(method==='GET'&&path==='/api/approved-hosts')
+        return doRequest(env,'/approved-hosts');
       if(method==='GET'&&path==='/api/state')
         return doRequest(env,'/state');
       if(method==='GET'&&path==='/api/original-taxonomy')
@@ -336,6 +365,11 @@ export default {
       if(method==='POST'&&path==='/api/cancel')
         return doRequest(env,'/cancel','POST',{});
       if(agent&&method==='POST'){
+        if(path==='/api/agent/approved-hosts'){
+          const data=await parse(request,10000);
+          return doRequest(env,'/approved-hosts','POST',{
+            hosts:normalizeApprovedCompanyHosts(data.hosts)});
+        }
         if(path==='/api/agent/original-taxonomy'){
           const payload=await parse(request,1_600_000);
           return doRequest(env,'/original-taxonomy','POST',{snapshot:sanitizeOriginalTaxonomy(payload.snapshot)});
