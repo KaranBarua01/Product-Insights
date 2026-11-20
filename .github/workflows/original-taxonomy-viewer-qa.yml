@@ -1,0 +1,38 @@
+name: Original Taxonomy Viewer QA
+on:
+  push:
+    branches:
+      - feat/full-taxonomy-explorer-target
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  taxonomy-and-dashboard:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Live Lab dependencies
+        working-directory: live-lab
+        run: npm install --no-audit --no-fund
+      - name: Test full reference, protected sync and UI
+        working-directory: live-lab
+        run: npm run check
+      - name: Bundle Cloudflare Worker without deployment
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: live-lab
+        run: npm run build:check
+      - name: Validate local Lab and laptop bridge JavaScript
+        working-directory: Scrappers
+        run: |
+          node --check tools/research-lab.mjs
+          node --check tools/live-lab-bridge.mjs
