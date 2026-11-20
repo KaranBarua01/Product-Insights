@@ -120,11 +120,16 @@ export function sanitizeResearchGraph(graph,expectedHost){
 export function sanitizeEditionSummary(edition){
  if(!edition||edition.schemaVersion!=='pi-ai-working-edition-json/v1')return null;
  const c=edition.totals||{},counts={};
- for(const key of ['companies','products','parts','materials','processHypotheses','taxonomyMappings','gaps'])
+ for(const key of ['companies','products','parts','materials','processHypotheses','taxonomyMappings','gaps','candidateNodes','candidateRelations'])
    counts[key]=Number.isInteger(c[key])&&c[key]>=0&&c[key]<=999999?c[key]:0;
  return {schemaVersion:'pi-ai-working-edition-json/v1',version:Number.isInteger(edition.version)?
    Math.max(0,Math.min(250,edition.version)):0,updatedAt:s(edition.updatedAt,35)||null,
-   totals:counts,recentCompanies:(Array.isArray(edition.recentCompanies)?edition.recentCompanies:[])
+   totals:counts,
+   candidateSamples:(Array.isArray(edition.candidateSamples)?edition.candidateSamples:[]).slice(-8)
+     .map(x=>({kind:s(x.kind,25),label:s(x.label,140),
+       status:s(x.status,80),companyCount:Number(x.companyCount||0),
+       occurrences:Number(x.occurrences||0)})),
+   recentCompanies:(Array.isArray(edition.recentCompanies)?edition.recentCompanies:[])
      .slice(-8).map(x=>({companyName:s(x.companyName,100),companyHost:s(x.companyHost,120),
        counts:x.counts||{}})),originalMasterModified:false,osWritePerformed:false};
 }
