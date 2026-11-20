@@ -142,3 +142,19 @@ test('OS snapshots reject silently truncated company catalogs and unsupported sh
   assert.throws(()=>normalizeOsSnapshot({...base,products:Array.from({length:501},(_,i)=>({name:'P-'+i}))}),/limit/);
   assert.throws(()=>normalizeOsSnapshot({...base,products:'not array'}),/must be an array/);
 });
+
+test('UI can distinguish website-sourced JS7/JS8/JS9 quotes from unverified OS/company facts',()=>{
+  const report=demo(),url='https://products.example.org/about';
+  report.stage2.companyProfile.sections.push(
+    {code:'JS7',claims:[{claim:'We buy brackets',quote:'We buy brackets',sourceUrl:url}]},
+    {code:'JS8',claims:[{claim:'We serve transport',quote:'We serve transport',sourceUrl:url}]},
+    {code:'JS9',claims:[{claim:'Proprietary mounting',quote:'Proprietary mounting',sourceUrl:url},
+      {claim:'Injected off-host source',quote:'Do not trust this',sourceUrl:'https://other.example.org/'}]}
+  );
+  const result=buildBusinessView(report);
+  assert.deepEqual(result.otherSectionClaims.map(x=>x.code),['JS7','JS8','JS9']);
+  assert.ok(result.otherSectionClaims.every(x=>x.status==='ai_compiled_website_quote_requires_human_review'));
+  assert.equal(result.otherSectionClaims[0].evidence.quote,'We buy brackets');
+  assert.equal(result.otherSectionClaims.some(x=>x.claim==='Injected off-host source'),false);
+  assert.equal(result.handoff.osWritePerformed,false);
+});
