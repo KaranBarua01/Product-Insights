@@ -87,6 +87,7 @@ export function sanitizeCompleted(data,expectedHost){
       reviewStatus:'unreviewed_source_candidate',
       ownership:'made_or_sold_not_verified',
       categories:(Array.isArray(p.categoryIds)?p.categoryIds:[]).slice(0,6).map(x=>s(x,80)),
+      taxonomy:{status:s(p.taxonomy?.status||'not_mapped',48),suggestions:(Array.isArray(p.taxonomy?.suggestions)?p.taxonomy.suggestions:[]).slice(0,2).map(x=>({code:s(x.code,110),label:s(x.label,135),path:s(x.path,350),method:s(x.method||'unverified',90)})).filter(x=>x.code&&x.label)},
       specs:claimList(p.specifications,expectedHost,'attribute','value',12),
       components:claimList(p.components,expectedHost,'component','component',9),
       materials:claimList(p.materials,expectedHost,'material','material',9),
@@ -129,6 +130,7 @@ export function sanitizeCompleted(data,expectedHost){
     technical:{strategy:s(report.lab?.strategy,30),browser:s(report.lab?.browser,30),
       patternStatus:s(report.lab?.patternStatus,60),
       stage2Status:s(report.stage2?.aiStatus||report.stage2?.companyProfile?.status,60),
+      localOllama:{status:s(report.lab?.ollama?.status||'not_run',48),model:s(report.lab?.ollama?.model||'',90),pagesAnalyzed:Number(report.lab?.ollama?.pagesAnalyzed||0),candidatesAccepted:Number(report.lab?.ollama?.candidatesAccepted||0)},
       errors:(Array.isArray(report.stage2?.errors)?report.stage2.errors:[]).slice(0,5).map(x=>s(x,180))},
     limitations:[
       'This is a real bounded website investigation, not a complete catalog.',
