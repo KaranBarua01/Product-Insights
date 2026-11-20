@@ -142,7 +142,7 @@ The two new actions **ollama_health** and **ollama_1up** use this same restricte
 
 Create a separate Git worktree from branch **feat/local-agent-ollama-fixed-jobs** at **%USERPROFILE%\PI-ollama-queue-agent**. Run npm install and npm run build in its Scrappers directory. If available, copy the existing original taxonomy into that worktree's gitignored Scrappers/local-data/installed-taxonomy.json.
 
-Run the checked-in **Scrappers/tools/pi-local-agent/start-ollama-agent.ps1** using PowerShell. It configures the existing private queue **KaranBarua01/PI-Agent-Queue**, enables only ollama_1up, and prompts for the fine-grained token through a hidden prompt. Do not paste the token into ChatGPT, source control or shared logs. The launcher clears the token when it exits.
+Run the checked-in **Scrappers/tools/pi-local-agent/start-ollama-agent.ps1** using PowerShell. It configures the existing private queue **KaranBarua01/PI-Agent-Queue**, opts into the Ollama 1UP job while disabling previous live benchmark/test flags (existing safe health and fixed offline taxonomy probes remain allowed), and prompts for the fine-grained token through a hidden prompt. Do not paste the token into ChatGPT, source control or shared logs. The launcher clears the token when it exits.
 
 Each remote job is an existing pi-local-agent/job-v1 JSON issue body, with the pi-local-agent-job label, exactly four allowed fields, and a lifetime no longer than 15 minutes:
 
