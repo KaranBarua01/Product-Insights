@@ -177,7 +177,7 @@ async function handler(req,res){
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/business-app.js')return send(res,await readFile(join(BASE,'research-lab-business-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/api/ollama/status')return json(res,await probeOllama());
-  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',foundationVersion:'pi-code-foundation/v1',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/working-edition/summary'){
     try{return json(res,publicEditionSummary(await readResearchEdition()));}
