@@ -33,4 +33,4 @@ jobs:
           npm test
       - name: Test live Lab protocol
         working-directory: live-lab
-        run: npm test
+        run: node --test tests/*.test.mjs
