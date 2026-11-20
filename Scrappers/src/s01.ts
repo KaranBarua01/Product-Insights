@@ -49,7 +49,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
       if(fetched.truncated){truncatedCount++;warnings.push(`HTML truncated at ${maxBytes} bytes: ${fetched.url}`)}
       warnings.push(...parsed.warnings);evidence.push(...parsed.evidence);
       for(const h of content.headings??[])if(!headings.includes(h)&&headings.length<70)headings.push(h);
-      for(const link of content.links??[])if(!linkSeen.has(link.url)&&links.length<160){linkSeen.add(link.url);links.push(link)}
+      for(const link of content.links??[])if(!linkSeen.has(link.url)&&links.length<260){linkSeen.add(link.url);links.push(link)}
       for(const doc of content.documents??[])if(!documentSeen.has(doc)&&documents.length<35){documentSeen.add(doc);documents.push(doc)}
       jsonLd.push(...(content.jsonLd??[]).slice(0,16-jsonLd.length));appState.push(...(content.appState??[]).slice(0,4-appState.length));
       // Only same-host, already-observed HTML links are candidates. No exhaustive crawling.
