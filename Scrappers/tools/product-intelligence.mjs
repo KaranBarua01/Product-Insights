@@ -63,10 +63,8 @@ export function classifyIntelligencePage(raw,strategy='S01',content=null){
   if(/^(?:\/|\/about(?:-us)?\/?|\/our-story\/?|\/who-we-are\/?)$/i.test(p))return 'company';
   if(BLOCKED_PATH.test(p))return 'other';
   const reference=classifyLeadUrl(raw);
-  // Collection URLs can also contain /products/: classifying them as
-  // products transfers unrelated text and attributes into the wrong record.
-  if(CATEGORY_PATH.test(p)||reference==='catalog')return 'category';
   if(DETAIL_PATH.test(p)||CATALOG_DETAIL.test(p)||reference==='product')return 'product';
+  if(CATEGORY_PATH.test(p)||reference==='catalog')return 'category';
   if(/\/(?:manufacturing|capabilities|services)(?:\/|$)/i.test(p))return 'capability';
   // Non-standard product URLs are eligible only with direct technical evidence
   // AND a concrete model-like title. Do not promote generic marketing pages.
