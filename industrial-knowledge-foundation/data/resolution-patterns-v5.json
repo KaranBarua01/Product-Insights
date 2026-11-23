@@ -1,0 +1,1521 @@
+{
+  "schema_version": "5.0.0",
+  "source": "Cloudflare D1 v5 curated registry",
+  "company_independent": true,
+  "external_ai_used": false,
+  "record_count": 168,
+  "records": [
+    {
+      "priority": 10,
+      "rule_key": "extraction_error",
+      "mode": "contains",
+      "pattern": "unable to determine",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 20,
+      "rule_key": "missing_product_info",
+      "mode": "contains",
+      "pattern": "no identifiable product",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 30,
+      "rule_key": "official_site_unavailable",
+      "mode": "contains",
+      "pattern": "official site inaccessible",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 40,
+      "rule_key": "bank_services",
+      "mode": "suffix",
+      "pattern": "banking services",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 50,
+      "rule_key": "consulting_services",
+      "mode": "suffix",
+      "pattern": "consulting services",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 60,
+      "rule_key": "contracting_services",
+      "mode": "suffix",
+      "pattern": "contracting services",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 70,
+      "rule_key": "install_services",
+      "mode": "suffix",
+      "pattern": "installation services",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 80,
+      "rule_key": "general_services",
+      "mode": "suffix",
+      "pattern": "services",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 90,
+      "rule_key": "service_provider",
+      "mode": "suffix",
+      "pattern": "service",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 100,
+      "rule_key": "consulting",
+      "mode": "suffix",
+      "pattern": "consulting",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 110,
+      "rule_key": "contracting",
+      "mode": "suffix",
+      "pattern": "contracting",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 120,
+      "rule_key": "engineering",
+      "mode": "suffix",
+      "pattern": "engineering",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 130,
+      "rule_key": "maintenance",
+      "mode": "suffix",
+      "pattern": "maintenance",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 140,
+      "rule_key": "repair",
+      "mode": "suffix",
+      "pattern": "repair",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 150,
+      "rule_key": "installation",
+      "mode": "suffix",
+      "pattern": "installation",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 160,
+      "rule_key": "fabrication",
+      "mode": "suffix",
+      "pattern": "fabrication",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 170,
+      "rule_key": "machining",
+      "mode": "suffix",
+      "pattern": "machining",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 180,
+      "rule_key": "welding",
+      "mode": "suffix",
+      "pattern": "welding",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 190,
+      "rule_key": "manufacturing",
+      "mode": "suffix",
+      "pattern": "manufacturing",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 200,
+      "rule_key": "custom_design",
+      "mode": "suffix",
+      "pattern": "design",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 210,
+      "rule_key": "software_development",
+      "mode": "suffix",
+      "pattern": "software development",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 220,
+      "rule_key": "product_development",
+      "mode": "suffix",
+      "pattern": "product development",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 230,
+      "rule_key": "testing_services",
+      "mode": "suffix",
+      "pattern": "testing",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 240,
+      "rule_key": "assembly_services",
+      "mode": "suffix",
+      "pattern": "assembly services",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 250,
+      "rule_key": "prototype_services",
+      "mode": "suffix",
+      "pattern": "prototyping",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 260,
+      "rule_key": "metal_stamping_process",
+      "mode": "suffix",
+      "pattern": "metal stamping",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 270,
+      "rule_key": "laser_cutting_process",
+      "mode": "suffix",
+      "pattern": "laser cutting",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 280,
+      "rule_key": "injection_molding_process",
+      "mode": "suffix",
+      "pattern": "injection molding",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 290,
+      "rule_key": "powder_coating_process",
+      "mode": "suffix",
+      "pattern": "powder coating",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 300,
+      "rule_key": "heat_treating_process",
+      "mode": "suffix",
+      "pattern": "heat treating",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 310,
+      "rule_key": "casting_process",
+      "mode": "suffix",
+      "pattern": "casting",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 320,
+      "rule_key": "training_services",
+      "mode": "suffix",
+      "pattern": "training",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 330,
+      "rule_key": "business_logistics",
+      "mode": "suffix",
+      "pattern": "logistics",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 340,
+      "rule_key": "financial_services",
+      "mode": "suffix",
+      "pattern": "financing",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 350,
+      "rule_key": "marketing_services",
+      "mode": "suffix",
+      "pattern": "marketing",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 360,
+      "rule_key": "banking",
+      "mode": "suffix",
+      "pattern": "banking",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 370,
+      "rule_key": "education",
+      "mode": "suffix",
+      "pattern": "education",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 380,
+      "rule_key": "insurance",
+      "mode": "suffix",
+      "pattern": "insurance",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 390,
+      "rule_key": "research_programs",
+      "mode": "suffix",
+      "pattern": "research programs",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 400,
+      "rule_key": "generic_parts",
+      "mode": "suffix",
+      "pattern": "parts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 410,
+      "rule_key": "generic_components",
+      "mode": "suffix",
+      "pattern": "components",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 420,
+      "rule_key": "generic_assemblies",
+      "mode": "suffix",
+      "pattern": "assemblies",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 430,
+      "rule_key": "generic_subassemblies",
+      "mode": "suffix",
+      "pattern": "subassemblies",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 440,
+      "rule_key": "generic_accessories",
+      "mode": "suffix",
+      "pattern": "accessories",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 450,
+      "rule_key": "generic_supplies",
+      "mode": "suffix",
+      "pattern": "supplies",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 460,
+      "rule_key": "generic_products",
+      "mode": "suffix",
+      "pattern": "products",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 470,
+      "rule_key": "generic_equipment",
+      "mode": "suffix",
+      "pattern": "equipment",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 480,
+      "rule_key": "generic_machinery",
+      "mode": "suffix",
+      "pattern": "machinery",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 490,
+      "rule_key": "generic_solutions",
+      "mode": "suffix",
+      "pattern": "solutions",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 500,
+      "rule_key": "system_level_products",
+      "mode": "suffix",
+      "pattern": "systems",
+      "disposition": "system_level_product_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 510,
+      "rule_key": "generic_system",
+      "mode": "suffix",
+      "pattern": "system",
+      "disposition": "system_level_product_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 520,
+      "rule_key": "general_machined_components",
+      "mode": "suffix",
+      "pattern": "machined components",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 530,
+      "rule_key": "general_machined_parts",
+      "mode": "suffix",
+      "pattern": "machined parts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 540,
+      "rule_key": "general_metal_stampings",
+      "mode": "suffix",
+      "pattern": "stampings",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 550,
+      "rule_key": "general_metal_castings",
+      "mode": "suffix",
+      "pattern": "castings",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 560,
+      "rule_key": "general_metal_forgings",
+      "mode": "suffix",
+      "pattern": "forgings",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 570,
+      "rule_key": "general_metal_extrusions",
+      "mode": "suffix",
+      "pattern": "extrusions",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 580,
+      "rule_key": "general_metal_moldings",
+      "mode": "suffix",
+      "pattern": "moldings",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 590,
+      "rule_key": "general_weldments",
+      "mode": "suffix",
+      "pattern": "weldments",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 600,
+      "rule_key": "pump_plural",
+      "mode": "suffix",
+      "pattern": "pumps",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Fluid Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 610,
+      "rule_key": "pump_singular",
+      "mode": "suffix",
+      "pattern": "pump",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Fluid Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 620,
+      "rule_key": "valve_plural",
+      "mode": "suffix",
+      "pattern": "valves",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Fluid Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 630,
+      "rule_key": "valve_singular",
+      "mode": "suffix",
+      "pattern": "valve",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Fluid Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 640,
+      "rule_key": "conveyor_plural",
+      "mode": "suffix",
+      "pattern": "conveyors",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 650,
+      "rule_key": "conveyor_singular",
+      "mode": "suffix",
+      "pattern": "conveyor",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 660,
+      "rule_key": "sensor_plural",
+      "mode": "suffix",
+      "pattern": "sensors",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 670,
+      "rule_key": "sensor_singular",
+      "mode": "suffix",
+      "pattern": "sensor",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 680,
+      "rule_key": "transmitter_plural",
+      "mode": "suffix",
+      "pattern": "transmitters",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 690,
+      "rule_key": "transmitter_singular",
+      "mode": "suffix",
+      "pattern": "transmitter",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 700,
+      "rule_key": "meter_plural",
+      "mode": "suffix",
+      "pattern": "meters",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 710,
+      "rule_key": "meter_singular",
+      "mode": "suffix",
+      "pattern": "meter",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 720,
+      "rule_key": "controller_plural",
+      "mode": "suffix",
+      "pattern": "controllers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Controls",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 730,
+      "rule_key": "controller_singular",
+      "mode": "suffix",
+      "pattern": "controller",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Controls",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 740,
+      "rule_key": "transformer_plural",
+      "mode": "suffix",
+      "pattern": "transformers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 750,
+      "rule_key": "transformer_singular",
+      "mode": "suffix",
+      "pattern": "transformer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 760,
+      "rule_key": "generator_plural",
+      "mode": "suffix",
+      "pattern": "generators",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 770,
+      "rule_key": "generator_singular",
+      "mode": "suffix",
+      "pattern": "generator",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 780,
+      "rule_key": "inverter_plural",
+      "mode": "suffix",
+      "pattern": "inverters",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 790,
+      "rule_key": "inverter_singular",
+      "mode": "suffix",
+      "pattern": "inverter",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 800,
+      "rule_key": "charger_plural",
+      "mode": "suffix",
+      "pattern": "chargers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 810,
+      "rule_key": "charger_singular",
+      "mode": "suffix",
+      "pattern": "charger",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electrical Power",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 820,
+      "rule_key": "switch_plural",
+      "mode": "suffix",
+      "pattern": "switches",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 830,
+      "rule_key": "switch_singular",
+      "mode": "suffix",
+      "pattern": "switch",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 840,
+      "rule_key": "filter_plural",
+      "mode": "suffix",
+      "pattern": "filters",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Filtration",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 850,
+      "rule_key": "filter_singular",
+      "mode": "suffix",
+      "pattern": "filter",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Filtration",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 860,
+      "rule_key": "compressor_plural",
+      "mode": "suffix",
+      "pattern": "compressors",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Pneumatics",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 870,
+      "rule_key": "compressor_singular",
+      "mode": "suffix",
+      "pattern": "compressor",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Pneumatics",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 880,
+      "rule_key": "chiller_plural",
+      "mode": "suffix",
+      "pattern": "chillers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 890,
+      "rule_key": "chiller_singular",
+      "mode": "suffix",
+      "pattern": "chiller",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 900,
+      "rule_key": "air_handler_plural",
+      "mode": "suffix",
+      "pattern": "air handlers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 910,
+      "rule_key": "heaters_plural",
+      "mode": "suffix",
+      "pattern": "heaters",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 920,
+      "rule_key": "heater_singular",
+      "mode": "suffix",
+      "pattern": "heater",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 930,
+      "rule_key": "fan_plural",
+      "mode": "suffix",
+      "pattern": "fans",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 940,
+      "rule_key": "fan_singular",
+      "mode": "suffix",
+      "pattern": "fan",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 950,
+      "rule_key": "damper_plural",
+      "mode": "suffix",
+      "pattern": "dampers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 960,
+      "rule_key": "damper_singular",
+      "mode": "suffix",
+      "pattern": "damper",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 970,
+      "rule_key": "heat_exchanger_plural",
+      "mode": "suffix",
+      "pattern": "heat exchangers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Thermal Management",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 980,
+      "rule_key": "heat_exchanger_singular",
+      "mode": "suffix",
+      "pattern": "heat exchanger",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Thermal Management",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 990,
+      "rule_key": "robot_plural",
+      "mode": "suffix",
+      "pattern": "robots",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Robotics & Automation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1000,
+      "rule_key": "robot_singular",
+      "mode": "suffix",
+      "pattern": "robot",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Robotics & Automation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1010,
+      "rule_key": "gripper_plural",
+      "mode": "suffix",
+      "pattern": "grippers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Robotics & Automation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1020,
+      "rule_key": "gripper_singular",
+      "mode": "suffix",
+      "pattern": "gripper",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Robotics & Automation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1030,
+      "rule_key": "feeder_plural",
+      "mode": "suffix",
+      "pattern": "feeders",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1040,
+      "rule_key": "feeder_singular",
+      "mode": "suffix",
+      "pattern": "feeder",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1050,
+      "rule_key": "palletizer_plural",
+      "mode": "suffix",
+      "pattern": "palletizers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1060,
+      "rule_key": "palletizer_singular",
+      "mode": "suffix",
+      "pattern": "palletizer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1070,
+      "rule_key": "wrapper_plural",
+      "mode": "suffix",
+      "pattern": "wrappers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1080,
+      "rule_key": "wrapper_singular",
+      "mode": "suffix",
+      "pattern": "wrapper",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1090,
+      "rule_key": "labeler_plural",
+      "mode": "suffix",
+      "pattern": "labelers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1100,
+      "rule_key": "labeler_singular",
+      "mode": "suffix",
+      "pattern": "labeler",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Packaging Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1110,
+      "rule_key": "trailer_plural",
+      "mode": "suffix",
+      "pattern": "trailers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Transportation Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1120,
+      "rule_key": "trailer_singular",
+      "mode": "suffix",
+      "pattern": "trailer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Transportation Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1130,
+      "rule_key": "truck_plural",
+      "mode": "suffix",
+      "pattern": "trucks",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Transportation Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1140,
+      "rule_key": "truck_singular",
+      "mode": "suffix",
+      "pattern": "truck",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Transportation Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1150,
+      "rule_key": "boat_plural",
+      "mode": "suffix",
+      "pattern": "boats",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Marine Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1160,
+      "rule_key": "boat_singular",
+      "mode": "suffix",
+      "pattern": "boat",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Marine Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1170,
+      "rule_key": "crane_plural",
+      "mode": "suffix",
+      "pattern": "cranes",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1180,
+      "rule_key": "crane_singular",
+      "mode": "suffix",
+      "pattern": "crane",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1190,
+      "rule_key": "hoist_plural",
+      "mode": "suffix",
+      "pattern": "hoists",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1200,
+      "rule_key": "hoist_singular",
+      "mode": "suffix",
+      "pattern": "hoist",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Material Handling",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1210,
+      "rule_key": "separator_plural",
+      "mode": "suffix",
+      "pattern": "separators",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1220,
+      "rule_key": "separator_singular",
+      "mode": "suffix",
+      "pattern": "separator",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1230,
+      "rule_key": "centrifuge_plural",
+      "mode": "suffix",
+      "pattern": "centrifuges",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1240,
+      "rule_key": "centrifuge_singular",
+      "mode": "suffix",
+      "pattern": "centrifuge",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1250,
+      "rule_key": "mixer_plural",
+      "mode": "suffix",
+      "pattern": "mixers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1260,
+      "rule_key": "mixer_singular",
+      "mode": "suffix",
+      "pattern": "mixer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1270,
+      "rule_key": "dryer_plural",
+      "mode": "suffix",
+      "pattern": "dryers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1280,
+      "rule_key": "dryer_singular",
+      "mode": "suffix",
+      "pattern": "dryer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1290,
+      "rule_key": "reactor_plural",
+      "mode": "suffix",
+      "pattern": "reactors",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1300,
+      "rule_key": "reactor_singular",
+      "mode": "suffix",
+      "pattern": "reactor",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1310,
+      "rule_key": "printer_plural",
+      "mode": "suffix",
+      "pattern": "printers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1320,
+      "rule_key": "printer_singular",
+      "mode": "suffix",
+      "pattern": "printer",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1330,
+      "rule_key": "camera_plural",
+      "mode": "suffix",
+      "pattern": "cameras",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electronics",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1340,
+      "rule_key": "camera_singular",
+      "mode": "suffix",
+      "pattern": "camera",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Electronics",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1350,
+      "rule_key": "motor_plural",
+      "mode": "suffix",
+      "pattern": "motors",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1360,
+      "rule_key": "motor_singular",
+      "mode": "suffix",
+      "pattern": "motor",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1370,
+      "rule_key": "actuator_plural",
+      "mode": "suffix",
+      "pattern": "actuators",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1380,
+      "rule_key": "actuator_singular",
+      "mode": "suffix",
+      "pattern": "actuator",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1390,
+      "rule_key": "cylinder_plural",
+      "mode": "suffix",
+      "pattern": "cylinders",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1400,
+      "rule_key": "cylinder_singular",
+      "mode": "suffix",
+      "pattern": "cylinder",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1410,
+      "rule_key": "gearbox_plural",
+      "mode": "suffix",
+      "pattern": "gearboxes",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1420,
+      "rule_key": "gearbox_singular",
+      "mode": "suffix",
+      "pattern": "gearbox",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1430,
+      "rule_key": "bearing_plural",
+      "mode": "suffix",
+      "pattern": "bearings",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Mechanical Components",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1440,
+      "rule_key": "bearing_singular",
+      "mode": "suffix",
+      "pattern": "bearing",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Mechanical Components",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1450,
+      "rule_key": "sprocket_plural",
+      "mode": "suffix",
+      "pattern": "sprockets",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Mechanical Components",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1460,
+      "rule_key": "sprocket_singular",
+      "mode": "suffix",
+      "pattern": "sprocket",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Mechanical Components",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1470,
+      "rule_key": "press_plural",
+      "mode": "suffix",
+      "pattern": "presses",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Machine Tools",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1480,
+      "rule_key": "press_singular",
+      "mode": "suffix",
+      "pattern": "press",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Machine Tools",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1490,
+      "rule_key": "machine_plural",
+      "mode": "suffix",
+      "pattern": "machines",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1500,
+      "rule_key": "machine_singular",
+      "mode": "suffix",
+      "pattern": "machine",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1510,
+      "rule_key": "instrument_plural",
+      "mode": "suffix",
+      "pattern": "instruments",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1520,
+      "rule_key": "instrument_singular",
+      "mode": "suffix",
+      "pattern": "instrument",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Instrumentation",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1530,
+      "rule_key": "silo_plural",
+      "mode": "suffix",
+      "pattern": "silos",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1540,
+      "rule_key": "silo_singular",
+      "mode": "suffix",
+      "pattern": "silo",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1550,
+      "rule_key": "furnace_plural",
+      "mode": "suffix",
+      "pattern": "furnaces",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1560,
+      "rule_key": "furnace_singular",
+      "mode": "suffix",
+      "pattern": "furnace",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1570,
+      "rule_key": "boiler_plural",
+      "mode": "suffix",
+      "pattern": "boilers",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1580,
+      "rule_key": "boiler_singular",
+      "mode": "suffix",
+      "pattern": "boiler",
+      "disposition": "specific_product_candidate_review",
+      "category_name": "HVAC",
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1590,
+      "rule_key": "tank_plural",
+      "mode": "suffix",
+      "pattern": "tanks",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1600,
+      "rule_key": "tank_singular",
+      "mode": "suffix",
+      "pattern": "tank",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1610,
+      "rule_key": "vessel_plural",
+      "mode": "suffix",
+      "pattern": "vessels",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1620,
+      "rule_key": "vessel_singular",
+      "mode": "suffix",
+      "pattern": "vessel",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1630,
+      "rule_key": "skid_plural",
+      "mode": "suffix",
+      "pattern": "skids",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1640,
+      "rule_key": "skid_singular",
+      "mode": "suffix",
+      "pattern": "skid",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1650,
+      "rule_key": "rack_plural",
+      "mode": "suffix",
+      "pattern": "racks",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1660,
+      "rule_key": "rack_singular",
+      "mode": "suffix",
+      "pattern": "rack",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1670,
+      "rule_key": "workstation_plural",
+      "mode": "suffix",
+      "pattern": "workstations",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    },
+    {
+      "priority": 1680,
+      "rule_key": "workstation_singular",
+      "mode": "suffix",
+      "pattern": "workstation",
+      "disposition": "specific_product_candidate_review",
+      "category_name": null,
+      "rationale": "suffix and domain rules identify candidates only; no ID creation"
+    }
+  ]
+}
