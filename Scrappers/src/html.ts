@@ -69,10 +69,10 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
   // Preserve structured specifications instead of flattening part/material rows.
   // These rows are source text only; no part or process is inferred here.
   const tables:{rows:string[][]}[]=[];
-  for(const table of region.matchAll(/<table\\b[^>]*>([\\s\\S]*?)<\\/table\\s*>/gi)){
+  for(const table of region.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table\s*>/gi)){
     const rows:string[][]=[];
-    for(const tr of (table[1]??'').matchAll(/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr\\s*>/gi)){
-      const cells=[...(tr[1]??'').matchAll(/<(?:td|th)\\b[^>]*>([\\s\\S]*?)<\\/(?:td|th)\\s*>/gi)]
+    for(const tr of (table[1]??'').matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)){
+      const cells=[...(tr[1]??'').matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)\s*>/gi)]
         .map(m=>stripMarkup(m[1]??'').slice(0,220)).filter(Boolean);
       if(cells.length>=2)rows.push(cells.slice(0,12));
       if(rows.length>=70)break;
