@@ -1,0 +1,1161 @@
+{
+  "schema_version": "5.0.0",
+  "source": "Cloudflare D1 v5 curated registry",
+  "company_independent": true,
+  "external_ai_used": false,
+  "record_count": 192,
+  "records": [
+    {
+      "phrase": "academic programs",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Academic program not a physical product"
+    },
+    {
+      "phrase": "actuators",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Electric hydraulic and pneumatic actuators diverge"
+    },
+    {
+      "phrase": "adapters",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Connection adapter geometry unspecified"
+    },
+    {
+      "phrase": "aerospace components",
+      "disposition": "generic_part_family",
+      "category_name": "Aerospace & Drones",
+      "rationale": "No specific component or design"
+    },
+    {
+      "phrase": "aluminum",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Material not a product archetype"
+    },
+    {
+      "phrase": "aluminum castings",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Shape and application of cast part unspecified"
+    },
+    {
+      "phrase": "amplifiers",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Audio RF and power amplifier systems differ"
+    },
+    {
+      "phrase": "antennas",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Antenna designs vary by RF function"
+    },
+    {
+      "phrase": "apparel",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Finished clothing outside industrial product machinery taxonomy"
+    },
+    {
+      "phrase": "architectural lighting",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Lighting",
+      "rationale": "Lighting application is not specific luminaire construction"
+    },
+    {
+      "phrase": "attachments",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Accessory assembly lacks parent equipment identity"
+    },
+    {
+      "phrase": "automation",
+      "disposition": "broad_product_family",
+      "category_name": "Robotics & Automation",
+      "rationale": "Automation is a broad function not a unique hardware product"
+    },
+    {
+      "phrase": "automation systems",
+      "disposition": "broad_product_family",
+      "category_name": "Robotics & Automation",
+      "rationale": "Broad solution category not an archetype"
+    },
+    {
+      "phrase": "axles",
+      "disposition": "generic_part_family",
+      "category_name": "Transportation Equipment",
+      "rationale": "Axle assembly not complete vehicle archetype"
+    },
+    {
+      "phrase": "balers",
+      "disposition": "ambiguous_scope_review",
+      "category_name": null,
+      "rationale": "Agricultural hay baler versus waste compacting equipment"
+    },
+    {
+      "phrase": "banking",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Financial service"
+    },
+    {
+      "phrase": "barrels",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Different vessel and barrel construction"
+    },
+    {
+      "phrase": "batteries",
+      "disposition": "broad_product_family",
+      "category_name": "Energy Storage",
+      "rationale": "Many battery chemistries and package architectures"
+    },
+    {
+      "phrase": "battery packs",
+      "disposition": "broad_product_family",
+      "category_name": "Energy Storage",
+      "rationale": "Primary and rechargeable chemistry and packaging differ"
+    },
+    {
+      "phrase": "bearings",
+      "disposition": "broad_product_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Rolling and plain and specialty bearing types differ"
+    },
+    {
+      "phrase": "benches",
+      "disposition": "broad_product_family",
+      "category_name": "Furniture",
+      "rationale": "Workshop and lab and furniture bench types differ"
+    },
+    {
+      "phrase": "blowers",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Blower wheel and air handler and industrial blower types differ"
+    },
+    {
+      "phrase": "boilers",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Steam and hot water and condensing boilers differ"
+    },
+    {
+      "phrase": "bolts",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Fastener subtypes and grades differ"
+    },
+    {
+      "phrase": "brackets",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "A structural part type not complete product identity"
+    },
+    {
+      "phrase": "brakes",
+      "disposition": "broad_product_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Disc drum and friction and magnetic brakes differ"
+    },
+    {
+      "phrase": "burners",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Equipment",
+      "rationale": "Gas oil and dual fuel burners differ"
+    },
+    {
+      "phrase": "cabinets",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Electrical cabinets and storage furniture differ"
+    },
+    {
+      "phrase": "cable",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Cable conductor insulation and type not specified"
+    },
+    {
+      "phrase": "cables",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Cable conductor insulation and type not specified"
+    },
+    {
+      "phrase": "cameras",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Industrial security thermal and imaging cameras differ"
+    },
+    {
+      "phrase": "cartridges",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Filtration reagent and industrial cartridge functions differ"
+    },
+    {
+      "phrase": "carts",
+      "disposition": "broad_product_family",
+      "category_name": "Material Handling",
+      "rationale": "Material handling and medical and furniture carts differ"
+    },
+    {
+      "phrase": "chairs",
+      "disposition": "broad_product_family",
+      "category_name": "Furniture",
+      "rationale": "Office healthcare and commercial chair types differ"
+    },
+    {
+      "phrase": "chargers",
+      "disposition": "broad_product_family",
+      "category_name": "Electrical Power",
+      "rationale": "Battery and vehicle and specialty charging systems differ"
+    },
+    {
+      "phrase": "cheese",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Food product not an industrial manufacturing equipment type"
+    },
+    {
+      "phrase": "chillers",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Air cooled and water cooled technologies differ"
+    },
+    {
+      "phrase": "clamps",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Multiple clamp geometries and applications"
+    },
+    {
+      "phrase": "clips",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Retaining and spring clip part type unspecified"
+    },
+    {
+      "phrase": "cnc machined parts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Generic manufacturing output not a particular part"
+    },
+    {
+      "phrase": "coils",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Heating electromagnetic refrigeration and spring coils differ"
+    },
+    {
+      "phrase": "compressors",
+      "disposition": "broad_product_family",
+      "category_name": "Pneumatics",
+      "rationale": "Compressor family includes multiple air-end types"
+    },
+    {
+      "phrase": "connectors",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Electrical and fluid and signal connectors differ"
+    },
+    {
+      "phrase": "consoles",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Control and furniture and automotive consoles differ"
+    },
+    {
+      "phrase": "construction",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Construction activity rather than a discrete manufactured item"
+    },
+    {
+      "phrase": "construction management",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Construction management is a service"
+    },
+    {
+      "phrase": "consulting",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Consulting is a service not a product archetype"
+    },
+    {
+      "phrase": "containers",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Shipping storage and chemical containers differ"
+    },
+    {
+      "phrase": "control electronics",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Control electronics spans PCB modules and finished products"
+    },
+    {
+      "phrase": "controllers",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Controls",
+      "rationale": "Controller is not a specific physical type"
+    },
+    {
+      "phrase": "conveyors",
+      "disposition": "broad_product_family",
+      "category_name": "Material Handling",
+      "rationale": "Conveyor family not a specific design"
+    },
+    {
+      "phrase": "coolers",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Fluid air evaporative and consumer coolers differ"
+    },
+    {
+      "phrase": "copper",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Material not a product archetype"
+    },
+    {
+      "phrase": "couplings",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Motion and pipe coupling functions differ"
+    },
+    {
+      "phrase": "crushers",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Equipment",
+      "rationale": "Jaw cone impact and roll crushers differ"
+    },
+    {
+      "phrase": "custom manufactured parts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Generic make-to-print products"
+    },
+    {
+      "phrase": "cylinders",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Hydraulic pneumatic gas and industrial cylinder applications differ"
+    },
+    {
+      "phrase": "dampers",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Volume fire smoke and isolation dampers differ"
+    },
+    {
+      "phrase": "decks",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Marine decks and trailer decks and patio decks differ"
+    },
+    {
+      "phrase": "defense electronics",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Broad electronics equipment class"
+    },
+    {
+      "phrase": "dies",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Forming and cutting tool types differ"
+    },
+    {
+      "phrase": "displays",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Displays can mean screen products or physical display structures"
+    },
+    {
+      "phrase": "drives",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Electrical drive motor drivetrain and gearbox meanings differ"
+    },
+    {
+      "phrase": "dryers",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Dryers include air food and material processing"
+    },
+    {
+      "phrase": "electrical contracting",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Contracting is a service"
+    },
+    {
+      "phrase": "electronics",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Entire technology sector not unique archetype"
+    },
+    {
+      "phrase": "engineering",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Engineering work is a service"
+    },
+    {
+      "phrase": "engines",
+      "disposition": "broad_product_family",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "Combustion and electric prime mover systems differ"
+    },
+    {
+      "phrase": "ethanol",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Commodity not an equipment archetype"
+    },
+    {
+      "phrase": "events",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Event not an industrial product"
+    },
+    {
+      "phrase": "fabricated assemblies",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified assemblies"
+    },
+    {
+      "phrase": "fabrication",
+      "disposition": "manufacturing_process_or_service_review",
+      "category_name": null,
+      "rationale": "Metal fabrication service or process"
+    },
+    {
+      "phrase": "fans",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Fan includes axial centrifugal and special duty variants"
+    },
+    {
+      "phrase": "feeders",
+      "disposition": "broad_product_family",
+      "category_name": "Material Handling",
+      "rationale": "Vibratory screw and belt feeder types differ"
+    },
+    {
+      "phrase": "fifth wheels",
+      "disposition": "ambiguous_scope_review",
+      "category_name": null,
+      "rationale": "Ambiguous recreational trailer versus fifth wheel coupling"
+    },
+    {
+      "phrase": "filters",
+      "disposition": "broad_product_family",
+      "category_name": "Filtration",
+      "rationale": "Filter family includes multiple physical architectures"
+    },
+    {
+      "phrase": "filtration systems",
+      "disposition": "broad_product_family",
+      "category_name": "Filtration",
+      "rationale": "Filtration system architecture unspecified"
+    },
+    {
+      "phrase": "fire doors",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Construction Products",
+      "rationale": "Fire door construction material unspecified"
+    },
+    {
+      "phrase": "fishing boats",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Marine Equipment",
+      "rationale": "Not every fishing boat is a commercial workboat"
+    },
+    {
+      "phrase": "fittings",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Pipe and mechanical fittings are not a single archetype"
+    },
+    {
+      "phrase": "fixtures",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Workholding and test and assembly fixtures differ"
+    },
+    {
+      "phrase": "food ingredients",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Food ingredient not a manufactured equipment component"
+    },
+    {
+      "phrase": "frames",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Structural member without parent product geometry"
+    },
+    {
+      "phrase": "gauges",
+      "disposition": "broad_product_family",
+      "category_name": "Instrumentation",
+      "rationale": "Mechanical and digital instruments measure different functions"
+    },
+    {
+      "phrase": "gears",
+      "disposition": "generic_part_family",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "Gear design and tooth geometry unspecified"
+    },
+    {
+      "phrase": "generators",
+      "disposition": "broad_product_family",
+      "category_name": "Electrical Power",
+      "rationale": "Multiple generator prime movers and topology"
+    },
+    {
+      "phrase": "globe valves",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Fluid Handling",
+      "rationale": "Globe valve not necessarily globe CONTROL valve"
+    },
+    {
+      "phrase": "grinders",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Industrial grinding machines and grinders differ"
+    },
+    {
+      "phrase": "grips",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Grip and handle part without application"
+    },
+    {
+      "phrase": "handguards",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified component product family outside current equipment taxonomy"
+    },
+    {
+      "phrase": "hoists",
+      "disposition": "broad_product_family",
+      "category_name": "Material Handling",
+      "rationale": "Electric manual and air chain hoists differ"
+    },
+    {
+      "phrase": "hoses",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Fluid medium reinforcement and pressure class unknown"
+    },
+    {
+      "phrase": "hulls",
+      "disposition": "generic_part_family",
+      "category_name": "Marine Equipment",
+      "rationale": "Hull is a subassembly of vessel"
+    },
+    {
+      "phrase": "hvac equipment",
+      "disposition": "broad_product_family",
+      "category_name": "HVAC",
+      "rationale": "Whole product sector not a product archetype"
+    },
+    {
+      "phrase": "hydraulic presses",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Machine Tools",
+      "rationale": "Shop press subtype is narrower than hydraulic press"
+    },
+    {
+      "phrase": "industrial cameras",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Electronics",
+      "rationale": "Industrial camera may be thermal security or machine vision"
+    },
+    {
+      "phrase": "industrial mixers",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Industrial Equipment",
+      "rationale": "Process mixers are not always food batch mixers"
+    },
+    {
+      "phrase": "industrial systems",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Cross-disciplinary generic descriptor"
+    },
+    {
+      "phrase": "injection molds",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Machine Tools",
+      "rationale": "Injection-specific tooling is narrower than existing forming molds"
+    },
+    {
+      "phrase": "installation",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Installation is a service"
+    },
+    {
+      "phrase": "instrumentation",
+      "disposition": "broad_product_family",
+      "category_name": "Instrumentation",
+      "rationale": "Whole instrumentation field not distinct product"
+    },
+    {
+      "phrase": "insurance",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Financial service"
+    },
+    {
+      "phrase": "inverters",
+      "disposition": "broad_product_family",
+      "category_name": "Electrical Power",
+      "rationale": "Power conversion topology and use not defined"
+    },
+    {
+      "phrase": "investment management",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Financial service"
+    },
+    {
+      "phrase": "keypads",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Controls",
+      "rationale": "HMI and access control keypad designs differ"
+    },
+    {
+      "phrase": "lids",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified closure part"
+    },
+    {
+      "phrase": "lighting",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Lighting",
+      "rationale": "Lighting technology and luminaire architecture unresolved"
+    },
+    {
+      "phrase": "loans",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Financial service"
+    },
+    {
+      "phrase": "logistics",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Supply chain logistics is a service"
+    },
+    {
+      "phrase": "machine tools",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Entire class not one machine archetype"
+    },
+    {
+      "phrase": "machined castings",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Casting form and use unspecified"
+    },
+    {
+      "phrase": "machined components",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified machined components"
+    },
+    {
+      "phrase": "maintenance",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Maintenance is a service"
+    },
+    {
+      "phrase": "material handling systems",
+      "disposition": "broad_product_family",
+      "category_name": "Material Handling",
+      "rationale": "System-level umbrella term"
+    },
+    {
+      "phrase": "medical devices",
+      "disposition": "broad_product_family",
+      "category_name": "Medical & Laboratory",
+      "rationale": "Many physical medical product archetypes"
+    },
+    {
+      "phrase": "metal castings",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Shape and application of cast part unspecified"
+    },
+    {
+      "phrase": "metal stampings",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Shape and application of stamped part unspecified"
+    },
+    {
+      "phrase": "mixers",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Mixing equipment spans food and chemical and construction"
+    },
+    {
+      "phrase": "molds",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Injection compression casting and forming molds differ"
+    },
+    {
+      "phrase": "monitors",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Medical industrial and electronic monitor applications differ"
+    },
+    {
+      "phrase": "motors",
+      "disposition": "broad_product_family",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "Multiple technologies and drive types"
+    },
+    {
+      "phrase": "mounts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Mounting hardware without defined interface"
+    },
+    {
+      "phrase": "n a",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "Placeholder"
+    },
+    {
+      "phrase": "none identified",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "No product identity available"
+    },
+    {
+      "phrase": "not specified",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "Placeholder"
+    },
+    {
+      "phrase": "nozzles",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Spray and injection and flow nozzles differ"
+    },
+    {
+      "phrase": "nuts",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Fastener subtypes and material unknown"
+    },
+    {
+      "phrase": "ovens",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Food industrial and laboratory ovens differ"
+    },
+    {
+      "phrase": "pallet jacks",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Material Handling",
+      "rationale": "Hand-operated and powered pallet jacks differ"
+    },
+    {
+      "phrase": "panels",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Panel function not established"
+    },
+    {
+      "phrase": "peristaltic pumps",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Fluid Handling",
+      "rationale": "Not all peristaltic pumps are dosing units"
+    },
+    {
+      "phrase": "pipe",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Material geometry and service not established"
+    },
+    {
+      "phrase": "planters",
+      "disposition": "ambiguous_scope_review",
+      "category_name": null,
+      "rationale": "Could mean agricultural planter or decorative container"
+    },
+    {
+      "phrase": "plates",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified structural or thermal plate"
+    },
+    {
+      "phrase": "platforms",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Physical platforms and software platforms differ"
+    },
+    {
+      "phrase": "plumbing",
+      "disposition": "broad_product_family",
+      "category_name": "Fluid Handling",
+      "rationale": "Plumbing equipment class lacks distinct product"
+    },
+    {
+      "phrase": "power distribution",
+      "disposition": "broad_product_family",
+      "category_name": "Electrical Power",
+      "rationale": "Electrical distribution system may be board transformer or switchgear"
+    },
+    {
+      "phrase": "power electronics",
+      "disposition": "broad_product_family",
+      "category_name": "Electronics",
+      "rationale": "Electronic power technology category not a specific item"
+    },
+    {
+      "phrase": "power supplies",
+      "disposition": "broad_product_family",
+      "category_name": "Electrical Power",
+      "rationale": "AC DC topology and capacity unresolved"
+    },
+    {
+      "phrase": "power systems",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Too general for a single electrical architecture"
+    },
+    {
+      "phrase": "power units",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Hydraulic electrical and pneumatic power units differ"
+    },
+    {
+      "phrase": "precision machined components",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Generic manufacturing output"
+    },
+    {
+      "phrase": "precision machined parts",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Generic manufacturing output"
+    },
+    {
+      "phrase": "precision tooling",
+      "disposition": "broad_product_family",
+      "category_name": "Machine Tools",
+      "rationale": "Tooling applications not defined"
+    },
+    {
+      "phrase": "private equity",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Investment activity not a product"
+    },
+    {
+      "phrase": "process equipment",
+      "disposition": "broad_product_family",
+      "category_name": "Industrial Equipment",
+      "rationale": "No distinct process or equipment construction"
+    },
+    {
+      "phrase": "pulleys",
+      "disposition": "broad_product_family",
+      "category_name": "Motion & Power Transmission",
+      "rationale": "Belt timing and rope pulley types differ"
+    },
+    {
+      "phrase": "pump packages",
+      "disposition": "system_level_product_review",
+      "category_name": "Fluid Handling",
+      "rationale": "Pump skid topology and duty not defined"
+    },
+    {
+      "phrase": "pumps",
+      "disposition": "broad_product_family",
+      "category_name": "Fluid Handling",
+      "rationale": "Pump family includes many physical architectures"
+    },
+    {
+      "phrase": "racks",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Server racks and shelving and pallet racks differ"
+    },
+    {
+      "phrase": "rails",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Guide structural and electrical rails differ"
+    },
+    {
+      "phrase": "receivers",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Radio receiver and pressure receiver and firearm receiver conflict"
+    },
+    {
+      "phrase": "regulators",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Pressure electrical and control regulator types differ"
+    },
+    {
+      "phrase": "screens",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Mesh filter screens and display screens differ"
+    },
+    {
+      "phrase": "screw pumps",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Fluid Handling",
+      "rationale": "Generic screw pump not necessarily twin-screw"
+    },
+    {
+      "phrase": "screws",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Fastener or lead screw or extrusion screw cannot be assumed"
+    },
+    {
+      "phrase": "seating",
+      "disposition": "broad_product_family",
+      "category_name": "Furniture",
+      "rationale": "Seat designs and transport applications differ"
+    },
+    {
+      "phrase": "sensors",
+      "disposition": "broad_product_family",
+      "category_name": "Instrumentation",
+      "rationale": "Multiple transduction and measurement mechanisms"
+    },
+    {
+      "phrase": "separators",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Magnetic centrifugal and filtration separation architectures differ"
+    },
+    {
+      "phrase": "shelving",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Warehouse and domestic shelving systems differ"
+    },
+    {
+      "phrase": "skids",
+      "disposition": "system_level_product_review",
+      "category_name": null,
+      "rationale": "Skid assembly requires process function to classify"
+    },
+    {
+      "phrase": "software",
+      "disposition": "nonphysical_service",
+      "category_name": null,
+      "rationale": "Software is not a manufactured mechanical product item"
+    },
+    {
+      "phrase": "specialty chemicals",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Chemical product needs separate material ontology"
+    },
+    {
+      "phrase": "sprayers",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Agricultural and industrial spray designs differ"
+    },
+    {
+      "phrase": "spreaders",
+      "disposition": "broad_product_family",
+      "category_name": "Agriculture",
+      "rationale": "Granular and liquid and fertilizer spreaders differ"
+    },
+    {
+      "phrase": "springs",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Compression torsion extension and leaf spring types differ"
+    },
+    {
+      "phrase": "steel",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Material not a product archetype"
+    },
+    {
+      "phrase": "strainers",
+      "disposition": "broad_product_family",
+      "category_name": "Filtration",
+      "rationale": "Basket Y-type and duplex strainer designs differ"
+    },
+    {
+      "phrase": "submersible pumps",
+      "disposition": "ambiguous_scope_review",
+      "category_name": "Fluid Handling",
+      "rationale": "Submersible is not necessarily centrifugal"
+    },
+    {
+      "phrase": "switches",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Electrical process and mechanical switch types differ"
+    },
+    {
+      "phrase": "tables",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Table category cannot distinguish furniture from machine or laboratory tables"
+    },
+    {
+      "phrase": "tanks",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Tank application rating and material unresolved"
+    },
+    {
+      "phrase": "test equipment",
+      "disposition": "broad_product_family",
+      "category_name": "Instrumentation",
+      "rationale": "Testing equipment spans several product types"
+    },
+    {
+      "phrase": "tractors",
+      "disposition": "ambiguous_scope_review",
+      "category_name": null,
+      "rationale": "Farm or yard or industrial application unspecified"
+    },
+    {
+      "phrase": "trailers",
+      "disposition": "broad_product_family",
+      "category_name": "Transportation Equipment",
+      "rationale": "Multiple vehicle trailer types"
+    },
+    {
+      "phrase": "transmitters",
+      "disposition": "broad_product_family",
+      "category_name": "Instrumentation",
+      "rationale": "Pressure temperature RF and electrical transmitters differ"
+    },
+    {
+      "phrase": "truck bodies",
+      "disposition": "broad_product_family",
+      "category_name": "Transportation Equipment",
+      "rationale": "Different service bodies and dump bodies and box bodies"
+    },
+    {
+      "phrase": "tubing",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Tubing not a unique equipment archetype"
+    },
+    {
+      "phrase": "unable to determine",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "Not a product phrase"
+    },
+    {
+      "phrase": "unable to determine from accessible official site",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "Not a product phrase"
+    },
+    {
+      "phrase": "university education",
+      "disposition": "nonindustrial_domain",
+      "category_name": null,
+      "rationale": "Education not an industrial manufactured component"
+    },
+    {
+      "phrase": "unknown",
+      "disposition": "extraction_failure",
+      "category_name": null,
+      "rationale": "No product identity available"
+    },
+    {
+      "phrase": "valves",
+      "disposition": "broad_product_family",
+      "category_name": "Fluid Handling",
+      "rationale": "Multiple distinct valve actuation and closure designs"
+    },
+    {
+      "phrase": "washers",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Fastener washer and cleaning machine meanings differ"
+    },
+    {
+      "phrase": "water treatment systems",
+      "disposition": "broad_product_family",
+      "category_name": "Water Treatment",
+      "rationale": "Process train and technology unspecified"
+    },
+    {
+      "phrase": "welded assemblies",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Unspecified welded assemblies"
+    },
+    {
+      "phrase": "weldments",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "Shape and function of welded assembly unknown"
+    },
+    {
+      "phrase": "wheels",
+      "disposition": "generic_part_family",
+      "category_name": "Mechanical Components",
+      "rationale": "Wheel is a component family not a machine archetype"
+    },
+    {
+      "phrase": "wire",
+      "disposition": "material_or_commodity_phrase",
+      "category_name": null,
+      "rationale": "Conductor wire material or part type not unique product archetype"
+    },
+    {
+      "phrase": "wire forms",
+      "disposition": "manufactured_component_family_review",
+      "category_name": null,
+      "rationale": "Wire form geometry and functional part not specified"
+    },
+    {
+      "phrase": "wiring",
+      "disposition": "generic_part_family",
+      "category_name": null,
+      "rationale": "Raw wiring not a distinct product archetype"
+    },
+    {
+      "phrase": "workstations",
+      "disposition": "broad_product_family",
+      "category_name": null,
+      "rationale": "Furniture and industrial electronic workstations differ"
+    }
+  ]
+}
