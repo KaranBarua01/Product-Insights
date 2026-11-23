@@ -1,0 +1,98 @@
+name: Evidence First Research V3 - Source QA and Real Website A/B
+on:
+  push:
+    branches: [feat/evidence-first-research-v3-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing project
+        working-directory: Scrappers
+        run: npm install --no-audit --no-fund
+      - name: Typecheck compile + source evidence regressions
+        working-directory: Scrappers
+        run: |
+          npm run build
+          node --check tools/research-v3.mjs
+          node --check tools/evidence-bridge-v3.mjs
+          node --check tools/research-lab.mjs
+          node --test tests/research-v3.test.mjs tests/part-evidence-verifier.test.mjs tests/oem-foundation.test.mjs tests/adaptive-research-v2.test.mjs tests/adaptive-html.test.mjs tests/v3-technical-tables.test.mjs tests/stage2-lab-integration.test.mjs
+  live-ab:
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [igus, bike, vacuum]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install project and build
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Install Chromium for existing PI auto fallback
+        working-directory: Scrappers
+        run: npx playwright install --with-deps chromium
+      - name: Compare same site with same 15-page budget
+        working-directory: Scrappers
+        timeout-minutes: 30
+        env:
+          PI_V3_SITE: ${{ matrix.site }}
+          PI_V3_PAGE_LIMIT: '15'
+        run: node tools/v3-live-ab-benchmark.mjs
+      - name: Upload source-backed comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-first-v3-${{ matrix.site }}
+          path: Scrappers/v3-live-benchmark-results/
+          retention-days: 15
+          if-no-files-found: warn
+
+  deep-v3-igus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install, compile and enable Chromium
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: V3 50-page technical-document benchmark on igus
+        working-directory: Scrappers
+        timeout-minutes: 36
+        env:
+          PI_V3_SITE: igus
+          PI_V3_PAGE_LIMIT: '50'
+        run: node tools/v3-live-ab-benchmark.mjs
+      - name: Preserve raw V3 evidence for manual assessment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-first-v3-igus-50page
+          path: Scrappers/v3-live-benchmark-results/
+          retention-days: 15
+          if-no-files-found: warn

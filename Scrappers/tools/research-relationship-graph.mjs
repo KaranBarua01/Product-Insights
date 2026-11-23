@@ -70,11 +70,11 @@ export function buildResearchGraph({companyName,companyUrl,products=[],
  // The verifier is the part-level gate when supplied. Existing historical
  // graph inputs remain accepted for backwards-compatible comparison.
  const verifiedByProduct=new Map();
- if(partEvidence?.schemaVersion==='pi-part-evidence/v1')for(const entry of arr(partEvidence.products,60)){
+ if(['pi-part-evidence/v1','pi-part-evidence/v3'].includes(partEvidence?.schemaVersion))for(const entry of arr(partEvidence.products,60)){
    if(typeof entry?.sourceUrl==='string'&&typeof entry?.name==='string')
      verifiedByProduct.set(norm(entry.sourceUrl)+'|'+norm(entry.name),entry);
  }
- const evidenceGate=partEvidence?.schemaVersion==='pi-part-evidence/v1';
+ const evidenceGate=['pi-part-evidence/v1','pi-part-evidence/v3'].includes(partEvidence?.schemaVersion);
  const approvedAI=new Map();
  for(const p of arr(aiParts,5))if(p&&typeof p.productName==='string'){
    const key=norm(p.productName);
