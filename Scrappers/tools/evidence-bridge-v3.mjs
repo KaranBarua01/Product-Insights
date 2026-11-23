@@ -109,6 +109,33 @@ function getBlocks(doc){
   }
   return out.slice(0,1400);
 }
+/** Parts catalogs often place two numbered columns on one PDF text line.
+ * Extract only explicit numbered entries after a published "Parts List" heading,
+ * never inferred parts from adjacent product manuals or unnumbered prose.
+ */
+function numberedPartsList(doc){
+  const out=[],seen=new Set();
+  for(const page of (doc.content?.pdfPages||[]).slice(0,15)){
+    const raw=String(page.text||'').slice(0,18000).replace(/\s+/g,' ').trim();
+    const heading=/\b(?:parts?|components?)\s+list\s*[:\-]?\s*/i.exec(raw);
+    if(!heading)continue;
+    const section=raw.slice(heading.index+heading[0].length,heading.index+heading[0].length+2300);
+    const expression=/(?:^|\s)(\d{1,2})\s*[).]\s*([\p{L}\d][\p{L}\d'’"\/\-\s]{2,72}?)(?=\s+\d{1,2}\s*[).]|$)/gu;
+    for(const m of section.matchAll(expression)){
+      const part=norm(m[2]).replace(/\s*[,:;.]$/,'').toLowerCase();
+      if(part.length<4||part.length>65||/^(?:warning|install|step|tools?|instructions?|pages?|notes?|product|figure|diagram)\b/i.test(part)||seen.has(part))continue;
+      // Part labels are published candidate names, not an engineering BOM certification.
+      const quote=norm(raw.slice(Math.max(0,heading.index-12),
+        Math.min(raw.length,heading.index+heading[0].length+m.index+m[0].length+25)));
+      if(!quote.toLowerCase().includes(part))continue;
+      seen.add(part);out.push({name:part,quote:quote.slice(-420),loc:'PDF page '+page.page+' numbered parts list',
+        materialClaims:[],processClaims:[]});
+      if(out.length>=45)break;
+    }
+    if(out.length>=45)break;
+  }
+  return out;
+}
 function cleanPart(s){return norm(s).replace(/^(?:stainless\s+steel|cast\s+iron|carbon\s+steel|steel|aluminum|aluminium|polyurethane|polypropylene|polycarbonate|fiber|injection[- ]molded|injection[- ]moulded)\s+/i,'').toLowerCase();}
 function groupParts(line){const out=[];for(const m of line.matchAll(COMPONENTS)){
   const name=cleanPart(m[0]);if(name.length<4)continue;
@@ -191,8 +218,9 @@ export function enrichPartEvidenceV3({companyName,companyUrl,products=[],pages=[
       accepted++;
       const rows=getBlocks(doc);
       const claims=rows.flatMap(({line,locator})=>extractBlock(line,locator,doc.url||doc.sourceUrl)).slice(0,120);
-      sourceClaims+=claims.length;
-      addClaims(entry,doc,claims);
+      const explicitParts=numberedPartsList(doc);
+      sourceClaims+=claims.length+explicitParts.length;
+      addClaims(entry,doc,[...explicitParts,...claims]);
     }
     entry.missingEvidence=entry.parts.length?'part_material_process_coverage_partial':'no_source_supported_integral_parts';
   }

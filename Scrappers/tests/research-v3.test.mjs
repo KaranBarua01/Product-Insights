@@ -164,3 +164,24 @@ test('V3 50-page product extraction wrapper processes extra pages without changi
  assert.equal(result.coverage.pagesSubmitted,50);
  assert.throws(()=>extractProductIntelligenceV3({companyName:'Example',rootUrl:root,pages:[...pages,pages[0]]}),/50/);
 });
+
+test('numbered, two-column assembly-manual parts list creates distinct, quoted part candidates',()=>{
+  const site='https://bike.example.com/',productUrl=site+'product/heavy-duty';
+  const manual=site+'content/pdf/HeavyDuty-INSTRUCTIONS.pdf';
+  const product={name:'Heavy Duty',sku:null,sourceUrl:productUrl,components:[]};
+  const productPage={url:productUrl,status:'completed',strategy:'S01',
+    content:{headings:['Heavy Duty'],title:'Heavy Duty',text:'Heavy Duty hitch bicycle rack.',
+      links:[{url:manual,label:'Heavy Duty instructions'}]}};
+  const text='HEAVY DUTY Parts List: 1) Hitch Bar 11) Passenger Side Tray 2) Driver Side Plate 12) Bent Arm 3) Driver Pivot Beam 13) 19" Strap 4) Cross Bar 14) Glide Bar 5) Black Bar';
+  const pdf={url:manual,status:'completed',strategy:'S03',content:{text,
+    pdfPages:[{page:2,text}]}};
+  const result=enrichPartEvidenceV3({companyName:'Bike Company',companyUrl:site,
+    products:[product],pages:[productPage,pdf],documentLinks:[{
+      productPageUrl:productUrl,documentUrl:manual,anchorText:'Heavy Duty instructions'}]});
+  assert.equal(result.v3.linkedDocumentsAccepted,1);
+  const names=result.products[0].parts.map(p=>p.name);
+  for(const name of ['hitch bar','passenger side tray','driver side plate','bent arm','driver pivot beam','cross bar','glide bar'])
+    assert.ok(names.includes(name),'missing '+name);
+  assert.ok(result.products[0].parts.every(p=>p.observations.some(e=>e.sourceUrl===manual&&e.quote)));
+  assert.equal(result.products[0].parts.flatMap(p=>p.processClaims).length,0);
+});
