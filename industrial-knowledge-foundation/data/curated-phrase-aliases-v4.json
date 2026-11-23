@@ -1,7 +1,7 @@
 {
   "schema_version": "4.1.0",
   "review_status": "candidate_only",
-  "record_count": 28,
+  "record_count": 32,
   "records": [
     {
       "alias_key": "air conditioners",
@@ -74,11 +74,25 @@
       "canonical_name": "Electrical switchgear"
     },
     {
+      "alias_key": "faucets",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "faucet",
+      "canonical_name": "Faucet valve assembly"
+    },
+    {
       "alias_key": "flow meters",
       "entity_type": "archetype",
       "alias_rule": "curated_semantic_alias_unreviewed",
       "entity_key": "flow_meter",
       "canonical_name": "Industrial flow meter"
+    },
+    {
+      "alias_key": "forklift attachments",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "forklift_attachment",
+      "canonical_name": "Forklift attachment"
     },
     {
       "alias_key": "forklifts",
@@ -100,6 +114,20 @@
       "alias_rule": "curated_semantic_alias_unreviewed",
       "entity_key": "heat_pump",
       "canonical_name": "Industrial heat pump"
+    },
+    {
+      "alias_key": "industrial camera systems",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_camera",
+      "canonical_name": "Industrial machine-vision camera"
+    },
+    {
+      "alias_key": "industrial heat sinks",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_heat_sink",
+      "canonical_name": "Industrial heatsink"
     },
     {
       "alias_key": "industrial ovens",
