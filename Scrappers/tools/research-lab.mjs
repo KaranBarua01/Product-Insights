@@ -10,6 +10,8 @@ import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {getResearchBudget} from './adaptive-research-v2.mjs';
+import {runResearchV3} from './research-v3.mjs';
+import {extractProductIntelligenceV3,enrichPartEvidenceV3} from './evidence-bridge-v3.mjs';
 import {extractProductIntelligence} from './product-intelligence.mjs';
 import {buildPartEvidenceReport} from './part-evidence-verifier.mjs';
 import {loadD1CompanyContext} from './d1-company-context.mjs';
@@ -90,7 +92,10 @@ async function loadOptionalTaxonomy(){
 async function runJob(body){
   const u=validatePublicUrl(body.url);
   const chosen=body.maxPages==null?undefined:Number(body.maxPages);
-  const budget=getResearchBudget({profile:body.researchProfile||'standard',maxPages:chosen});
+  const v3Enabled=process.env.PI_RESEARCH_V3==='1';
+  const budget=v3Enabled&&chosen!=null&&Number.isInteger(chosen)&&chosen>=31&&chosen<=50
+    ? {profile:'evidence_v3',maxPages:chosen}
+    :getResearchBudget({profile:body.researchProfile||'standard',maxPages:chosen});
   const maxPages=budget.maxPages;
   const strategy=body.strategy||'auto',browserMode=body.browser||'headless';
   if(!['auto','S01','S02'].includes(strategy)||!['none','headless','visible'].includes(browserMode))throw Error('Invalid browser or strategy');
@@ -115,7 +120,8 @@ async function runJob(body){
     return fetch(input,init);
   };
   const rawProductEvidence=[];
-  const report=await runResearch({url:u.href,maxPages,profile:budget.profile,
+  const researchRunner=v3Enabled?runResearchV3:runResearch;
+  const report=await researchRunner({url:u.href,maxPages,profile:budget.profile,
     delayMs:350,taxonomyNodes,shouldContinue:()=>!state.cancel,
     prioritizeLinks:aiSettings.configured?async({rootUrl,page,links})=>{
       const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
@@ -133,7 +139,9 @@ async function runJob(body){
     try{enriched.stage2.queue=await enqueueTaxonomyProposals(enriched.stage2.proposals,{baseNodeHash:masterTaxonomy.manifest.nodeHash});}
     catch(e){enriched.stage2.errors.push('Review queue could not be persisted: '+String(e.message||e).slice(0,150));}
   }
-  const deterministic=extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
+  const deterministic=v3Enabled
+    ? extractProductIntelligenceV3({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence})
+    : extractProductIntelligence({companyName:u.hostname,rootUrl:u.href,pages:rawProductEvidence});
   // Source-extracted products are authoritative IDs; local Ollama adds review-only
   // component/material evidence and chooses from read-only taxonomy candidates.
   const ollama=await enrichKnownProductsWithOllama({rootUrl:u.href,rawPages:rawProductEvidence,
@@ -144,9 +152,12 @@ async function runJob(body){
   let d1Record=null;
   try{d1Record=await loadD1CompanyContext({companyUrl:u.href});}
   catch(e){logEvent({status:'d1_context_warning',reason:String(e?.message||e).slice(0,150)});}
-  const partEvidence=buildPartEvidenceReport({
-    companyName:u.hostname,companyUrl:u.href,products:productIntelligence.products,
-    pages:rawProductEvidence,d1Record});
+  const partEvidence=v3Enabled
+    ? enrichPartEvidenceV3({companyName:u.hostname,companyUrl:u.href,
+      products:productIntelligence.products,pages:rawProductEvidence,
+      documentLinks:report.documentLinks||[],d1Record})
+    : buildPartEvidenceReport({companyName:u.hostname,companyUrl:u.href,
+      products:productIntelligence.products,pages:rawProductEvidence,d1Record});
   logEvent({status:'part_evidence',reason:
     partEvidence.counts.partEvidenceCandidates+' source-mentioned parts / '+
     partEvidence.counts.partMaterialCandidates+' part-material links / '+
@@ -201,7 +212,7 @@ async function handler(req,res){
   if(req.method==='GET'&&path==='/app.js')return send(res,await readFile(join(BASE,'research-lab-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/business-app.js')return send(res,await readFile(join(BASE,'research-lab-business-ui.js'),'utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'});
   if(req.method==='GET'&&path==='/api/ollama/status')return json(res,await probeOllama());
-  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',foundationVersion:'pi-code-foundation/v1',adaptiveResearchVersion:'pi-adaptive-research/v2',anyCompanyTesting:true,status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
+  if(req.method==='GET'&&path==='/health')return json(res,{service:'InsideJob Research Lab',foundationVersion:'pi-code-foundation/v1',adaptiveResearchVersion:'pi-adaptive-research/v2',anyCompanyTesting:true,evidenceV3Available:true,evidenceV3Enabled:process.env.PI_RESEARCH_V3==='1',status:'ready',port,access:'loopback_only',taxonomyLoaded:taxonomyNodes.length,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/status')return json(res,{busy:state.busy,phase:state.phase,events:state.events,lastError:state.lastError,hasReport:!!state.report,taxonomyNodes:taxonomyNodes.length,taxonomySource,taxonomyManifest,stage2AiConfigured:aiSettings.configured,localEditionVersion:workingEdition?.version||0});
   if(req.method==='GET'&&path==='/api/working-edition/summary'){
     try{return json(res,publicEditionSummary(await readResearchEdition()));}
