@@ -1,7 +1,7 @@
 -- Product Insights Step 1 (V5) schema snapshot from D1, 2026-11-23.
--- Historical reference and development migration aid; dependency order must be reviewed.
--- Do not run against live D1 without backup and schema diff.
--- No company/product linking; terms are mined in aggregate.
+-- Documentary schema snapshot; dependencies must be migrated in correct order.
+-- Do not run on live D1 without backup/schema diff.
+-- Company-independent product vocabulary normalization.
 
 -- table: pi_kb_archetype_curation_v5
 CREATE TABLE pi_kb_archetype_curation_v5 (
@@ -99,6 +99,17 @@ WHERE p.priority=(
  JOIN pi_kb_resolution_patterns_v5 p2 ON p2.rule_key=h2.rule_key
  WHERE h2.term_id=h.term_id);
 
+-- view: pi_kb_taxonomy_ambiguous_id_matches_v5
+CREATE VIEW pi_kb_taxonomy_ambiguous_id_matches_v5 AS
+SELECT r.term_id,l.normalized_term,l.term_kind,l.occurrence_count,
+       COUNT(DISTINCT m.injcode_id) AS matching_ids,
+       GROUP_CONCAT(DISTINCT m.injcode_id) AS possible_injcodes
+FROM pi_kb_term_resolution_v5 r
+JOIN pi_kb_lexicon_v2 l ON l.term_id=r.term_id
+JOIN pi_kb_phrase_matches_v5 m ON m.term_id=r.term_id
+WHERE r.disposition IN('ambiguous_id_match_review','ambiguous_scope_review','cross_type_mismatch_review')
+GROUP BY r.term_id HAVING matching_ids>1;
+
 -- view: pi_kb_taxonomy_archetypes_v5
 CREATE VIEW pi_kb_taxonomy_archetypes_v5 AS
 SELECT n.entity_id AS injcode_id,n.entity_key,n.canonical_name,
@@ -112,6 +123,40 @@ LEFT JOIN pi_kb_names_v1 cat ON cat.entity_id=ca.parent_id AND cat.entity_type='
 LEFT JOIN pi_kb_hierarchy_edges_v1 tc ON tc.parent_id=n.entity_id AND tc.relation='ARCHETYPE_CONFIGURATION'
 WHERE n.entity_type='archetype'
 GROUP BY n.entity_id;
+
+-- view: pi_kb_taxonomy_integrity_issues_extra_v5
+CREATE VIEW pi_kb_taxonomy_integrity_issues_extra_v5 AS
+SELECT 'curation_alias_missing_INJCODE' AS issue_type,c.phrase AS reference
+FROM pi_kb_archetype_curation_v5 c LEFT JOIN INJCODES n ON n.injcode_id=c.target_injcode_id
+WHERE c.decision='alias_existing' AND n.injcode_id IS NULL
+UNION ALL
+SELECT 'curation_quarantine_with_mapped_target',c.phrase
+FROM pi_kb_archetype_curation_v5 c
+WHERE c.decision='scope_review' AND c.target_injcode_id IS NOT NULL
+UNION ALL
+SELECT 'untriaged_term',CAST(l.term_id AS TEXT)
+FROM pi_kb_lexicon_v2 l LEFT JOIN pi_kb_term_resolution_v5 r ON r.term_id=l.term_id
+WHERE r.term_id IS NULL
+UNION ALL
+SELECT 'unclassified_disposition',CAST(r.term_id AS TEXT)
+FROM pi_kb_term_resolution_v5 r WHERE r.disposition='needs_context';
+
+-- view: pi_kb_taxonomy_integrity_issues_v5
+CREATE VIEW pi_kb_taxonomy_integrity_issues_v5 AS
+SELECT 'unresolved_foreign_ID' AS issue_type,CAST(r.term_id AS TEXT) AS reference
+FROM pi_kb_term_resolution_v5 r LEFT JOIN INJCODES n ON n.injcode_id=r.matched_injcode_id
+WHERE r.disposition LIKE 'canonical_%' AND r.matched_injcode_id IS NOT NULL AND n.injcode_id IS NULL
+UNION ALL
+SELECT 'canonical_archetype_wrong_entity_type',CAST(r.term_id AS TEXT)
+FROM pi_kb_term_resolution_v5 r JOIN INJCODES n ON n.injcode_id=r.matched_injcode_id
+WHERE r.disposition='canonical_archetype' AND n.entity_type<>'archetype'
+UNION ALL
+SELECT 'archetype_missing_category',CAST(t.injcode_id AS TEXT)
+FROM pi_kb_taxonomy_archetypes_v5 t WHERE t.product_category IS NULL
+UNION ALL
+SELECT 'curation_new_missing_INJCODE',c.phrase
+FROM pi_kb_archetype_curation_v5 c LEFT JOIN INJCODES n ON n.injcode_id=c.target_injcode_id
+WHERE c.decision='new_archetype' AND n.injcode_id IS NULL;
 
 -- view: pi_kb_taxonomy_review_backlog_v5
 CREATE VIEW pi_kb_taxonomy_review_backlog_v5 AS
@@ -128,6 +173,29 @@ FROM pi_kb_term_resolution_v5 r
 JOIN pi_kb_lexicon_v2 l ON l.term_id=r.term_id
 LEFT JOIN INJCODES cat ON cat.injcode_id=r.suggested_category_id
 WHERE r.review_state='pending';
+
+-- view: pi_kb_taxonomy_review_summary_v5
+CREATE VIEW pi_kb_taxonomy_review_summary_v5 AS
+SELECT r.disposition,r.review_state,COUNT(*) AS phrases,
+       SUM(l.occurrence_count) AS occurrences
+FROM pi_kb_term_resolution_v5 r
+JOIN pi_kb_lexicon_v2 l ON l.term_id=r.term_id
+WHERE l.term_kind='product_phrase'
+GROUP BY r.disposition,r.review_state;
+
+-- view: pi_kb_taxonomy_step1_gate_v5
+CREATE VIEW pi_kb_taxonomy_step1_gate_v5 AS
+SELECT
+ CASE
+ WHEN (SELECT COUNT(*) FROM pi_kb_taxonomy_integrity_issues_v5)
+     +(SELECT COUNT(*) FROM pi_kb_taxonomy_integrity_issues_extra_v5)=0
+ THEN 'PASS' ELSE 'FAIL' END AS structural_gate,
+ CASE
+ WHEN (SELECT COUNT(*) FROM pi_kb_taxonomy_review_backlog_v5 WHERE term_kind='product_phrase')=0
+ THEN 'COMPLETE' ELSE 'REVIEW_PENDING' END AS semantic_completion_gate,
+ (SELECT COUNT(*) FROM pi_kb_taxonomy_integrity_issues_v5)
+     +(SELECT COUNT(*) FROM pi_kb_taxonomy_integrity_issues_extra_v5) AS structural_issue_count,
+ (SELECT COUNT(*) FROM pi_kb_taxonomy_review_backlog_v5 WHERE term_kind='product_phrase') AS product_phrase_review_backlog;
 
 -- view: pi_kb_taxonomy_step1_scorecard_v5
 CREATE VIEW pi_kb_taxonomy_step1_scorecard_v5 AS
