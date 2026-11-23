@@ -77,7 +77,8 @@ The current maps are plausible candidate manufacturing possibilities, subject to
 - `data/routes-v4.1-curated.json` — 219 hand-reasoned new candidate paths
 - `data/routes-v4.1-alternatives.json` — 315 material-route alternatives generated from explicit conditions
 - `data/material-route-rules-v4.json` — 18 conditional engineering rules
-- `data/curated-phrase-aliases-v4.json` — 28 candidate aliases (not blindly accepted as engineering facts)
+- `data/curated-phrase-aliases-v4.json` — 32 candidate aliases (not blindly accepted as engineering facts)
+- `tools/build-rules-and-aliases-v4.mjs` — compile V4 material-rule and alias fixtures to SQL.
 - `tools/build-all-seed-sql-v4.mjs` — compile eight versioned packs into deterministic, idempotent seed SQL with validation.
 - `sql/corpus-triage-v4.sql`, `sql/category-suggestions-v4.sql` — deterministic lexical processing.
 - `sql/sync-normalized.sql`, `sql/INJCODES_and_Tree_of_Manufacturing.sql` — synchronize both ID mapping layers.
