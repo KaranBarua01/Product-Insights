@@ -13,6 +13,7 @@ export interface ExtractedContent {
   headings?: string[];
   links?: { url: string; label: string }[];
   documents?: string[];
+  tables?: { rows: string[][] }[]; // Table row boundaries retained for technical evidence
   jsonLd?: unknown[];
   appState?: unknown[];
   pdfPages?: { page: number; text: string }[];
