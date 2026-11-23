@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runResearchV3,v3SafeUrl,v3RankLink,V3_MAX_PAGES} from '../tools/research-v3.mjs';
-import {enrichPartEvidenceV3,linkedDocumentForProduct,extractProductIntelligenceV3,v3FamilyPageCandidate} from '../tools/evidence-bridge-v3.mjs';
+import {enrichPartEvidenceV3,linkedDocumentForProduct,extractProductIntelligenceV3,prioritizeEvidenceProducts,v3FamilyPageCandidate} from '../tools/evidence-bridge-v3.mjs';
 const root='https://industrial.example.com/',detail=root+'product/pump-100',doc=root+'technical/pump-100-manual.pdf';
 function companyPage(url,content={}){return {sourceUrl:url,url,status:'completed',strategy:url.endsWith('.pdf')?'S03':'S01',
   content:{title:'Industrial',headings:[],text:'Published company information.',links:[],...content},evidence:[]};}
@@ -172,7 +172,7 @@ test('numbered, two-column assembly-manual parts list creates distinct, quoted p
   const productPage={url:productUrl,status:'completed',strategy:'S01',
     content:{headings:['Heavy Duty'],title:'Heavy Duty',text:'Heavy Duty hitch bicycle rack.',
       links:[{url:manual,label:'Heavy Duty instructions'}]}};
-  const text='HEAVY DUTY Parts List: 1) Hitch Bar 11) Passenger Side Tray 2) Driver Side Plate 12) Bent Arm 3) Driver Pivot Beam 13) 19" Strap 4) Cross Bar 14) Glide Bar 5) Black Bar';
+  const text='HEAVY DUTY Parts List: 1) Hitch Bar 11) Passenger Side Tray 2) Driver Side Plate 12) Bent Arm 3) Driver Pivot Beam 13) 19” Strap 4) Cross Bar 14) Glide Bar 5) Black Bar 9) Passenger Pivot Beam 19) Driver Side Tray 10) Tap Plate In the Box: (2) Security Wrench';
   const pdf={url:manual,status:'completed',strategy:'S03',content:{text,
     pdfPages:[{page:2,text}]}};
   const result=enrichPartEvidenceV3({companyName:'Bike Company',companyUrl:site,
@@ -180,8 +180,26 @@ test('numbered, two-column assembly-manual parts list creates distinct, quoted p
       productPageUrl:productUrl,documentUrl:manual,anchorText:'Heavy Duty instructions'}]});
   assert.equal(result.v3.linkedDocumentsAccepted,1);
   const names=result.products[0].parts.map(p=>p.name);
-  for(const name of ['hitch bar','passenger side tray','driver side plate','bent arm','driver pivot beam','cross bar','glide bar'])
+  for(const name of ['hitch bar','passenger side tray','driver side plate','bent arm','driver pivot beam','cross bar','glide bar','tap plate','19” strap'])
     assert.ok(names.includes(name),'missing '+name);
   assert.ok(result.products[0].parts.every(p=>p.observations.some(e=>e.sourceUrl===manual&&e.quote)));
   assert.equal(result.products[0].parts.flatMap(p=>p.processClaims).length,0);
+});
+
+test('120-record output ceiling cannot erase documented family evidence amid SKU flood',()=>{
+  const familyUrl=root+'energy-chain/special-solutions/e-loop';
+  const family={id:'source-family-eloop',sourceUrl:familyUrl,name:'e-loop cable carrier',
+    familyScope:'product_family_not_individual_variant'};
+  const variants=Array.from({length:250},(_,i)=>({id:'sku-'+i,sku:'SKU-'+i,
+    sourceUrl:root+'product/catalog-'+Math.floor(i/12),name:'SKU variant '+i}));
+  const result=prioritizeEvidenceProducts({sourceFamilies:[family],extractedProducts:variants});
+  assert.equal(result.products.length,120);
+  assert.equal(result.products[0].sourceUrl,familyUrl);
+  assert.equal(result.familyAdded,1);
+  assert.ok(result.droppedSkuVariantCandidates>0);
+  assert.ok(result.skippedRecordCeiling>0);
+  const perSource=new Map();
+  for(const p of result.products.filter(x=>x.id.startsWith('sku-')))
+    perSource.set(p.sourceUrl,(perSource.get(p.sourceUrl)||0)+1);
+  assert.ok([...perSource.values()].every(n=>n<=8));
 });

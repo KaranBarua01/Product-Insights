@@ -119,8 +119,9 @@ function numberedPartsList(doc){
     const raw=String(page.text||'').slice(0,18000).replace(/\s+/g,' ').trim();
     const heading=/\b(?:parts?|components?)\s+list\s*[:\-]?\s*/i.exec(raw);
     if(!heading)continue;
-    const section=raw.slice(heading.index+heading[0].length,heading.index+heading[0].length+2300);
-    const expression=/(?:^|\s)(\d{1,2})\s*[).]\s*([\p{L}\d][\p{L}\d'’"\/\-\s]{2,72}?)(?=\s+\d{1,2}\s*[).]|$)/gu;
+    const section=raw.slice(heading.index+heading[0].length,heading.index+heading[0].length+2300)
+      .split(/\b(?:In\s+the\s+Box|Product\s+Notes|Step\s+1|Installation\s+Instructions)\s*:/i)[0];
+    const expression=/(?:^|\s)(\d{1,2})\s*[).]\s*([\p{L}\d][\p{L}\d'’"“”\/\-\s]{2,72}?)(?=\s+\d{1,2}\s*[).]|$)/gu;
     for(const m of section.matchAll(expression)){
       const part=norm(m[2]).replace(/\s*[,:;.]$/,'').toLowerCase();
       if(part.length<4||part.length>65||/^(?:warning|install|step|tools?|instructions?|pages?|notes?|product|figure|diagram)\b/i.test(part)||seen.has(part))continue;
@@ -267,25 +268,46 @@ export function v3FamilyPageCandidate(page,rootUrl){
     familyScope:'product_family_not_individual_variant',
     status:'source_evidenced_family_candidate_requires_review'};
 }
+/** Evidence-first selection independent of crawling and SKU parsing. Source-backed
+ * family pages cannot be erased by the 120-record output limit or a single
+ * variant-heavy source. No model/SKU is treated as verified by this ordering. */
+export function prioritizeEvidenceProducts({sourceFamilies=[],extractedProducts=[],
+  maxProducts=120,maxVariantsPerSource=8}={}){
+  const prods=new Map(),sourceCounts=new Map(),identities=new Set();
+  let familyAdded=0,droppedSkuVariantCandidates=0,skippedRecordCeiling=0;
+  for(const p of sourceFamilies){
+    if(!p?.id||!canon(p.sourceUrl))continue;
+    const identity=canon(p.sourceUrl)+'|'+key(p.name);
+    if(identities.has(identity))continue;
+    if(prods.size>=maxProducts){skippedRecordCeiling++;continue;}
+    identities.add(identity);prods.set(p.id,p);familyAdded++;
+  }
+  for(const p of extractedProducts){
+    if(!p?.id||!canon(p.sourceUrl))continue;
+    const identity=canon(p.sourceUrl)+'|'+key(p.name);
+    if(prods.has(p.id)||identities.has(identity))continue;
+    const source=canon(p.sourceUrl),num=sourceCounts.get(source)||0;
+    if(num>=maxVariantsPerSource){droppedSkuVariantCandidates++;continue;}
+    if(prods.size>=maxProducts){skippedRecordCeiling++;continue;}
+    identities.add(identity);prods.set(p.id,p);sourceCounts.set(source,num+1);
+  }
+  return {products:[...prods.values()],familyAdded,droppedSkuVariantCandidates,skippedRecordCeiling};
+}
 /** Keep the frozen V2 extractor unchanged; split 50-page V3 runs into chunks. */
 export function extractProductIntelligenceV3({companyName,rootUrl,pages=[]}={}){
   if(!Array.isArray(pages)||pages.length>50)throw Error('V3 supports at most 50 source pages');
   const results=[];
   for(let i=0;i<pages.length;i+=30)results.push(extractProductIntelligence({companyName,rootUrl,pages:pages.slice(i,i+30)}));
-  const base=results[0],prods=new Map(),cats=new Map(),leads=new Map();
+  const base=results[0],cats=new Map(),leads=new Map();
+  const familyCandidates=pages.map(p=>v3FamilyPageCandidate(p,rootUrl)).filter(Boolean);
+  const preferred=prioritizeEvidenceProducts({sourceFamilies:familyCandidates,
+    extractedProducts:results.flatMap(r=>r.products),maxProducts:120,maxVariantsPerSource:8});
+  const {familyAdded,droppedSkuVariantCandidates,skippedRecordCeiling}=preferred;
   for(const r of results){
-    for(const p of r.products)if(!prods.has(p.id))prods.set(p.id,p);
     for(const c of r.categories)if(!cats.has(c.id))cats.set(c.id,c);
     for(const l of r.productLeads)if(!leads.has(l.sourceUrl))leads.set(l.sourceUrl,l);
   }
-  const familyCandidates=pages.map(p=>v3FamilyPageCandidate(p,rootUrl)).filter(Boolean);
-  let familyAdded=0;
-  for(const c of familyCandidates){
-    if([...prods.values()].some(p=>canon(p.sourceUrl)===canon(c.sourceUrl)&&key(p.name)===key(c.name)))continue;
-    if(prods.size>=120)break;
-    prods.set(c.id,c);familyAdded++;
-  }
-  const products=[...prods.values()].slice(0,120),categories=[...cats.values()].slice(0,60);
+  const products=preferred.products,categories=[...cats.values()].slice(0,60);
   const families=new Map();
   for(const p of products){const k=productFamilyKey(p.name);if(!families.has(k))families.set(k,{name:p.name,productSkuCandidates:0,
     reviewStatus:'unreviewed_name_grouping_not_approved_product_family'});families.get(k).productSkuCandidates++;}
@@ -298,6 +320,7 @@ export function extractProductIntelligenceV3({companyName,rootUrl,pages=[]}={}){
       categoryPages:results.reduce((n,x)=>n+x.coverage.categoryPages,0),
       products:products.length,categories:categories.length,
       newSourceFamilyPageCandidates:familyAdded,
+      droppedSkuVariantCandidates,skippedRecordCeiling,
       skuNamedProductCandidates:products.filter(x=>x.sku).length,
       productsWithSpecifications:products.filter(x=>x.specifications?.length).length,
       productsWithComponents:products.filter(x=>x.components?.length).length,
