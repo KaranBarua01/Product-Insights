@@ -1,0 +1,64 @@
+name: PI V3 Generalization Holdout - 10 Diverse Websites
+on:
+  push:
+    branches: [experiment/v3-ten-site-generalization-20261123]
+    paths: ['.github/workflows/v3-ten-site-generalization.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate isolated benchmark and core V3
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          node --check tools/v3-ten-site-generalization.mjs
+          node --test tests/research-v3.test.mjs tests/part-evidence-verifier.test.mjs tests/v3-technical-tables.test.mjs
+  ten-sites:
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        site: [hammond, boschrexroth, sparkfun, prusa, smc, automationdirect, adafruit, genomics, flowserve, ricelake]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install current PI engine
+        working-directory: Scrappers
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Install Chromium for browser fallback
+        working-directory: Scrappers
+        run: npx playwright install --with-deps chromium
+      - name: V2 versus V3 source-backed acquisition comparison
+        working-directory: Scrappers
+        timeout-minutes: 28
+        env:
+          PI_V3_SITE: ${{ matrix.site }}
+          PI_V3_PAGE_LIMIT: '15'
+        run: node tools/v3-ten-site-generalization.mjs
+      - name: Upload raw outputs and access failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi-v3-generalization-${{ matrix.site }}
+          path: Scrappers/v3-generalization-holdout-results/
+          if-no-files-found: warn
+          retention-days: 14
