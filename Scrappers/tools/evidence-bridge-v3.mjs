@@ -17,7 +17,7 @@ function canon(url){try{const u=new URL(url);if(!['http:','https:'].includes(u.p
   return u.href.replace(/\/$/,'');}catch{return null;}}
 const MATERIALS=[
  ['stainless steel',/\bstainless\s+steel\b/i],['carbon steel',/\bcarbon\s+steel\b/i],
- ['cast iron',/\bcast\s+iron\b/i],['polyurethane',/\bpolyurethane\b/i],
+ ['cast iron',/\bcast\s+iron\b/i],['polyurethane',/\b(?:polyurethane|PU)\b/i],
  ['polypropylene',/\bpolypropylene\b/i],['polycarbonate',/\bpolycarbonate\b/i],
  ['aluminum',/\balumin(?:um|ium)\b/i],['titanium',/\btitanium\b/i],
  ['copper',/\bcopper\b/i],['brass',/\bbrass\b/i],['steel',/\bsteel\b/i],
@@ -37,7 +37,7 @@ const PROCESSES=[
  ['Stamping',/\bstamp(?:ed|ing)\b/i],
  ['3D printing',/\b3D[- ]print(?:ed|ing)?\b/i]
 ];
-const COMPONENTS=/(?:\b(?:inner\s+(?:pieces|parts|elements|components)|outer\s+protectors?|tension\s+ropes?|mounting\s+brackets?|hitch\s+bars?|rack\s+arms?|bike\s+trays?|locking\s+mechanisms?|impellers?|shafts?|pump\s+heads?|bearing\s+housings?|housings?|diffusers?|rotors?|stators?|bearings?|bushings?|seals?|gaskets?|o[- ]rings?|motors?|gears?|pulleys?|valves?|sensors?|control\s+boards?|circuit\s+boards?|connectors?|cables?|brackets?|chambers?|rails?|frames?|fasteners?|sleeves?|cartridges?|filters?|guide\s+bars?)\b)/gi;
+const COMPONENTS=/(?:\b(?:inner\s+(?:body|pieces|parts|elements|components)|outer\s+protectors?|(?:tension|hauling|plastic\s+fiber)\s+ropes?|mounting\s+brackets?|hitch\s+bars?|rack\s+arms?|bike\s+trays?|locking\s+mechanisms?|impellers?|shafts?|pump\s+heads?|bearing\s+housings?|housings?|diffusers?|rotors?|stators?|bearings?|bushings?|seals?|gaskets?|o[- ]rings?|motors?|gears?|pulleys?|valves?|sensors?|control\s+boards?|circuit\s+boards?|connectors?|cables?|brackets?|chambers?|rails?|frames?|fasteners?|sleeves?|cartridges?|filters?|guide\s+bars?|chain\s+links?)\b)/gi;
 const CAUTION=/\b(?:could|may|might|potentially|typically|normally|often|generally|possibly|not included|sold separately|compatible with|optional|example|alternatively|hypothetical)\b/i;
 const PART_CONTEXT=/\b(?:assembly|component|construction|includes?|consists?|contains?|comprises?|material|parts?|description|made\s+of|made\s+from|manufactured|machined|molded|moulded|cast|extruded|welded|impeller|shaft|housing)\b/i;
 const PROCESS_CONTEXT=/\b(?:made|manufactured|fabricated|produced|process|molded|moulded|machined|cast|extruded|welded|stamped|laser[- ]cut|forged|printed)\b/i;
@@ -68,6 +68,8 @@ export function linkedDocumentForProduct({product,productPage,documentPage,docum
   const explicitSku=sku.length>=4&&tokenMatch(text+' '+title,sku);
   const named=tokenMatch(text+' '+title,productName);
   if(!named&&!explicitSku)return false;
+  if(sku&&!explicitSku&&products.some(p=>p!==product&&
+       canon(p.sourceUrl)===pu&&p.sku&&p.sku!==sku))return false;
   // If the same document matches another sampled product title, it is a
   // multi-model document. Without an explicit SKU anchor, abstain.
   if(!explicitSku&&products.some(p=>p!==product&&p.sourceUrl!==product.sourceUrl&&
@@ -76,15 +78,28 @@ export function linkedDocumentForProduct({product,productPage,documentPage,docum
 }
 function getBlocks(doc){
   const out=[];
+  // PDF text can have no line breaks. Preserve verbatim, bounded windows
+  // around technical terms throughout the document instead of its first 900 chars.
+  const include=(input,locator)=>{
+    const line=String(input||'').trim();if(line.length<12)return;
+    if(line.length<=900){out.push({line,locator});return;}
+    const technical=/\b(?:impellers?|shafts?|housings?|bearings?|bushings?|seals?|gaskets?|brackets?|inner pieces?|outer protectors?|ropes?|motors?|material|molded|moulded|machined|steel|aluminum|polyurethane|injection molding|CNC machining)\b/gi;
+    let count=0;
+    for(const m of line.matchAll(technical)){
+      const left=Math.max(0,m.index-100),right=Math.min(line.length,m.index+240);
+      const excerpt=line.slice(left,right).trim();
+      if(excerpt.length>=12)out.push({line:excerpt,locator:locator+' (technical window)'});
+      if(++count>=90)break;
+    }
+  };
   for(const p of (doc.content?.pdfPages||[]).slice(0,15)){
     const raw=String(p.text||'').slice(0,18000);
-    const parts=raw.split(/(?:\n|(?<=[.!?])\s+|\s*;\s*)/);
-    for(const line of parts)if(line.trim().length>=12)out.push({line:line.trim().slice(0,900),locator:'PDF page '+p.page});
+    for(const line of raw.split(/(?:\n|(?<=[.!?])\s+|\s*;\s*)/))include(line,'PDF page '+p.page);
   }
   if(!out.length){
     const text=String(doc.content?.text||'').slice(0,90000);
     for(const line of text.split(/(?:\n|(?<=[.!?])\s+|\s*;\s*)/))
-      if(line.trim().length>=12)out.push({line:line.trim().slice(0,900),locator:'technical HTML text'});
+      include(line,'technical HTML text');
   }
   for(const t of (doc.content?.tables||[]).slice(0,16)){
     for(const row of (t.rows||[]).slice(0,40)){
@@ -192,10 +207,41 @@ export function enrichPartEvidenceV3({companyName,companyUrl,products=[],pages=[
   base.limitations.push('Document links are never evidence without a direct product-page link and document-side model match.');
   return base;
 }
+/** Narrow source-only detection for technical product-family pages whose URL
+ * is not a /product route. Requires a model-like slug, matching H1 and
+ * multiple technical facts. Does NOT confirm any SKU or manufacturer role. */
+export function v3FamilyPageCandidate(page,rootUrl){
+  if(!page||!['completed','partial'].includes(page.status))return null;
+  const url=page.url||page.sourceUrl;
+  if(!same(url,rootUrl))return null;
+  let path;try{path=new URL(url).pathname.toLowerCase();}catch{return null;}
+  if(/(?:^|\/)(?:product-?category|categories|collections|about|news|blog|services?|applications?|industries|contact|support|shop|materials?|custom-parts|product-families)(?:\/|$)/i.test(path))return null;
+  const seg=path.split('/').filter(Boolean),slug=seg.at(-1)||'';
+  if(seg.length<2||slug.length<5||slug.length>70||!/[a-z]/.test(slug))return null;
+  const content=page.content||{},h1=norm(content.headings?.[0]);
+  if(h1.length<8||h1.length>140||/^(?:products?|all products|catalog|overview|parts?|services?|solutions?|materials?|technical|downloads|specifications)$/i.test(h1))return null;
+  const slugWords=slug.split(/[-_.]+/).filter(x=>x.length>=4&& !/^(?:product|system|solution|information|complete|special|overview|standard)$/.test(x));
+  if(!slugWords.length||!slugWords.some(w=>key(h1).split(' ').includes(w)))return null;
+  const text=String(content.text||'').slice(0,70000);
+  const signals=[/\b(?:construction|constructed|comprises|consists|assembled|component|chain\s+link)\b/i,
+    /\b(?:material|steel|polyurethane|plastic\s+fiber|aluminum|machined|injection\s+molded)\b/i,
+    /\b(?:dimensions|width|length|diameter|load|weight|part no\.?|specification)\b/i,
+    /\b(?:impeller|shaft|housing|bracket|inner body|outer protector|hauling rope)\b/i]
+    .filter(re=>re.test(text)).length;
+  if(signals<3)return null;
+  if(!tokenMatch(text,h1))return null;
+  return {id:'v3-family:'+hash(url+'|'+key(h1)),name:h1,sku:null,sourceUrl:url,
+    extractionMethod:'v3_source_technical_product_family',kind:'product_family',
+    categoryIds:[],components:[],materials:[],specifications:[],
+    evidence:[{sourceUrl:url,quote:h1,locator:'primary product family heading',method:'source_heading',
+      reviewStatus:'requires_human_verification'}],reviewStatus:'candidate_requires_review',
+    companyProductRole:'manufactured_vs_sold_not_determined',
+    familyScope:'product_family_not_individual_variant',
+    status:'source_evidenced_family_candidate_requires_review'};
+}
 /** Keep the frozen V2 extractor unchanged; split 50-page V3 runs into chunks. */
 export function extractProductIntelligenceV3({companyName,rootUrl,pages=[]}={}){
   if(!Array.isArray(pages)||pages.length>50)throw Error('V3 supports at most 50 source pages');
-  if(pages.length<=30)return extractProductIntelligence({companyName,rootUrl,pages});
   const results=[];
   for(let i=0;i<pages.length;i+=30)results.push(extractProductIntelligence({companyName,rootUrl,pages:pages.slice(i,i+30)}));
   const base=results[0],prods=new Map(),cats=new Map(),leads=new Map();
@@ -203,6 +249,13 @@ export function extractProductIntelligenceV3({companyName,rootUrl,pages=[]}={}){
     for(const p of r.products)if(!prods.has(p.id))prods.set(p.id,p);
     for(const c of r.categories)if(!cats.has(c.id))cats.set(c.id,c);
     for(const l of r.productLeads)if(!leads.has(l.sourceUrl))leads.set(l.sourceUrl,l);
+  }
+  const familyCandidates=pages.map(p=>v3FamilyPageCandidate(p,rootUrl)).filter(Boolean);
+  let familyAdded=0;
+  for(const c of familyCandidates){
+    if([...prods.values()].some(p=>canon(p.sourceUrl)===canon(c.sourceUrl)&&key(p.name)===key(c.name)))continue;
+    if(prods.size>=120)break;
+    prods.set(c.id,c);familyAdded++;
   }
   const products=[...prods.values()].slice(0,120),categories=[...cats.values()].slice(0,60);
   const families=new Map();
@@ -216,6 +269,7 @@ export function extractProductIntelligenceV3({companyName,rootUrl,pages=[]}={}){
       productPages:results.reduce((n,x)=>n+x.coverage.productPages,0),
       categoryPages:results.reduce((n,x)=>n+x.coverage.categoryPages,0),
       products:products.length,categories:categories.length,
+      newSourceFamilyPageCandidates:familyAdded,
       skuNamedProductCandidates:products.filter(x=>x.sku).length,
       productsWithSpecifications:products.filter(x=>x.specifications?.length).length,
       productsWithComponents:products.filter(x=>x.components?.length).length,

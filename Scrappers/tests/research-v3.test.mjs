@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runResearchV3,v3SafeUrl,v3RankLink,V3_MAX_PAGES} from '../tools/research-v3.mjs';
-import {enrichPartEvidenceV3,linkedDocumentForProduct,extractProductIntelligenceV3} from '../tools/evidence-bridge-v3.mjs';
+import {enrichPartEvidenceV3,linkedDocumentForProduct,extractProductIntelligenceV3,v3FamilyPageCandidate} from '../tools/evidence-bridge-v3.mjs';
 const root='https://industrial.example.com/',detail=root+'product/pump-100',doc=root+'technical/pump-100-manual.pdf';
 function companyPage(url,content={}){return {sourceUrl:url,url,status:'completed',strategy:url.endsWith('.pdf')?'S03':'S01',
   content:{title:'Industrial',headings:[],text:'Published company information.',links:[],...content},evidence:[]};}
@@ -17,6 +17,26 @@ function execute(opts={}){return enrichPartEvidenceV3({companyName:'Industrial',
 test('V3 limits 1-50 pages and refuses invalid budgets',async()=>{
   await assert.rejects(runResearchV3({url:root,maxPages:51,extractPage:async()=>companyPage(root)}),/1-50/);
   assert.equal(V3_MAX_PAGES,50);
+});
+test('V3 does not mistake material categories for technical documents',()=>{
+ const unrelated=v3RankLink({url:root+'3d-printing-material/3d-printer-materials',label:'3D printer materials'},'industrial.example.com',
+   {parentKind:'company',productCount:0});
+ assert.ok(!unrelated||unrelated.score<95);
+ const docRank=v3RankLink({url:root+'technical/pump-100-manual.pdf',label:'Pump 100 manual'},'industrial.example.com',
+   {parentKind:'product',productCount:1});
+ assert.ok(docRank.score>=200);
+});
+test('replacement parts catalogs do not displace main finished-product catalogs',()=>{
+ const primary=v3RankLink({url:root+'product-category/products/all',label:'All products'},'industrial.example.com',
+   {parentKind:'company',productCount:0});
+ const replacement=v3RankLink({url:root+'product-category/parts/replacement-parts',label:'Replacement parts'},'industrial.example.com',
+   {parentKind:'company',productCount:0});
+ assert.ok(primary.score>replacement.score);
+});
+test('a trailing slash or tracking fragment never consumes a second crawl slot',()=>{
+ const host='industrial.example.com';
+ assert.equal(v3SafeUrl(root+'product/pump-100/',host),v3SafeUrl(root+'product/pump-100',host));
+ assert.equal(v3SafeUrl(root+'product/pump-100?utm_source=mail#top',host),v3SafeUrl(root+'product/pump-100',host));
 });
 test('cross-host URLs and private-data links cannot enter frontier',()=>{
   assert.equal(v3SafeUrl('https://other.example.com/product/part','industrial.example.com'),null);
@@ -50,6 +70,22 @@ test('source documents cannot describe unrelated product variants without SKU di
  assert.equal(linkedDocumentForProduct({product,productPage,documentPage:multi,
    documentLink:{productPageUrl:detail,documentUrl:doc},products:[product,p2]}),false);
 });
+test('PDFs with no line breaks retain late document component and process evidence',()=>{
+ const lead='Pump 100 service manual. '+'General product overview and warranty text. '.repeat(55);
+ const tail=' Impeller material: stainless steel. Shaft is CNC machined.';
+ const long={...document,content:{text:lead+tail,pdfPages:[{page:2,text:lead+tail}]}};
+ const r=execute({pages:[productPage,long]});
+ assert.ok(r.products[0].parts.some(p=>/impeller/.test(p.name)&&
+   p.materialClaims.some(m=>m.name==='stainless steel'&&m.evidence.locator.includes('PDF page 2'))));
+ assert.ok(r.products[0].parts.some(p=>/shaft/.test(p.name)&&
+   p.processClaims.some(m=>m.name==='CNC machining')));
+});
+test('a shared source-page manual without a specific SKU cannot be copied to sibling variants',()=>{
+ const p1={...product,sku:'PUMP-100-A'};
+ const p2={...product,sku:'PUMP-100-B'};
+ assert.equal(linkedDocumentForProduct({product:p1,productPage,documentPage:document,
+  documentLink:{productPageUrl:detail,documentUrl:doc},products:[p1,p2]}),false);
+});
 test('linked PDF adds source-attributed part/material/process candidates but no in-house assertions',()=>{
  const r=execute();
  assert.equal(r.schemaVersion,'pi-part-evidence/v3');
@@ -64,6 +100,30 @@ test('linked PDF adds source-attributed part/material/process candidates but no 
  assert.equal(impeller.processClaims.some(x=>x.name==='CNC machining'),false);
  assert.ok(p.parts.every(x=>x.isCompanyCapability===false&&x.isVerifiedBom===false));
  assert.equal(r.d1,null);
+});
+test('industrial product-family technical page yields new product->part manufacturing evidence without SKU inheritance',()=>{
+ const eurl=root+'cable-carriers/special-solutions/e-loop';
+ const text='e-loop modular top drive cable carrier. The inner body consists of four injection molded parts. '+
+  'Outer protectors made of impact-absorbing PU protect the cables. '+
+  'The chain links attach to the high strength hauling rope. The hauling rope is made of plastic fiber. '+
+  'The mounting brackets are stable steel mounting brackets. Rated tensile load 50 kN.';
+ const page=companyPage(eurl,{headings:['e-loop modular top drive cable carrier'],
+   title:'e-loop modular top drive cable carrier',text});
+ const family=v3FamilyPageCandidate(page,root);
+ assert.ok(family);
+ assert.equal(family.familyScope,'product_family_not_individual_variant');
+ const catalog=extractProductIntelligenceV3({companyName:'igus',rootUrl:root,pages:[page]});
+ assert.equal(catalog.products.length,1);
+ const facts=enrichPartEvidenceV3({companyName:'igus',companyUrl:root,
+    products:catalog.products,pages:[page]});
+ assert.ok(facts.counts.partEvidenceCandidates>=3);
+ const parts=facts.products[0].parts;
+ assert.ok(parts.some(p=>/inner body/.test(p.name)&&p.processClaims.some(c=>c.name==='Injection molding')));
+ assert.ok(parts.some(p=>/outer protectors?/i.test(p.name)&&p.materialClaims.some(c=>c.name==='polyurethane')));
+ assert.ok(parts.some(p=>/mounting brackets?/.test(p.name)&&p.materialClaims.some(c=>c.name==='steel')));
+ assert.equal(parts.some(p=>/cables?/.test(p.name)&&p.materialClaims.some(c=>c.name==='polyurethane')),false);
+ assert.equal(facts.products[0].name,'e-loop modular top drive cable carrier');
+ assert.ok(parts.every(p=>p.isVerifiedBom===false));
 });
 test('product-specific specification tables create correctly sourced material candidates',()=>{
  const page={...productPage,content:{...productPage.content,

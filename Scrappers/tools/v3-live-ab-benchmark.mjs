@@ -21,11 +21,13 @@ const key=process.env.PI_V3_SITE||'igus';
 if(!Object.hasOwn(companies,key))throw Error('Unknown test company');
 const site=companies[key],u=validatePublicUrl(site.url);
 const limit=Number(process.env.PI_V3_PAGE_LIMIT||15);
-if(!Number.isInteger(limit)||limit<2||limit>30)throw Error('Fair V2/V3 comparison max pages must be 2-30');
+if(!Number.isInteger(limit)||limit<2||limit>50)throw Error('Page limit must be 2-50');
+const fair=limit<=30;
 const output=resolve('v3-live-benchmark-results');
 const summary={schemaVersion:'pi-research-v3-live-ab/1',site,limit,
   runner:'github-hosted-ubuntu',startedAt:new Date().toISOString(),
-  controlledVariables:'same company, 15/30 page ceiling, same PI source extraction with browser fallback',
+  controlledVariables:fair?'same company, same page ceiling, same PI extractor with browser fallback':
+    'V3-only 50-page exploratory run, NOT a fair V2/V3 comparison',
   caveats:['Order effects and site volatility are not randomized.',
     'Candidate counts do not prove precision or true part recall.',
     'Blocked sites are access failures, not negative manufacturing evidence.',
@@ -68,6 +70,10 @@ async function run(which){
     productMaterialMentions:detected.coverage?.materials||0,
     productComponentMentions:detected.coverage?.components||0,
     sourceSupportedPartCandidates:partEvidence.counts.partEvidenceCandidates,
+    distinctSourceParts:new Set(partEvidence.products.flatMap(p=>p.parts.map(part=>
+      p.sourceUrl.toLowerCase()+'|'+part.name.toLowerCase()))).size,
+    distinctFamilyParts:new Set(partEvidence.products.flatMap(p=>p.parts.map(part=>
+      p.name.replace(/\s*\([^)]{4,}\)\s*$/,'').toLowerCase()+'|'+part.name.toLowerCase()))).size,
     sourceSupportedPartMaterialClaims:partEvidence.counts.partMaterialCandidates,
     sourceSupportedPartProcessClaims:partEvidence.counts.partProcessCandidates,
     linkedTechnicalDocumentsAccepted:partEvidence.v3?.linkedDocumentsAccepted||0,
@@ -88,7 +94,7 @@ async function run(which){
     errors:research.warnings?.slice(0,12)};
 }
 await assertPublicDns(u.hostname);
-for(const approach of ['v2','v3']){
+for(const approach of fair?['v2','v3']:['v3']){
   console.log('BEGIN '+site.name+' '+approach);
   try{summary.approaches[approach]=await run(approach)}
   catch(e){summary.approaches[approach]={executionStatus:'failed',reason:clip(e?.stack||e,650)};}

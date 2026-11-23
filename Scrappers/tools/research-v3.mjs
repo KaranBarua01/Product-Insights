@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 
 export const V3_MAX_PAGES=50;
 const EXCLUDE=/(?:^|\/)(?:login|signin|account|cart|checkout|privacy|terms|cookies|jobs|careers|press|blog|news|events|search|contact|request-quote|support|investors)(?:\/|$)|\.(?:png|jpe?g|gif|svg|webp|zip|mp4|css|js)(?:$|\?)/i;
-const TECH=/\b(?:datasheet|data[- ]sheet|manual|installation|technical|specification|documentation|pdf|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|assembly[- ]instructions?|engineering[- ]drawing|material|bom|bill[- ]of[- ]materials)\b/i;
+const TECH=/\b(?:datasheet|data[- ]sheet|manual|installation|technical|specification|documentation|pdf|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|assembly[- ]instructions?|engineering[- ]drawing|bom|bill[- ]of[- ]materials)\b/i;
 const STRONG_TECH=/\b(?:datasheet|data[- ]sheet|manual|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|bill[- ]of[- ]materials|engineering[- ]drawing)\b/i;
 const PRODUCT=/\b(?:product|products|model|series|sku|item|catalog|pumps?|bearings?|bushings?|enclosures?|racks?|equipment|systems?|components?)\b/i;
 const DETAIL=/(?:^|\/)(?:products?|product|item|items|models?|sku|p)\/[^/?#]+\/?$/i;
@@ -21,7 +21,7 @@ export function v3SafeUrl(raw,host){
     if(!['http:','https:'].includes(u.protocol)||u.hostname.toLowerCase()!==host||u.username||u.password||
        (u.port&&u.port!=='443'&&u.port!=='80')||u.href.length>1400||EXCLUDE.test(u.pathname))return null;
     if(u.pathname.startsWith('//'))return null;
-    u.hash='';
+    u.hash='';if(u.pathname.length>1)u.pathname=u.pathname.replace(/\/+$/,'');
     for(const key of [...u.searchParams.keys()])if(/^(?:utm_.*|fbclid|gclid|ref|mc_cid|mc_eid)$/i.test(key))u.searchParams.delete(key);
     return u.href;
   }catch{return null;}
@@ -48,7 +48,8 @@ export function v3RankLink(link,host,{parentKind='other',productCount=0,companyS
   const label=CLEAN(link?.label).slice(0,150);
   const combined=path.replace(/[-_/]/g,' ')+' '+label;
   const kind=v3PageKind(url,{title:label});
-  const technical=TECH.test(combined)||kind==='document'||kind==='technical';
+  const partCatalog=kind==='catalog'&&/(?:^|\/)(?:parts|replacement-parts|spare-parts)(?:\/|$)/i.test(path);
+  const technical=(TECH.test(combined)||kind==='document'||kind==='technical')&&!partCatalog;
   const strong=STRONG_TECH.test(combined);
   const specificProduct=kind==='product'||DETAIL.test(path);
   if(!technical&&!specificProduct&&kind!=='catalog'&&kind!=='company'&&!PRODUCT.test(combined))return null;
@@ -63,7 +64,10 @@ export function v3RankLink(link,host,{parentKind='other',productCount=0,companyS
   else if(technical&&productCount>0)score+=55;
   if(strong)score+=27;
   if(/\.(?:pdf)$/i.test(path))score+=22;
-  if(/\b(?:spare|replacement|exploded|material)\b/i.test(combined))score+=15;
+  if(/\b(?:spare|replacement|exploded)\b/i.test(combined)&&!partCatalog)score+=15;
+  // Replacement parts are valuable after a finished product is known, but
+  // are poor company-level entry points for discovering product assemblies.
+  if(partCatalog&&productCount===0)score-=75;
   if(!companySeen&&kind==='company'&&parentKind==='company')score+=75;
   if(label.length>5&&!/^(?:read more|learn more|shop now|details|view all|products?)$/i.test(label))score+=10;
   if(new URL(url).search)score-=18;
@@ -109,7 +113,9 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
   let sequence=1;
   while(queue.size>0&&pages.length<maxPages&&shouldContinue()){
     const options=[...queue.values()].sort((a,b)=>{
-      const av=a.score+(a.fromProductPage?20:0),bv=b.score+(b.fromProductPage?20:0);
+      const sat=item=>item.kind==='catalog'&&categoryPages>=3?Math.min(105,(categoryPages-2)*24):0;
+      const av=a.score+(a.fromProductPage?20:0)-sat(a),
+        bv=b.score+(b.fromProductPage?20:0)-sat(b);
       return bv-av||a.order-b.order;
     });
     const next=options[0];queue.delete(next.url);

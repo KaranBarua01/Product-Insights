@@ -25,9 +25,9 @@ function isProductDetail(raw){
   catch{return false;}
 }
 const PARTS=[
-  /\b(?:injection[- ]molded\s+)?inner\s+(?:pieces?|parts?|elements?|components?|structure)\b/gi,
+  /\b(?:injection[- ]molded\s+)?inner\s+(?:pieces?|parts?|elements?|components?|structure|body)\b/gi,
   /\b(?:polyurethane\s+)?(?:outer\s+)?protectors?\b/gi,
-  /\b(?:fiber\s+)?(?:tension\s+)?ropes?\b/gi,
+  /\b(?:fiber\s+)?(?:(?:tension|hauling)\s+)?ropes?\b/gi,
   /\b(?:steel\s+)?mounting\s+brackets?\b/gi,
   /\b(?:hitch\s+)?(?:bars?|receivers?)\b/gi,
   /\b(?:rack\s+)?arms?\b/gi,
@@ -35,7 +35,7 @@ const PARTS=[
   /\b(?:locking\s+)?mechanisms?\b/gi,
   /\b(?:impellers?|shafts?|pump\s+heads?|chambers?|housings?|rotors?|stators?|bearings?|bushings?|seals?|o-rings?|gaskets?|motors?|gears?|pulleys?|valves?|sensors?|control\s+boards?|circuit\s+boards?|printed\s+circuit\s+boards?|mounting\s+plates?|fasteners?|cables?|connectors?|chain\s+links?)\b/gi
 ];
-const MAT=/(?:\bstainless\s+steel\b|\bcarbon\s+steel\b|\bcast\s+iron\b|\bpolyurethane\b|\bpolypropylene\b|\bpolycarbonate\b|\bpolyethylene\b|\bengineering\s+plastics?\b|\bengineered\s+polymers?\b|\balumin(?:um|ium)\b|\bsteel\b|\bcopper\b|\bbrass\b|\btitanium\b|\brubber\b|\bnylon\b|\bplastic\b|\bfiber(?:glass)?\b)/gi;
+const MAT=/(?:\bPU\b|\bstainless\s+steel\b|\bcarbon\s+steel\b|\bcast\s+iron\b|\bpolyurethane\b|\bpolypropylene\b|\bpolycarbonate\b|\bpolyethylene\b|\bengineering\s+plastics?\b|\bengineered\s+polymers?\b|\balumin(?:um|ium)\b|\bsteel\b|\bcopper\b|\bbrass\b|\btitanium\b|\brubber\b|\bnylon\b|\bplastic\b|\bfiber(?:glass)?\b)/gi;
 const PROCESSES=[
  {name:'Injection molding',re:/\binjection[- ]mold(?:ed|ing)?\b|\binjection[- ]mould(?:ed|ing)?\b/i},
  {name:'CNC machining',re:/\b(?:CNC[- ]machined?|CNC[- ]machining)\b/i},
@@ -72,18 +72,19 @@ function matchParts(sentence){
   }}return matches.slice(0,12);
 }
 function nearestMaterial(sentence,part){
+  const normalizeMaterial=v=>String(v).toLowerCase()==='pu'?'polyurethane':clean(v,100);
   MAT.lastIndex=0;
   const candidates=[...sentence.matchAll(MAT)].filter(x=>Math.abs(x.index-part.index)<=90)
     .sort((a,b)=>Math.abs(a.index-part.index)-Math.abs(b.index-part.index));
   for(const m of candidates){
-    if(key(part.name).startsWith(key(m[0])+' '))return clean(m[0],100);
+    if(key(part.name).startsWith(key(m[0])+' '))return normalizeMaterial(m[0]);
     const between=m.index<part.index?
       sentence.slice(m.index+m[0].length,part.index):
       sentence.slice(part.index+part.name.length,m.index);
     // Direct adjective/noun phrase, or explicit "part made from material".
-    if(m.index<part.index&&/^(?:\s+[a-z-]{1,18}){0,2}\s*$/i.test(between))return clean(m[0],100);
-    if(m.index>=part.index&&/^\s*(?:is\s+)?(?:made|manufactured|constructed)\s+(?:of|from)\s*$/i.test(between))
-      return clean(m[0],100);
+    if(m.index<part.index&&/^(?:\s+(?:high[- ]strength|impact[- ]resistant|reinforced|alloy|molded|extruded|fiber|carbon)){0,2}\s*$/i.test(between))return normalizeMaterial(m[0]);
+    if(m.index>=part.index&&/^\s*(?:is\s+)?(?:made|manufactured|constructed)\s+(?:of|from)\s+(?:(?:[a-z-]{2,25})\s*){0,2}$/i.test(between))
+      return normalizeMaterial(m[0]);
   }
   return null;
 }
