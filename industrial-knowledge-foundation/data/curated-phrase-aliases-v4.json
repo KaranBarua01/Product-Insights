@@ -1,0 +1,231 @@
+{
+  "schema_version": "4.1.0",
+  "review_status": "candidate_only",
+  "record_count": 32,
+  "records": [
+    {
+      "alias_key": "air conditioners",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "air_conditioner",
+      "canonical_name": "Air conditioner"
+    },
+    {
+      "alias_key": "air handlers",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "air_handling_unit",
+      "canonical_name": "Air handling unit"
+    },
+    {
+      "alias_key": "aluminum windows",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "aluminum_window",
+      "canonical_name": "Aluminum framed window"
+    },
+    {
+      "alias_key": "battery chargers",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "battery_charger",
+      "canonical_name": "Industrial battery charger"
+    },
+    {
+      "alias_key": "cable assemblies",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "cable_assembly",
+      "canonical_name": "Industrial cable assembly"
+    },
+    {
+      "alias_key": "case packers",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "case_packer",
+      "canonical_name": "Case packing machine"
+    },
+    {
+      "alias_key": "control panels",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "control_panel",
+      "canonical_name": "Industrial control panel"
+    },
+    {
+      "alias_key": "data loggers",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "data_logger",
+      "canonical_name": "Industrial data logger"
+    },
+    {
+      "alias_key": "electric generators",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "generator",
+      "canonical_name": "Electric generator"
+    },
+    {
+      "alias_key": "electrical switchgear",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "switchgear",
+      "canonical_name": "Electrical switchgear"
+    },
+    {
+      "alias_key": "faucets",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "faucet",
+      "canonical_name": "Faucet valve assembly"
+    },
+    {
+      "alias_key": "flow meters",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "flow_meter",
+      "canonical_name": "Industrial flow meter"
+    },
+    {
+      "alias_key": "forklift attachments",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "forklift_attachment",
+      "canonical_name": "Forklift attachment"
+    },
+    {
+      "alias_key": "forklifts",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "forklift",
+      "canonical_name": "Industrial forklift"
+    },
+    {
+      "alias_key": "generators",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "generator",
+      "canonical_name": "Electric generator"
+    },
+    {
+      "alias_key": "heat pumps",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "heat_pump",
+      "canonical_name": "Industrial heat pump"
+    },
+    {
+      "alias_key": "industrial camera systems",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_camera",
+      "canonical_name": "Industrial machine-vision camera"
+    },
+    {
+      "alias_key": "industrial heat sinks",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_heat_sink",
+      "canonical_name": "Industrial heatsink"
+    },
+    {
+      "alias_key": "industrial ovens",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_oven",
+      "canonical_name": "Industrial oven"
+    },
+    {
+      "alias_key": "labeling machines",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "labeling_machine",
+      "canonical_name": "Industrial labeling machine"
+    },
+    {
+      "alias_key": "led fixtures",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "led_fixture",
+      "canonical_name": "LED lighting fixture"
+    },
+    {
+      "alias_key": "packaging machinery",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "packaging_machine",
+      "canonical_name": "Packaging machine"
+    },
+    {
+      "alias_key": "pipe fittings",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "pipe_fitting",
+      "canonical_name": "Industrial pipe fitting"
+    },
+    {
+      "alias_key": "power supplies",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "power_supply",
+      "canonical_name": "Industrial power supply"
+    },
+    {
+      "alias_key": "pressure vessels",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "pressure_vessel",
+      "canonical_name": "Industrial pressure vessel"
+    },
+    {
+      "alias_key": "refrigeration units",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "refrigeration_unit",
+      "canonical_name": "Industrial refrigeration unit"
+    },
+    {
+      "alias_key": "solar modules",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "solar_module",
+      "canonical_name": "Photovoltaic module"
+    },
+    {
+      "alias_key": "solar panels",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "solar_module",
+      "canonical_name": "Photovoltaic module"
+    },
+    {
+      "alias_key": "storage tanks",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "storage_tank",
+      "canonical_name": "Industrial storage tank"
+    },
+    {
+      "alias_key": "transformers",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "transformer",
+      "canonical_name": "Power transformer"
+    },
+    {
+      "alias_key": "wire harnesses",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "wire_harness",
+      "canonical_name": "Industrial wire harness"
+    },
+    {
+      "alias_key": "workbenches",
+      "entity_type": "archetype",
+      "alias_rule": "curated_semantic_alias_unreviewed",
+      "entity_key": "industrial_workbench",
+      "canonical_name": "Industrial workbench"
+    }
+  ]
+}
