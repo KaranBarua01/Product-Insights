@@ -93,6 +93,24 @@
       'Unresolved FAMILY mappings':report.coverage.taxonomyGaps??0
     }))append(summ,'span',value+' '+name.toLowerCase());
     append(root,'p','PROVISIONAL research sample. Counts are not verified catalog coverage, manufacturing qualifications, or confirmed taxonomy gaps.','warn');
+    const q=report.evidenceQuality;
+    if(q){
+      append(root,'h3','Acquisition evidence quality');
+      append(root,'p',q.verdict.replace(/_/g,' ')+' · '+q.score+'/100 observed signal coverage (not verified accuracy)',q.falseSuccessRisk?'warn':'small');
+      append(root,'p',q.counts.retrieved+' retrieved / '+q.counts.accepted+' accepted / '+q.counts.relevant+' relevant of '+q.counts.attempted+' attempted; '+q.distinctProductCandidates+' source-backed product candidates.');
+      append(root,'p','Not observed in this sample: '+(q.missingDimensions.join(', ')||'none of the tracked signal types')+'. Missing is not absent.','small');
+      append(root,'p','Stop: '+q.stopReason.replace(/_/g,' ')+' · '+q.remainingLeads+' queued leads · '+q.frontierDropped+' discarded by frontier limit. Catalog completeness and accuracy are unmeasured.','small');
+      const details=append(root,'details');
+      append(details,'summary','Observed evidence signals and gaps');
+      for(const [name,d] of Object.entries(q.dimensions)){
+        append(details,'h4',name+' · '+d.status.replace(/_/g,' ')+' ('+d.distinctExcerpts+')');
+        for(const ex of d.examples){
+          const p=append(details,'p',ex.locator+': '+ex.quote+' ','small');
+          p.append(urlLink(ex.sourceUrl,'Source'));
+        }
+      }
+      append(details,'p',q.unassessedSources.length+' inaccessible, failed or insufficient source attempts; '+q.partialSources.length+' partially assessed sources.','small');
+    }
     append(root,'h3','Company role — website statements only');
     const role=report.companyRole;
     if(!role||role.status==='unknown')append(root,'p','Unknown: sampled pages contain no explicit self-description. Do not assume this website manufactures products.','warn');

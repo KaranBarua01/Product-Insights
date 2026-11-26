@@ -206,7 +206,9 @@ export function extractPageIntelligence(page,host){
       specifications:[],components:[],materials:[],
       categoryIds:[],reviewStatus:'candidate_requires_review'});
   }
-  const name=kind==='product'?primaryHeading(content):null;
+  const proposedName=kind==='product'?primaryHeading(content):null;
+  const q=page.acquisitionQuality;
+  const name=proposedName&&(!q||q.productIdentities?.some(p=>lower(p.name)===lower(proposedName)))?proposedName:null;
   if(name){
     const match=products.find(p=>lower(p.name)===lower(name));
     if(!match){

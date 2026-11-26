@@ -182,6 +182,7 @@ async function runJob(body){
     ' visited · '+productIntelligence.products.length+' products · '+
     (productIntelligence.coverage.catalogLinkCandidates||0)+
     ' catalog-only leads · stopped: '+report.coverage.stopReason});
+  if(report.evidenceQuality)logEvent({status:'acquisition_quality',reason:report.evidenceQuality.verdict+' · '+report.evidenceQuality.distinctProductCandidates+' source-backed product candidates · missing: '+(report.evidenceQuality.missingDimensions.join(', ')||'none of the tracked signal types')+' · not independently validated'});
   // The source file is a pinned, gitignored, local CODE asset. An absent or invalid
   // reference never blocks website research; no taxonomy / OS write is attempted.
   let processReference=null;

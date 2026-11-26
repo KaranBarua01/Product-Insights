@@ -4,6 +4,7 @@
  * safety-checked extractPage callback and enforce public DNS / robots rules.
  */
 import {createHash} from 'node:crypto';
+import {assessPageEvidence,createQualityTracker,gapPriority,adaptiveStop} from './evidence-quality.mjs';
 
 export const V3_MAX_PAGES=50;
 const EXCLUDE=/(?:^|\/)(?:login|signin|account|cart|checkout|privacy|terms|cookies|jobs|careers|press|blog|news|events|search|contact|request-quote|investors)(?:\/|$)|\.(?:png|jpe?g|gif|svg|webp|zip|mp4|css|js)(?:$|\?)/i;
@@ -211,9 +212,10 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
   const startedAt=new Date().toISOString(),queue=new Map(),seen=new Set(),pages=[];
   const documentLinks=new Map(),warnings=[],seedAccessAttempts=[];
   const acceptedSources=new Map(),fingerprints=new Map(),branches=new Map(),preferredRoutes=new Set();
+  const qualityTracker=createQualityTracker();
   let preferredLocale=localeRoute(initial.href).locale,duplicatePages=0,irrelevantPages=0,filteredLinks=0,frontierDropped=0,localeAlternativeVisits=0;
   let companySeen=false,productCount=0,usefulPages=0,productPages=0,categoryPages=0,technicalPages=0;
-  let newParts=0,noGain=0,stopReason='frontier_exhausted',discoveredLeads=0,blockedPages=0;
+  let noGain=0,stopReason='frontier_exhausted',discoveredLeads=0,blockedPages=0;
   const initialUrl=v3SafeUrl(initial.href,host);
   // Keep the approved seed's actual path (including its trailing slash); only dedup the key.
   const seedRequest=new URL(initialUrl);seedRequest.pathname=initial.pathname;
@@ -223,14 +225,18 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
   function preferenceSet(){
     return new Set([...preferredRoutes,...[...queue.values()].filter(x=>localeRoute(x.url).locale===preferredLocale).map(x=>localeRoute(x.url).route)]);
   }
+  let missing=qualityTracker.missing();
   function priority(item,preferred){
     const route=localeRoute(item.url),stats=branches.get(item.branch)||{attempts:0,uniquePages:0};
     const alternative=route.locale!==preferredLocale&&preferred.has(route.route);
     const productLike=['product','catalog'].includes(item.kind)||item.reason.startsWith('Unfamiliar catalog');
     const diversity=productLike&&!item.fromProductPage?(stats.attempts===0?60:-Math.min(105,Math.max(0,stats.attempts-1)*35)):0;
-    return item.score+(item.fromProductPage?55:0)+diversity-(alternative?180:0);
+    return item.score+(item.fromProductPage?55:0)+diversity-(alternative?180:0)+gapPriority(item,missing);
   }
   while(queue.size>0&&pages.length<maxPages&&shouldContinue()){
+    if(adaptiveStop({visited:pages.length,maxPages,noGain,frontier:[...queue.values()],missing,branchStats:branches})){
+      stopReason='diminishing_returns';break;
+    }
     const preferred=preferenceSet();
     const options=[...queue.values()].sort((a,b)=>priority(b,preferred)-priority(a,preferred)||a.order-b.order);
     const next=options[0];queue.delete(next.url);
@@ -255,18 +261,19 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     const text=good?String(content.text||''):'';
     const jsonProducts=good?structuralProducts(content,actual):[];
     const isProduct=kind==='product';
-    const evidence=good&&technicalEvidence(text,content);
-    const evidenceWindows=good?selectEvidenceWindows(content):[];
+    const quality=assessPageEvidence(result,kind,jsonProducts);
+    const evidence=quality.accepted&&['specifications','components','materials','processes'].some(k=>quality.signals[k]?.length);
+    const evidenceWindows=quality.accepted?selectEvidenceWindows(content):[];
     const review=good||result.status==='needs_ocr'?technicalReview(content):null;
     const page={url:actual,status:result.status||'failed',strategy:result.strategy||'none',
       reason:result.reason||'',title:CLEAN(content.title).slice(0,180),
       textChars:text.length,snippet:text.slice(0,1300),aiText:evidenceWindows.map(w=>w.text).join('\n[... omitted source text ...]\n').slice(0,4800),
-      evidenceWindows,technicalReview:review,
+      evidenceWindows,technicalReview:review,quality,
       headings:(content.headings||[]).slice(0,12),evidence:(result.evidence||[]).slice(0,8),
-      structuredProducts:jsonProducts,warnings:(result.warnings||[]).slice(0,9),
+      structuredProducts:quality.accepted?jsonProducts.filter(p=>quality.productIdentities.some(q=>q.name===p.name&&q.sku===(p.sku||null))):[],warnings:(result.warnings||[]).slice(0,9),
       lead:next.reason,stage:isProduct?'product_detail':kind==='document'||kind==='technical'?'technical_evidence':
         kind==='catalog'?'category_discovery':kind==='company'?'company_identity':'site_exploration',
-      useful:good&&Boolean(text.trim()||jsonProducts.length)&&(isProduct||kind==='catalog'||kind==='document'||evidence),
+      useful:quality.accepted&&quality.score>0,
       pageKind:kind,branch,requestedUrl:requested,
       technicalEvidence:Boolean(evidence),sourcePageUrl:next.parent||null};
     pages.push(page);
@@ -287,43 +294,50 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       continue;
     }
     seen.add(actual);queue.delete(actual);
-    if(kind==='form'){
-      irrelevantPages++;noGain++;
-      Object.assign(page,{retrievalStatus:page.status,status:'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
+    if(!quality.discoveryAllowed){
+      if(quality.classification!=='soft_error')irrelevantPages++;
+      noGain++;
+      Object.assign(page,{retrievalStatus:page.status,status:quality.classification==='soft_error'?'soft_error':'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
       if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
       continue;
     }
     if(acceptedSources.size===0)preferredLocale=localeRoute(actual).locale;
     const local=localeRoute(actual);
     if(local.locale===preferredLocale)preferredRoutes.add(local.route);
-    const fingerprint=duplicateFingerprint(result,content,kind,actual,host);
-    const duplicateOf=acceptedSources.get(actual)||(fingerprint&&fingerprints.get(fingerprint));
+    const fingerprint=quality.accepted?duplicateFingerprint(result,content,kind,actual,host):null;
+    const duplicateOf=quality.accepted&&(acceptedSources.get(actual)||(fingerprint&&fingerprints.get(fingerprint)));
     if(duplicateOf){
       duplicatePages++;noGain++;
       Object.assign(page,{retrievalStatus:page.status,status:'duplicate',duplicateOf,useful:false,technicalEvidence:false,
-        snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
+        snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[],quality:{...quality,accepted:false,classification:'duplicate',score:0,signals:{},productIdentities:[]}});
       if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
       continue;
     }
+    if(quality.accepted){
     acceptedSources.set(actual,actual);
     if(fingerprint)fingerprints.set(fingerprint,actual);
     stats.uniquePages++;if(isProduct)stats.productPages++;if(kind==='catalog')stats.catalogPages++;
     if(kind==='technical'||kind==='document')stats.technicalPages++;
     // OCR candidate text and geometry-only rows stay in the local review report, not the intelligence input.
     const evidenceResult=Array.isArray(content.pdfPages)?{...result,content:{...content,pdfPages:content.pdfPages.map(({ocrText,layoutRows,...native})=>native)}}:result;
-    onEvidence(evidenceResult,requested);
+    onEvidence({...evidenceResult,acquisitionQuality:quality},requested);
     if(kind==='company')companySeen=true;
     if(isProduct)productPages++;
     if(kind==='catalog')categoryPages++;
     if(kind==='technical'||kind==='document')technicalPages++;
     if(page.useful)usefulPages++;
-    const prevProducts=productCount;productCount+=jsonProducts.length+(isProduct&&!jsonProducts.length?1:0);
-    if(evidence||productCount>prevProducts||stats.uniquePages===1){newParts++;noGain=0;}else noGain++;
+    if(qualityTracker.add(page))noGain=0;else noGain++;
+    productCount=qualityTracker.productCount();missing=qualityTracker.missing();
+    }else{
+      // Empty but navigable pages can yield observed links, never evidence.
+      noGain++;
+      Object.assign(page,{retrievalStatus:page.status,status:'insufficient',useful:false,technicalEvidence:false,snippet:'',aiText:'',evidenceWindows:[],structuredProducts:[],evidence:[]});
+    }
     // Per-product docs are linked by their *direct source-page anchor*, not
     // company-level co-occurrence. Their text is separately checked downstream.
     const urls=new Map();
     for(const link of [...(content.links||[]),...(content.documents||[]).map(url=>({url,label:'PDF technical document'}))]){
-      const candidate=v3RankLink(link,host,{parentKind:isProduct?'product':kind,productCount,companySeen,parentBranch:branch});
+      const candidate=v3RankLink(link,host,{parentKind:isProduct&&quality.accepted?'product':kind==='product'?'catalog':kind,productCount,companySeen,parentBranch:branch});
       if(!candidate){filteredLinks++;continue;}
       if(initial.protocol==='https:'&&new URL(candidate.requestUrl).protocol!=='https:'){filteredLinks++;continue;}
       if(candidate.url===actual)continue;
@@ -331,7 +345,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     }
     const pagePreferred=new Set([...preferenceSet(),...[...urls.values()].filter(x=>localeRoute(x.url).locale===preferredLocale).map(x=>localeRoute(x.url).route)]);
     for(const candidate of [...urls.values()].sort((a,b)=>priority(b,pagePreferred)-priority(a,pagePreferred))){
-      if(isProduct&&candidate.fromProductPage){
+      if(quality.accepted&&quality.productIdentities.length&&isProduct&&candidate.fromProductPage){
         const mapKey=actual+'|'+candidate.url;
         if(!documentLinks.has(mapKey))documentLinks.set(mapKey,{productPageUrl:actual,
           documentUrl:candidate.url,anchorText:candidate.label,
@@ -351,25 +365,22 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
         parent:candidate.fromProductPage?actual:old.parent,
         fromProductPage:old.fromProductPage||candidate.fromProductPage});}
     }
-    // Stop only after a substantial sample and no remaining high-value links.
-    if(pages.length>=Math.max(12,Math.ceil(maxPages*0.45))&&noGain>=8){
-      const hasValuable=Array.from(queue.values()).some(x=>x.fromProductPage||['catalog','product','document','technical'].includes(x.kind)||x.reason.startsWith('Unfamiliar catalog'));
-      if(!hasValuable){stopReason='diminishing_returns';break;}
-    }
     if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
   }
   if(!shouldContinue())stopReason='cancelled';
   else if(stopReason!=='rate_limited'&&pages.length>=maxPages)stopReason='budget_exhausted';
   const successfulPages=pages.filter(p=>['completed','partial'].includes(p.status)).length;
+  const evidenceQuality=qualityTracker.summary(pages,[...queue.values()],stopReason,{frontierDropped,maxPages});
+  evidenceQuality.directDocumentLeads=[...documentLinks.values()].slice(0,150).map(l=>({...l,reviewStatus:pages.some(p=>p.url===l.documentUrl&&p.quality?.accepted)?'source_retrieved_relationship_unverified':'not_assessed_or_unavailable'}));
   return {schemaVersion:'pi-research-v3/1',requestedUrl:initialUrl,startedAt,
-    status:successfulPages?'sampled':'no_successful_pages',requestedPages:maxPages,pages,
+    status:successfulPages?'sampled':'no_successful_pages',requestedPages:maxPages,pages,evidenceQuality,
     products:pages.flatMap(x=>x.structuredProducts).slice(0,120),
     documentLinks:[...documentLinks.values()].slice(0,150),
     coverage:{visitedPages:pages.length,successfulPages,usefulPages,productPages,
       catalogPages:categoryPages,technicalPages,blockedPages,discoveredLeads,
       productEvidenceCandidates:productCount,sourceTechnicalPages:pages.filter(x=>x.technicalEvidence).length,
       directProductDocumentLinks:documentLinks.size,stopReason,
-      retrievedPages:successfulPages+duplicatePages+irrelevantPages,duplicatePages,irrelevantPages,filteredLinks,frontierDropped,remainingLeads:queue.size,
+      retrievedPages:evidenceQuality.counts.retrieved,duplicatePages,irrelevantPages,insufficientPages:evidenceQuality.counts.insufficient,softErrorPages:evidenceQuality.counts.softErrors,relevantEvidencePages:evidenceQuality.counts.relevant,filteredLinks,frontierDropped,remainingLeads:queue.size,
       pdfDocuments:pages.filter(p=>p.technicalReview?.pdfCoverage).length,
       pdfPagesNeedingOcr:pages.reduce((n,p)=>n+(p.technicalReview?.pdfCoverage?.ocrRequiredPages?.length||0),0),
       pdfOcrReviewPages:pages.reduce((n,p)=>n+(p.technicalReview?.ocrReview?.length||0),0),
@@ -378,6 +389,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       unvisitedBranches:[...new Set([...queue.values()].map(x=>x.branch))].filter(key=>!branches.has(key)),branchCoverageIsHeuristic:true},
     seedAccessAttempts,
     warnings,limitations:['Limited and bounded same-host sample, not full catalog coverage.',
+      'Evidence quality scores describe observed literal signals, not accuracy or verified manufacturing facts.',
       'Branch and locale coverage are heuristics; locale alternatives are deferred, never assumed equivalent.',
       'Technical link is not proof the document describes a specific product.',
       'The user-provided extractPage callback must enforce DNS, robots and request security.',
