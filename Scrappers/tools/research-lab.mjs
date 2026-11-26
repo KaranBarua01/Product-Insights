@@ -323,7 +323,7 @@ async function handler(req,res){
     const node=taxonomyNodes.find(n=>n.code===(kind==='alias'?body.existingCode:body.parentCode));
     if(!node||(kind==='alias'?node.level<2:node.level>2))return json(res,{error:'Choose a valid existing parent (L0-L2) or alias target (L2-L3)'},400);
     const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&(
-      [String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])]
+      [...(Array.isArray(p.evidenceWindows)?p.evidenceWindows.map(w=>String(w.text||'')):[String(p.aiText||p.snippet||'')]),String(p.title||''),...(p.headings||[])]
         .some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' ')))||
       (p.structuredProducts||[]).some(found=>found.name.toLowerCase().replace(/\s+/g,' ').trim()===String(product.quote).toLowerCase().replace(/\s+/g,' ').trim())
     ));
