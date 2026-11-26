@@ -28,7 +28,7 @@ export interface ScrapeResult {
   routing: { strategy: Strategy; reason: string; patternIds: string[]; provenance: 'supplied' | 'remote' | 'local' | 'none' | 'forced' };
 }
 export interface ScrapeCore { strategy: Strategy; status: ExtractionStatus; reason: string; sourceUrl: string; content: ExtractedContent; evidence: ExtractionEvidence[]; warnings: string[]; next?: Strategy }
-export interface BrowserOutput { html: string; url: string; truncated?: boolean }
+export interface BrowserOutput { html: string; url: string; truncated?: boolean; httpStatus?: number }
 export interface PdfParserOutput { pageCount: number; totalPages?: number; truncated?: boolean; pages: { page: number; text: string }[] }
 export interface Dependencies {
   fetcher: typeof fetch;
