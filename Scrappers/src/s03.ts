@@ -19,7 +19,7 @@ export async function unpdfParser(bytes:Uint8Array,maxPages:number):Promise<PdfP
 export async function scrapeS03(url:string,dependencies:Dependencies,policy:ExecutionPolicy,maxPages=8):Promise<ScrapeCore>{
   const safe=assertAllowed(url,policy.allowedHosts);
   const response=await fetchBounded(safe.href,policy.allowedHosts,dependencies.fetcher,{timeoutMs:policy.timeoutMs??7000,maxBytes:policy.maxBytesPdf??3_000_000,robotsRules:policy.robotsRules},'application/pdf');
-  if(response.status>=400)return {strategy:'S03',status:response.status===403||response.status===429?'blocked':'failed',reason:`HTTP ${response.status}`,sourceUrl:response.url,content:{},evidence:[],warnings:[]};
+  if(response.status>=400)return {strategy:'S03',status:[401,403,429,503].includes(response.status)?'blocked':'failed',reason:`HTTP ${response.status}`,sourceUrl:response.url,content:{},evidence:[],warnings:[]};
   if(!documentLooksPdf(response.bytes,response.type,response.url))return {strategy:'S03',status:'unsupported',reason:'Not a PDF response',sourceUrl:response.url,content:{},evidence:[],warnings:[]};
   if(response.bytes.length<5 || String.fromCharCode(...response.bytes.slice(0,5))!=='%PDF-')return {strategy:'S03',status:'failed',reason:'Invalid PDF signature',sourceUrl:response.url,content:{},evidence:[],warnings:[]};
   const parser=dependencies.pdfParser??unpdfParser;
