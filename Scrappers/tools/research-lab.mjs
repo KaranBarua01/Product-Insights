@@ -127,10 +127,10 @@ async function runJob(body){
       const planned=await callStage2('plan',{rootUrl,pageSummary:page.snippet,links}, {config:aiSettings});
       return (planned.prioritizedIds||[]).map(id=>links[id-1]?.url).filter(Boolean);
     }:null,
-    onProgress:logEvent,extractPage:async target=>{
+    onProgress:logEvent,onEvidence:(extracted,target)=>{rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});},extractPage:async target=>{
       await assertPublicDns(u.hostname);
       const extracted=await extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
-      rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});
+      if(!v3Enabled)rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});
       return extracted;
     }});
   const enriched=await stage2Analyze(report,{nodes:taxonomyNodes,aliases:taxonomyAliases,
