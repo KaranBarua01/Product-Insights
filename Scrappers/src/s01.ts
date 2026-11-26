@@ -70,8 +70,15 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
   if(!pages.length)return {strategy:'S01',status:'failed',reason:warnings[0]||'No HTML pages could be retrieved',sourceUrl:firstUrl,content:{},evidence:[],warnings};
   const allTruncated=truncatedCount===pages.length;
   const sparse=text.trim().length<180;
+  // Hydration alone is not proof that rendering helps. A thin catalog shell
+  // must also lack useful product navigation and published product data.
+  const catalogLinks=links.filter(l=>/\b(?:products?|catalog(?:ue)?|models?|series|collections|categories|datasheets?|manuals?)\b/i.test(l.url+' '+l.label));
+  const productData=jsonLd.some(x=>/"@type"\s*:\s*"Product(?:Group)?"/i.test(JSON.stringify(x)));
+  const shellText=/\b(?:enable javascript|javascript (?:is )?required|loading (?:products|catalog|content)|please wait while)\b/i.test(text);
+  const dynamicShell=!productData&&catalogLinks.length===0&&text.length<1400&&(shellText||appState.length>0);
+  const formHeading=/^(?:request (?:a )?(?:quote|demo)|contact (?:us|sales)|sign (?:in|up)|log in|subscribe)$/i.test((headings[0]||firstTitle||'').trim());
   const status:ScrapeCore['status']=allTruncated||text.trim().length<40?'partial':'completed';
   const reason=`Inspected ${pages.length} HTML page(s), ${text.length} text chars, ${truncatedCount} truncated, ${fetchErrors} failed`;
   const content:ExtractedContent={title:firstTitle,description:firstDescription,text,headings,links,documents,jsonLd,appState,sampledPages:pages,sourceSections};
-  return {strategy:'S01',status,reason,sourceUrl:firstUrl,content,evidence,warnings,...(sparse||allTruncated?{next:'S02' as const}:{})};
+  return {strategy:'S01',status,reason,sourceUrl:firstUrl,content,evidence,warnings,...((sparse||allTruncated||dynamicShell)&&!formHeading?{next:'S02' as const}:{})};
 }
