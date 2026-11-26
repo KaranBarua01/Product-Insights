@@ -17,7 +17,7 @@ const RULES={
  applications:/\b(?:designed for|used in|applications include|industries served|suitable for|intended for)\s+\S/i
 };
 const GENERIC=/^(?:home|welcome|products?|our products|all products|product information|product details|catalog(?:ue)?|industrial(?: company)?|company|about(?: us)?|overview|description|technical (?:data|information)|specifications?|loading(?: products)?|read more|learn more|shop|model|series|untitled|not found|error|access denied)$/i;
-const SOFT_ERROR=/^(?:404(?:\s*[-:])?\s*(?:error|page not found|not found)?|page not found|file not found|this page (?:does not exist|is not available)|(?:sorry[, ]+)?(?:we (?:could not|couldn't|can't) find|the requested page (?:was not found|does not exist))|access denied|forbidden|service unavailable|just a moment(?:\.\.\.)?)(?:$|[\s:|–—-])/i;
+const SOFT_ERROR=/^(?:404(?:\s*[-:]?\s*(?:error|page not found|not found)|$)|page not found|file not found|this page (?:does not exist|is not available)|(?:sorry[, ]+)?(?:we (?:could not|couldn't|can't) find|the requested page (?:was not found|does not exist))|access denied|forbidden|service unavailable|just a moment(?:\.\.\.)?)(?:$|[\s:|–—-])/i;
 const BOILERPLATE=/\b(?:accept all cookies|cookie preferences|manage cookies|enable javascript|javascript is required|loading products|please wait while|verify you are human|checking your browser)\b/i;
 const hasText=x=>clean(x).replace(/\s/g,'').length;
 const sourceTexts=content=>Array.isArray(content.pdfPages)&&content.pdfPages.length?
@@ -27,12 +27,12 @@ function validName(name){
  const s=clean(name);
  return s.length>=3&&s.length<=140&&!GENERIC.test(s)&&!SOFT_ERROR.test(s)&&/[\p{L}\p{N}]{2}/u.test(s)&&!BOILERPLATE.test(s);
 }
-function locateSignals(content){
+function locateSignals(content,sourceUrl){
  const sources=sourceTexts(content);
  // Physical cells are kept separate. Never interpret adjacent cells or merged
  // geometry as a relation. OCR-only text is deliberately not included.
  for(const [i,t] of (content.tables||[]).slice(0,16).entries()){
-   if(t.hasMergedCells||t.truncated)continue;
+   if(t.hasMergedCells||t.truncated||(t.sourceUrl&&t.sourceUrl!==sourceUrl))continue;
    for(const [r,row] of (t.rows||[]).slice(0,70).entries())
      for(const [c,cell] of (Array.isArray(row)?row:[]).slice(0,12).entries())
        if(typeof cell==='string'&&cell.trim())sources.push({locator:'HTML table '+(t.tableIndex||i+1)+', row '+(r+1)+', cell '+(c+1),text:cell});
@@ -62,7 +62,7 @@ export function assessPageEvidence(result,kind,structuredProducts=[]){
    (body.length<700&&SOFT_ERROR.test(body));
  if(softError)return {...empty,classification:'soft_error',flags:['soft_error_response']};
  if(kind==='form')return {...empty,classification:'irrelevant',flags:['form_or_action_page']};
- const signals=locateSignals(content),productIdentities=[],seen=new Set();
+ const signals=locateSignals(content,result.sourceUrl),productIdentities=[],seen=new Set();
  function add(name,sku,locator,quote){
    name=clean(name);sku=clean(sku);
    if(!validName(name))return;
@@ -81,7 +81,7 @@ export function assessPageEvidence(result,kind,structuredProducts=[]){
  if(productIdentities.length)signals.product=productIdentities.slice(0,3).map(p=>({locator:p.locator,quote:p.quote,signal:p.name}));
  const nativeChars=sourceTexts(content).reduce((n,s)=>n+hasText(s.text),0);
  const structured=productIdentities.length>0;
- const actualCells=(content.tables||[]).some(t=>!t.hasMergedCells&&!t.truncated&&(t.rows||[]).some(r=>Array.isArray(r)&&r.filter(c=>clean(c)).length>=2));
+ const actualCells=(content.tables||[]).some(t=>(!t.sourceUrl||t.sourceUrl===result.sourceUrl)&&!t.hasMergedCells&&!t.truncated&&(t.rows||[]).some(r=>Array.isArray(r)&&r.filter(c=>clean(c)).length>=2));
  const sparse=nativeChars<25&&!structured&&!actualCells;
  const shell=!structured&&!actualCells&&Object.keys(signals).length===0&&BOILERPLATE.test(body)&&body.length<1400;
  if(sparse||shell)return {...empty,discoveryAllowed:true,classification:'insufficient',flags:[shell?'navigation_or_cookie_shell':'insufficient_native_content']};
@@ -117,7 +117,7 @@ export function createQualityTracker(){
    const accepted=pages.filter(p=>p.quality?.accepted&&['completed','partial'].includes(p.status));
    const retrieved=pages.filter(p=>p.quality?.retrieved);
    const relevant=accepted.filter(p=>p.quality.score>0);
-   const unassessed=pages.filter(p=>['failed','blocked','needs_ocr','unsupported','insufficient','soft_error'].includes(p.status)).map(p=>({sourceUrl:p.url,status:p.status,reason:p.reason}));
+   const unassessed=pages.filter(p=>['failed','blocked','needs_ocr','unsupported','insufficient','soft_error'].includes(p.status)).map(p=>({sourceUrl:p.url,status:p.status,reason:p.reason,flags:p.quality?.flags||[]}));
    const remainingByKind={};
    for(const l of frontier)remainingByKind[l.kind]=(remainingByKind[l.kind]||0)+1;
    const missingDimensions=missing(),productCount=products.size;
@@ -134,6 +134,9 @@ export function createQualityTracker(){
        insufficient:pages.filter(p=>p.status==='insufficient').length,softErrors:pages.filter(p=>p.status==='soft_error').length,duplicate:pages.filter(p=>p.status==='duplicate').length},
      relevantYield:pages.length?relevant.length/pages.length:0,
      remainingByKind,remainingLeads:frontier.length,frontierDropped,stopReason,maxPages,
+     unresolvedProductLeads:frontier.filter(l=>['product','catalog'].includes(l.kind)||String(l.reason||'').startsWith('Unfamiliar catalog')).length,
+     unresolvedTechnicalLeads:frontier.filter(l=>l.fromProductPage||['technical','document'].includes(l.kind)).length,
+     productSourcesWithoutEngineeringSignals:accepted.filter(p=>p.quality.productIdentities.length&&!['specifications','components','materials','processes'].some(k=>p.quality.signals[k]?.length)).map(p=>({sourceUrl:p.url,products:p.quality.productIdentities.map(x=>x.name)})),
      unassessedSources:unassessed.slice(0,50),
      partialSources:accepted.filter(p=>p.quality.flags.some(f=>['partial_source','source_truncated','ocr_review_required','ambiguous_or_truncated_table'].includes(f))).map(p=>({sourceUrl:p.url,flags:p.quality.flags})),
      limitations:['Not observed does not mean absent.','Observed signals are source mentions, not verified product-component relationships or manufacturing ownership.','Unvisited or inaccessible pages are not negative evidence.']};
