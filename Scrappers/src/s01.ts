@@ -1,5 +1,5 @@
 import type {Dependencies,ExecutionPolicy,ExtractedContent,ExtractionEvidence,ScrapeCore,SourcePage} from './types.js';
-import {assertAllowed,documentLooksPdf,fetchBounded} from './safety.js';
+import {assertAllowed,describeAccessFailure,documentLooksPdf,fetchBounded,isAccessPolicyStop} from './safety.js';
 import {parseHtml} from './html.js';
 
 const BAD_PATH=/(?:\/login|\/cart|\/checkout|\/account|\/privacy|\/terms|\/careers|\/contact|\/search\?)/i;
@@ -24,6 +24,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
     const next=queue.shift()!;if(visited.has(next))continue;visited.add(next);
     try{
       const fetched=await fetchBounded(next,policy.allowedHosts,deps.fetcher,{timeoutMs:policy.timeoutMs??7000,maxBytes,robotsRules:policy.robotsRules,truncate:true});
+      if(pages.length===0)firstUrl=fetched.url;
       if(pages.length===0&&[401,403,429,503].includes(fetched.status))return {strategy:'S01',status:'blocked',reason:`HTTP ${fetched.status}; no bypass attempted`,sourceUrl:fetched.url,content:{},evidence:[],warnings};
       if(fetched.status>=400){fetchErrors++;warnings.push(`Skipped ${new URL(next).pathname}: HTTP ${fetched.status}`);continue}
       if(documentLooksPdf(fetched.bytes,fetched.type,fetched.url)){
@@ -59,7 +60,10 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
         }).sort((a,b)=>rankLink(b)-rankLink(a));
         for(const link of candidates.slice(0,maxPages*2)){if(queue.length>=maxPages*2)break;queue.push(link.url)}
       }
-    }catch(err){fetchErrors++;warnings.push(`Page ${next} failed: ${String(err instanceof Error?err.message:err)}`)}
+    }catch(err){
+      if(pages.length===0&&isAccessPolicyStop(err))return {strategy:'S01',status:'blocked',reason:describeAccessFailure(err),sourceUrl:firstUrl,content:{},evidence:[],warnings};
+      fetchErrors++;warnings.push(`Page ${next} failed: ${describeAccessFailure(err)}`);
+    }
   }
   if(pdfResponse)return {strategy:'S01',status:'unsupported',reason:'PDF response; delegate to S03',sourceUrl:firstUrl,content:{},evidence:[],warnings,next:'S03'};
   const text=textParts.join('\n\n').slice(0,90_000);
