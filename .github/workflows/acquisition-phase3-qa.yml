@@ -1,0 +1,37 @@
+name: Acquisition phase 3 regression
+on:
+  push:
+    branches: [feat/acquisition-phase3-technical-evidence]
+  pull_request:
+    branches: [feat/acquisition-phase2-intelligent-discovery]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Scrappers
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --omit=optional --no-audit --no-fund
+      - run: npm run build
+      - run: node --check tools/research-lab.mjs
+      - run: node --check tools/local-pdf-ocr.mjs
+      - name: Install local OCR fixture prerequisites if absent
+        run: |
+          if ! command -v pdftoppm >/dev/null || ! command -v tesseract >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-eng
+          fi
+      - name: Technical extraction and acquisition regression suite
+        env:
+          PI_TEST_LOCAL_OCR: '1'
+        run: node --test tests/technical-extraction.test.mjs tests/v3-technical-tables.test.mjs tests/intelligent-discovery.test.mjs tests/access-recovery.test.mjs tests/scrappers.test.mjs tests/research-v3.test.mjs tests/adaptive-html.test.mjs
