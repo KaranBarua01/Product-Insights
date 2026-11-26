@@ -1,10 +1,10 @@
-import type {ExtractedContent,ExtractionEvidence,Strategy} from './types.js';
+import type {ExtractedContent,ExtractionEvidence,Strategy,TechnicalTable} from './types.js';
 const MAX_HTML=1_500_000;
 function decode(s:string):string{
-  const names:Record<string,string>={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' ',ndash:'-',mdash:'-',hellip:'...',reg:'(R)',copy:'(C)'};
+  const names:Record<string,string>={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' ',ndash:'–',mdash:'—',hellip:'…',plusmn:'±',deg:'°',micro:'µ',times:'×',minus:'−',sup2:'²',sup3:'³',middot:'·',omega:'ω',Omega:'Ω',reg:'(R)',copy:'(C)'};
   return s.replace(/&(#(?:x[0-9a-f]+|[0-9]+)|[a-z]+);/gi,(_,token:string)=>{
     if(token[0]==='#'){const hex=token[1]?.toLowerCase()==='x';const n=parseInt(token.slice(hex?2:1),hex?16:10);return Number.isFinite(n)&&n>0&&n<=0x10ffff?String.fromCodePoint(n):' '}
-    return names[token.toLowerCase()]??' ';
+    return names[token]??names[token.toLowerCase()]??'&'+token+';';
   });
 }
 function sanitize(html:string):string{
@@ -68,17 +68,31 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
     ??html;
   // Preserve structured specifications instead of flattening part/material rows.
   // These rows are source text only; no part or process is inferred here.
-  const tables:{rows:string[][]}[]=[];
-  for(const table of region.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table\s*>/gi)){
-    const rows:string[][]=[];
+  const tables:TechnicalTable[]=[];
+  const tableRegion=region.replace(/<\s*(nav|footer|aside|script|style|template)\b[^>]*>[\s\S]*?<\/\s*\1\s*>/gi,' ');
+  let tableIndex=0;
+  for(const table of tableRegion.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table\s*>/gi)){
+    tableIndex++;
+    if(tables.length>=16){warnings.push('HTML table count limit reached');break;}
+    const rows:string[][]=[],rowMeta:NonNullable<TechnicalTable['rowMeta']>=[];
+    let hasMergedCells=false,truncated=false;
+    const span=(a:string,key:string)=>{const value=Number(attr(a,key)??'1');return Number.isInteger(value)&&value>=1?value:1};
     for(const tr of (table[1]??'').matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)){
-      const cells=[...(tr[1]??'').matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)\s*>/gi)]
-        .map(m=>stripMarkup(m[1]??'').slice(0,220)).filter(Boolean);
-      if(cells.length>=2)rows.push(cells.slice(0,12));
-      if(rows.length>=70)break;
+      if(rows.length>=70){truncated=true;break;}
+      const cells:string[]=[],meta:{colspan:number;rowspan:number;header:boolean}[]=[];
+      for(const m of (tr[1]??'').matchAll(/<(td|th)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)){
+        if(cells.length>=12){truncated=true;break;}
+        const value=stripMarkup(m[3]??''),a=m[2]??'',colspan=span(a,'colspan'),rowspan=span(a,'rowspan');
+        if(value.length>220)truncated=true;
+        if(colspan>1||rowspan>1||attr(a,'rowspan')==='0')hasMergedCells=true;
+        cells.push(value.slice(0,220));
+        meta.push({colspan,rowspan,header:m[1]?.toLowerCase()==='th'});
+      }
+      // Preserve empty cells and physical column order; do not propagate merged values.
+      if(cells.length){rows.push(cells);rowMeta.push({cells:meta});}
     }
-    if(rows.length)tables.push({rows});
-    if(tables.length>=16)break;
+    if(rows.length)tables.push({rows,sourceUrl,tableIndex,rowMeta,hasMergedCells,truncated});
+    if(truncated)warnings.push('HTML table '+tableIndex+' reached extraction limits');
   }
   const headings=[...region.matchAll(/<h[1-4]\b[^>]*>([\s\S]*?)<\/h[1-4]\s*>/gi)].map(m=>stripMarkup(m[1]??'')).filter(Boolean).slice(0,40).map(s=>s.slice(0,200));
   // Commerce pages often place the product H1 before a description article.
@@ -89,7 +103,8 @@ export function parseHtml(htmlInput:string,sourceUrl:string,method:Strategy='S01
   const primaryHeading=pageHeading?stripMarkup(pageHeading[1]??'').slice(0,200):'';
   if(primaryHeading&&!headings.includes(primaryHeading))headings.unshift(primaryHeading);
   // Keep late-page technical evidence; bounded by 1.5 MB input and 90k text.
-  const text=stripMarkup(region).slice(0,90_000);
+  const fullText=stripMarkup(region),text=fullText.slice(0,90_000);
+  if(fullText.length>text.length)warnings.push('HTML primary text truncated at 90000 characters');
   const evidence:ExtractionEvidence[]=[];
   if(title)evidence.push({sourceUrl,locator:'html > head > title',excerpt:title.slice(0,210),method});
   if(headings[0])evidence.push({sourceUrl,locator:'main/section heading',excerpt:headings[0].slice(0,210),method});
