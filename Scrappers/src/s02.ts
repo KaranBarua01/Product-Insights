@@ -1,12 +1,13 @@
 /* S02 is runtime neutral. Browser implementations are injected by the host platform. */
 import type {Dependencies,ExecutionPolicy,ScrapeCore} from './types.js';
-import {assertAllowed} from './safety.js';
+import {assertAllowed,robotsAllowed} from './safety.js';
 import {parseHtml} from './html.js';
 export async function scrapeS02(url:string,deps:Dependencies,policy:ExecutionPolicy):Promise<ScrapeCore>{
   const safe=assertAllowed(url,policy.allowedHosts);
   if(!deps.browser)return {strategy:'S02',status:'unsupported',reason:'No browser adapter configured; use --browser playwright on Node or an optional Worker binding',sourceUrl:safe.href,content:{},evidence:[],warnings:[]};
   const output=await deps.browser(safe.href,policy.allowedHosts,policy.robotsRules);
-  assertAllowed(output.url,policy.allowedHosts,safe.hostname);
+  const final=assertAllowed(output.url,policy.allowedHosts,safe.hostname);
+  if((safe.protocol==='https:'&&final.protocol!=='https:')||!robotsAllowed(policy.robotsRules??'',final.pathname+final.search))return {strategy:'S02',status:'blocked',reason:'Browser final URL violates redirect or robots policy; no evidence retained',sourceUrl:safe.href,content:{},evidence:[],warnings:[]};
   if(output.httpStatus!==undefined&&output.httpStatus>=400)return {strategy:'S02',status:[401,403,429,503].includes(output.httpStatus)?'blocked':'failed',reason:`HTTP ${output.httpStatus} during browser capture; no bypass attempted`,sourceUrl:output.url,content:{},evidence:[],warnings:[]};
   const parsed=parseHtml(output.html,output.url,'S02');
   const challenge=/^(?:just a moment|attention required|access denied|bot verification|security check)/i.test((parsed.content.title??'').trim());
