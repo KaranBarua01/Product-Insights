@@ -1,0 +1,29 @@
+name: Acquisition phase 2 regression
+on:
+  push:
+    branches: [feat/acquisition-phase2-intelligent-discovery]
+  pull_request:
+    branches: [feat/acquisition-phase1-access-recovery]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: Scrappers
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --omit=optional --no-audit --no-fund
+      - run: npm run build
+      - run: node --check tools/research-lab.mjs
+      - run: node --check tools/node-browser.mjs
+      - run: node --check tools/v3-live-ab-benchmark.mjs
+      - run: node --test tests/intelligent-discovery.test.mjs tests/access-recovery.test.mjs tests/scrappers.test.mjs tests/research-v3.test.mjs tests/adaptive-html.test.mjs
