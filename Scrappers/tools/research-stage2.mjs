@@ -43,8 +43,8 @@ export function offlineProductLeads(pages){
     if(!['completed','partial'].includes(page.status))continue;
     let path;
     try{path=new URL(page.url).pathname.toLowerCase();}catch{continue;}
-    const family=/(?:^|\/)(?:product-category|categories|category|collections)\/[^/]+/.test(path);
-    const model=/(?:^|\/)(?:product|products|model|models)\/[^/]+/.test(path)&&!family;
+    const family=page.pageKind==='catalog'||/(?:^|\/)(?:product-category|categories|category|collections)\/[^/]+/.test(path);
+    const model=(page.pageKind==='product'||/(?:^|\/)(?:product|products|model|models)\/[^/]+/.test(path))&&!family;
     if(!family&&!model)continue;
     const pageText=String(page.aiText||page.snippet||'');
     const heading=(page.headings||[]).find(x=>typeof x==='string'&&x.trim().length>=5&&x.length<135&&
@@ -54,6 +54,7 @@ export function offlineProductLeads(pages){
     const siteName=new URL(page.url).hostname.replace(/^www\./,'').split('.')[0].replace(/[^a-z0-9]/gi,'').toLowerCase();
     if(name.length<5||name.length>135||name.toLowerCase().replace(/[^a-z0-9]/g,'')===siteName||
       /^(?:products?|catalog|home|shop|about|category)$/i.test(name))continue;
+    if(page.quality&&model&&!page.quality.productIdentities?.some(p=>norm(p.name)===norm(name)))continue;
     const evidence=String(heading||page.title||'').trim();
     const at=pageText.toLowerCase().indexOf(name.toLowerCase());
     const quote=at>=0?pageText.slice(Math.max(0,at-20),at+Math.min(175,name.length+125)).trim():evidence.slice(0,200);
