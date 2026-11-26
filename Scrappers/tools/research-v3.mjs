@@ -105,11 +105,13 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
   if(!Number.isInteger(maxPages)||maxPages<1||maxPages>V3_MAX_PAGES)throw Error('V3 page budget must be 1-50');
   if(typeof extractPage!=='function')throw Error('extractPage callback required');
   const startedAt=new Date().toISOString(),queue=new Map(),seen=new Set(),pages=[];
-  const documentLinks=new Map(),warnings=[];
+  const documentLinks=new Map(),warnings=[],seedAccessAttempts=[];
   let companySeen=false,productCount=0,usefulPages=0,productPages=0,categoryPages=0,technicalPages=0;
   let newParts=0,noGain=0,stopReason='frontier_exhausted',discoveredLeads=0,blockedPages=0;
   const initialUrl=v3SafeUrl(initial.href,host);
-  queue.set(initialUrl,{url:initialUrl,score:1000,kind:'company',parent:null,reason:'Starting company website',order:0});
+  // Keep the approved seed's actual path (including its trailing slash); only dedup the key.
+  const seedRequest=new URL(initialUrl);seedRequest.pathname=initial.pathname;
+  queue.set(initialUrl,{url:initialUrl,requestUrl:seedRequest.href,score:1000,kind:'company',parent:null,reason:'Starting company website',order:0});
   let sequence=1;
   while(queue.size>0&&pages.length<maxPages&&shouldContinue()){
     const options=[...queue.values()].sort((a,b)=>{
@@ -121,9 +123,10 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     const next=options[0];queue.delete(next.url);
     if(seen.has(next.url))continue;
     seen.add(next.url);
-    onProgress({step:pages.length+1,maxPages,url:next.url,status:'visiting',reason:next.reason});
+    const requested=next.requestUrl||next.url;
+    onProgress({step:pages.length+1,maxPages,url:requested,status:'visiting',reason:next.reason});
     let result;
-    try{result=await extractPage(next.url);}catch(e){
+    try{result=await extractPage(requested);}catch(e){
       result={sourceUrl:next.url,status:'failed',strategy:'none',reason:String(e?.message||e),content:{},evidence:[],warnings:[]};
     }
     // Treat out-of-scope redirects as blocked, never let their text into research.
@@ -147,7 +150,23 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       useful:good&&(isProduct||kind==='catalog'||kind==='document'||evidence),
       technicalEvidence:Boolean(evidence),sourcePageUrl:next.parent||null};
     pages.push(page);
-    if(!good){if(result.status==='blocked')blockedPages++;noGain++;continue;}
+    if(pages.length===1||next.seedRecovery)seedAccessAttempts.push({requestedUrl:requested,sourceUrl:actual,status:page.status,reason:page.reason,recovery:!!next.seedRecovery});
+    if(!good){
+      if(result.status==='blocked')blockedPages++;
+      noGain++;
+      // Rate limits terminate the site run, rather than exploring another path.
+      if(result.status==='blocked'&&/(?:\[rate_limited\]|\bHTTP 429\b)/i.test(page.reason)){stopReason='rate_limited';break;}
+      // Recover only from an explicitly missing deep entry path on the approved host.
+      // The existing extractPage callback must recheck robots, DNS and all transport limits.
+      const root=v3SafeUrl(new URL('/',initial).href,host);
+      if(pages.length===1&&pages.length<maxPages&&received&&root&&actual!==root&&next.url!==root&&
+         result.status==='failed'&&/\bHTTP (?:404|410)\b/i.test(page.reason)&&!seen.has(root)){
+        queue.set(root,{url:root,score:1000,kind:'company',parent:null,reason:'Missing seed path; retry approved same-host root',order:sequence++,seedRecovery:true});
+      }
+      if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
+      continue;
+    }
+    seen.add(actual);
     if(kind==='company')companySeen=true;
     if(isProduct)productPages++;
     if(kind==='catalog')categoryPages++;
@@ -186,8 +205,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
   }
   if(!shouldContinue())stopReason='cancelled';
-  else if(pages.length>=maxPages)stopReason='budget_exhausted';
-  else if(!queue.size&&stopReason!=='diminishing_returns')stopReason='frontier_exhausted';
+  else if(stopReason!=='rate_limited'&&pages.length>=maxPages)stopReason='budget_exhausted';
   const successfulPages=pages.filter(p=>['completed','partial'].includes(p.status)).length;
   return {schemaVersion:'pi-research-v3/1',requestedUrl:initialUrl,startedAt,
     status:successfulPages?'sampled':'no_successful_pages',requestedPages:maxPages,pages,
@@ -197,6 +215,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       catalogPages:categoryPages,technicalPages,blockedPages,discoveredLeads,
       productEvidenceCandidates:productCount,sourceTechnicalPages:pages.filter(x=>x.technicalEvidence).length,
       directProductDocumentLinks:documentLinks.size,stopReason},
+    seedAccessAttempts,
     warnings,limitations:['Limited and bounded same-host sample, not full catalog coverage.',
       'Technical link is not proof the document describes a specific product.',
       'The user-provided extractPage callback must enforce DNS, robots and request security.',
