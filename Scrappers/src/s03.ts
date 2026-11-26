@@ -126,6 +126,7 @@ export async function scrapeS03(url:string,dependencies:Dependencies,policy:Exec
   const warnings:string[]=[];
   if(sampled)warnings.push('Document page limit reached; remaining pages not inspected');
   if(needs.length)warnings.push('Pages with little native text require OCR review: '+needs.map(p=>p.page).join(', '));
+  if(needs.length&&!dependencies.pdfOcr)warnings.push('OCR not configured; no recognized text was invented');
   if(coverage.ocrReviewPages.length)warnings.push('OCR candidates are review-only and excluded from native evidence');
   if(truncatedPages.length||allText.length>90000)warnings.push('PDF text reached extraction limits');
   const reason=status==='needs_ocr'?'PDF has little extractable native text; OCR review required':
