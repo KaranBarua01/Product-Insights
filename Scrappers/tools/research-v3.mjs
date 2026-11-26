@@ -182,7 +182,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     const alternative=route.locale!==preferredLocale&&preferred.has(route.route);
     const productLike=['product','catalog'].includes(item.kind)||item.reason.startsWith('Unfamiliar catalog');
     const diversity=productLike&&!item.fromProductPage?(stats.attempts===0?60:-Math.min(105,Math.max(0,stats.attempts-1)*35)):0;
-    return item.score+(item.fromProductPage?20:0)+diversity-(alternative?180:0);
+    return item.score+(item.fromProductPage?55:0)+diversity-(alternative?180:0);
   }
   while(queue.size>0&&pages.length<maxPages&&shouldContinue()){
     const preferred=preferenceSet();
