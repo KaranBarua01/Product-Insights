@@ -8,6 +8,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {extract,limitedPatternAnalysis} from '../dist/engine.js';
 import {validatePublicUrl} from '../dist/safety.js';
 import {createPlaywrightBrowserCapture} from './node-browser.mjs';
+import {createLocalPdfOcr} from './local-pdf-ocr.mjs';
 import {MAX_PAGES,parseTaxonomy,runResearch} from './research-planner.mjs';
 import {getResearchBudget} from './adaptive-research-v2.mjs';
 import {runResearchV3} from './research-v3.mjs';
@@ -93,6 +94,14 @@ async function runJob(body){
   const u=validatePublicUrl(body.url);
   const chosen=body.maxPages==null?undefined:Number(body.maxPages);
   const v3Enabled=process.env.PI_RESEARCH_V3==='1';
+  const allowLargePdf=v3Enabled&&process.env.PI_LOCAL_LARGE_PDF==='1';
+  const pdfOcr=v3Enabled&&process.env.PI_LOCAL_PDF_OCR==='1'?createLocalPdfOcr():undefined;
+  // A run-wide extra download budget; existing safe default applies when exhausted.
+  let largePdfBytesRemaining=36_000_000,ocrPagesRemaining=6;
+  const boundedOcr=pdfOcr?async(bytes,pages)=>{
+    const selected=pages.slice(0,ocrPagesRemaining);ocrPagesRemaining-=selected.length;
+    return selected.length?pdfOcr(bytes,selected):[];
+  }:undefined;
   const budget=v3Enabled&&chosen!=null&&Number.isInteger(chosen)&&chosen>=31&&chosen<=50
     ? {profile:'evidence_v3',maxPages:chosen}
     :getResearchBudget({profile:body.researchProfile||'standard',maxPages:chosen});
@@ -129,7 +138,12 @@ async function runJob(body){
     }:null,
     onProgress:logEvent,onEvidence:(extracted,target)=>{rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});},extractPage:async target=>{
       await assertPublicDns(u.hostname);
-      const extracted=await extract({url:target,mode:strategy,maxPdfPages:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1},patternAnalysis?'supplied':'none');
+      // Reserve the entire larger ceiling before an attempt (even a failed transfer
+      // can consume bytes). At most three 12-MB reservations per local run.
+      const pdfLead=/\.pdf(?:$|\?)|\b(?:catalog(?:ue)?|datasheet|manual|download|technical|document)\b/i.test(new URL(target).pathname);
+      const larger=allowLargePdf&&pdfLead&&largePdfBytesRemaining>=12_000_000;
+      if(larger)largePdfBytesRemaining-=12_000_000;
+      const extracted=await extract({url:target,mode:strategy,maxPdfPages:v3Enabled?15:8,...(patternAnalysis?{patternAnalysis}:{})},{fetcher,...(browser?{browser}:{}),...(boundedOcr?{pdfOcr:boundedOcr}:{})},{allowedHosts:[u.hostname],timeoutMs:9000,maxHtmlPages:1,allowLargePdf:larger,maxBytesPdf:larger?12_000_000:3_000_000},patternAnalysis?'supplied':'none');
       if(!v3Enabled)rawProductEvidence.push({...extracted,url:extracted.sourceUrl||target});
       return extracted;
     }});
@@ -309,7 +323,7 @@ async function handler(req,res){
     const node=taxonomyNodes.find(n=>n.code===(kind==='alias'?body.existingCode:body.parentCode));
     if(!node||(kind==='alias'?node.level<2:node.level>2))return json(res,{error:'Choose a valid existing parent (L0-L2) or alias target (L2-L3)'},400);
     const supported=(state.report.pages||[]).some(p=>p.url===product.sourceUrl&&(
-      [String(p.aiText||p.snippet||''),String(p.title||''),...(p.headings||[])]
+      [...(Array.isArray(p.evidenceWindows)?p.evidenceWindows.map(w=>String(w.text||'')):[String(p.aiText||p.snippet||'')]),String(p.title||''),...(p.headings||[])]
         .some(text=>text.toLowerCase().replace(/\s+/g,' ').includes(String(product.quote).toLowerCase().replace(/\s+/g,' ')))||
       (p.structuredProducts||[]).some(found=>found.name.toLowerCase().replace(/\s+/g,' ').trim()===String(product.quote).toLowerCase().replace(/\s+/g,' ').trim())
     ));

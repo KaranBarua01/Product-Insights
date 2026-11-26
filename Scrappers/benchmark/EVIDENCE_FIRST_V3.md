@@ -29,6 +29,14 @@ npm run lab
 
 The existing Lab UI can continue requesting 5, 15, or 30 pages; the V3-only `/api/run` JSON request may specify up to **50**. The ordinary Worker remains unchanged. If `PI_RESEARCH_V3` is unset, existing V2 research remains the default. The response `partEvidence` includes source-backed candidate links and unverified D1 context; `documentLinks` lives in the research report. Do not enable for supplier qualification without manual review.
 
+## Phase 3 technical extraction (development branch)
+
+- S01 retains bounded raw HTML tables with source URL, table number, physical cells, empty cells and span metadata. Merged or truncated rows are not used for automatic row claims.
+- S03 retains native page text and conservative visual-row candidates, with explicit selected, missing and OCR-required pages. Sampling is bounded to 15 pages; larger catalogs are not claimed complete. The default 3 MB transfer cap remains unchanged.
+- Only in the operator-run localhost V3 lab, `PI_LOCAL_LARGE_PDF=1` enables up to three reserved 12 MB PDF attempts per run. `PI_LOCAL_PDF_OCR=1` enables local Poppler (`pdftoppm`) and Tesseract (`tesseract`, English data) on PATH: at most 3 pages per document and 6 per run, with fixed time and output limits. Both flags default off; they do not modify remote-agent permissions. The local OCR process is not an OS sandbox.
+- OCR text and geometry candidates are review-only, separate from digital source claims. The report includes bounded review previews and page-level coverage. Technical excerpt selection prioritizes literal unit-bearing and material/specification text; quotes must match one source window, not a gap between windows.
+- The running v0.8 installation is not updated by this branch. Verify integration with its guarded transport and rerun the controlled live benchmark before release.
+
 ## Evidence policy
 
 A document is eligible for part evidence only when **all** these tests pass: public source on the same approved host; the product's own visited page directly links the document; the document itself names that product/model; and the document has source text. If a shared manual names multiple sampled models or variants without a product-specific SKU, the verifier abstains. A family-level technical page may be treated as a **separate family candidate** when the primary H1, URL slug and multiple engineering signals agree. No generic family fact is automatically inherited by individual SKUs.

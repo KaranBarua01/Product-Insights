@@ -13,7 +13,7 @@ const key=x=>norm(x).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const hash=x=>createHash('sha256').update(x).digest('hex').slice(0,16);
 const same=(a,b)=>{try{const x=new URL(a),y=new URL(b);return x.hostname.toLowerCase()===y.hostname.toLowerCase()&&['http:','https:'].includes(x.protocol)&&['http:','https:'].includes(y.protocol);}catch{return false;}};
 function canon(url){try{const u=new URL(url);if(!['http:','https:'].includes(u.protocol))return null;
-  u.hash='';for(const k of [...u.searchParams.keys()])if(/^utm_|^(?:fbclid|gclid|ref)$/i.test(k))u.searchParams.delete(k);
+  u.hash='';for(const k of [...u.searchParams.keys()])if(/^utm_|^(?:fbclid|gclid)$/i.test(k))u.searchParams.delete(k);
   return u.href.replace(/\/$/,'');}catch{return null;}}
 const MATERIALS=[
  ['stainless steel',/\bstainless\s+steel\b/i],['carbon steel',/\bcarbon\s+steel\b/i],
@@ -59,7 +59,7 @@ export function linkedDocumentForProduct({product,productPage,documentPage,docum
   const anchors=[...(productPage.content?.links||[]),...(productPage.content?.documents||[]).map(url=>({url}))];
   if(!anchors.some(x=>canon(x.url)===du))return false;
   const pdfText=(documentPage.content?.pdfPages||[]).map(x=>String(x.text||'')).join('\n');
-  const text=String(documentPage.content?.text||pdfText).slice(0,90000);
+  const text=String(pdfText||documentPage.content?.text||'').slice(0,270000);
   if(text.length<30)return false;
   const title=String(documentPage.content?.title||'');
   const productName=String(product.name||'');
@@ -102,9 +102,13 @@ function getBlocks(doc){
       include(line,'technical HTML text');
   }
   for(const t of (doc.content?.tables||[]).slice(0,16)){
-    for(const row of (t.rows||[]).slice(0,40)){
-      const text=(Array.isArray(row)?row:row.cells||[]).map(norm).join(' | ');
-      if(text.length>=8)out.push({line:text.slice(0,900),locator:'technical table row'});
+    // Never infer relationships from ambiguous spanning cells, clipped rows or another page's table.
+    if(t.hasMergedCells||t.truncated||(t.sourceUrl&&canon(t.sourceUrl)!==canon(doc.url||doc.sourceUrl)))continue;
+    for(const [i,row] of (t.rows||[]).slice(0,70).entries()){
+      const cells=Array.isArray(row)?row:row.cells||[];
+      if(cells.length<2||cells.some(cell=>!norm(cell)))continue;
+      const text=cells.map(norm).join(' | ');
+      if(text.length>=8)out.push({line:text.slice(0,900),locator:'technical table row'+(t.tableIndex?' (HTML table '+t.tableIndex+', row '+(i+1)+')':'')});
     }
   }
   return out.slice(0,1400);
@@ -152,7 +156,7 @@ function nearestMatch(terms,line,part,peers,maxDistance=80){
   return found.sort((a,b)=>a.distance-b.distance);
 }
 function extractBlock(line,loc,docUrl){
-  if(CAUTION.test(line)||(!PART_CONTEXT.test(line)&&loc!=='technical table row'))return[];
+  if(CAUTION.test(line)||(!PART_CONTEXT.test(line)&&!loc.startsWith('technical table row')))return[];
   const parts=groupParts(line);if(!parts.length)return[];
   return parts.map(part=>{
     const materials=nearestMatch(MATERIALS,line,part,parts,75);
@@ -163,7 +167,7 @@ function extractBlock(line,loc,docUrl){
       const pre=line.slice(Math.max(0,m.index-35),Math.min(line.length,part.index+part.length+70));
       const adjacency=m.index<=part.index&&part.index-m.index<=26;
       const labeled=/\b(?:material|made\s+(?:of|from)|construction)\b/i.test(pre);
-      return adjacency||labeled||loc==='technical table row';
+      return adjacency||labeled||loc.startsWith('technical table row');
     }).slice(0,2).map(m=>({name:m.name,evidence:makeEvidence(docUrl,line,loc),
       status:'source_supported_candidate_requires_review'}));
     const processClaims=processes.filter(m=>{
@@ -205,7 +209,7 @@ export function enrichPartEvidenceV3({companyName,companyUrl,products=[],pages=[
        productPage.content.tables.length&&
        tokenMatch(String(productPage.content?.headings?.[0]||productPage.content?.title||''),product.name)){
       const tableClaims=getBlocks({...productPage,content:{...productPage.content,
-        text:'',pdfPages:[]}}).filter(x=>x.locator==='technical table row')
+        text:'',pdfPages:[]}}).filter(x=>x.locator.startsWith('technical table row'))
         .flatMap(({line,locator})=>extractBlock(line,locator,productPage.url||productPage.sourceUrl))
         .slice(0,100);
       addClaims(entry,productPage,tableClaims);

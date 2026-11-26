@@ -149,7 +149,53 @@ function duplicateFingerprint(result,content,kind,actual,host){
   return createHash('sha256').update(JSON.stringify([kind,identity,CLEAN(content.title),content.headings||[],text,
     content.jsonLd||[],content.tables||[],content.appState||[],links,docs])).digest('hex');
 }
-const technicalEvidence=(text,content)=>/\b(?:impeller|shaft|housing|bracket|bearing|seal|molding|moulding|machin|material|steel|aluminum|polyurethane|parts?[- ]list|spare parts)\b/i.test(String(text).slice(0,12000))||
+const TECHNICAL_TEXT=/\b(?:specifications?|dimensions?|tolerances?|materials?|parts? list|bill of materials|components?|pressure|torque|capacity|voltage|impellers?|shafts?|housings?|brackets?|bearings?|seals?|molding|moulding|machin(?:ed|ing)|steel|alumin(?:um|ium)|polyurethane)\b/i;
+const UNITS=/(?:\d[\d.,]*\s*(?:mm|cm|µm|μm|in\b|kg|g\b|lb|kN|Nm|N·m|MPa|bar|psi|rpm|kW|W\b|V\b|A\b|Hz|°[CF]|Ω)|±\s*\d)/i;
+export function selectEvidenceWindows(content,{limit=4800}={}){
+  const sources=Array.isArray(content.pdfPages)&&content.pdfPages.length?
+    content.pdfPages.map(p=>({locator:'PDF page '+p.page,text:String(p.text||'')})):
+    [{locator:'HTML primary text',text:String(content.text||'')}];
+  const candidates=[];
+  for(const {locator,text} of sources){
+    if(!text.trim())continue;
+    // Disjoint source slices, never fabricated or reflowed values.
+    for(let start=0;start<text.length;){
+      let end=Math.min(start+780,text.length);
+      if(end<text.length){
+        const cut=text.lastIndexOf('\n',end);
+        if(cut>start+350)end=cut+1;
+      }
+      const raw=text.slice(start,end),score=(TECHNICAL_TEXT.test(raw)?4:0)+(UNITS.test(raw)?5:0)+(start===0?1:0);
+      if(raw.trim())candidates.push({locator,start,end,text:raw,score});
+      start=end;
+    }
+  }
+  if(!candidates.length)return [];
+  const chosen=[candidates[0]],used=new Set([0]);let size=candidates[0].text.length;
+  const joinCost=30;
+  for(const {i,c} of candidates.map((c,i)=>({c,i})).sort((a,b)=>b.c.score-a.c.score||a.i-b.i)){
+    if(used.has(i)||size+joinCost+c.text.length>limit)continue;
+    used.add(i);chosen.push(c);size+=joinCost+c.text.length;
+  }
+  return chosen.sort((a,b)=>sources.findIndex(s=>s.locator===a.locator)-sources.findIndex(s=>s.locator===b.locator)||a.start-b.start)
+    .map(({score,...window})=>window);
+}
+function technicalReview(content){
+  const tables=Array.isArray(content.tables)?content.tables:[];
+  const pages=Array.isArray(content.pdfPages)?content.pdfPages:[];
+  // Review previews only. The extractor retains the full bounded raw structure.
+  const tablePreviews=tables.slice(0,4).map(t=>({...t,rows:t.rows.slice(0,12),rowMeta:t.rowMeta?.slice(0,12),previewTruncated:t.rows.length>12}));
+  let remaining=24;
+  const layoutPreviews=[];
+  for(const p of pages){
+    const rows=(p.layoutRows||[]).slice(0,remaining);
+    if(rows.length){layoutPreviews.push({page:p.page,rows,previewTruncated:rows.length<(p.layoutRows||[]).length});remaining-=rows.length;}
+  }
+  return {tableCount:tables.length,tablePreviews,layoutRowCount:pages.reduce((n,p)=>n+(p.layoutRows||[]).length,0),layoutPreviews,
+    pdfCoverage:content.pdfCoverage||null,ocrReview:pages.filter(p=>p.ocrText).slice(0,3).map(p=>({page:p.page,text:p.ocrText,reviewStatus:'ocr_requires_human_review'}))};
+}
+const technicalEvidence=(text,content)=>/\b(?:impeller|shaft|housing|bracket|bearing|seal|molding|moulding|machin|material|steel|aluminum|polyurethane|parts?[- ]list|spare parts)\b/i.test(String(text))||
+  (content.pdfPages||[]).some(p=>TECHNICAL_TEXT.test(p.text||'')||UNITS.test(p.text||''))||
   Array.isArray(content?.tables)&&content.tables.length>0;
 /**
  * A true second-stage, evidence-led crawler. 50 is a ceiling, not a target.
@@ -204,15 +250,18 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     if(!received){warnings.push('Off-host redirect or invalid source rejected for '+next.url);
       result={sourceUrl:next.url,status:'blocked',strategy:'none',reason:'Off-host redirect rejected',content:{},evidence:[]};}
     const actual=received||next.url;
-    const content=result.content||{},kind=v3PageKind(actual,content);
+    const content=result.content||{},kind=result.strategy==='S03'?'document':v3PageKind(actual,content);
     const good=['completed','partial'].includes(result.status);
     const text=good?String(content.text||''):'';
     const jsonProducts=good?structuralProducts(content,actual):[];
     const isProduct=kind==='product';
     const evidence=good&&technicalEvidence(text,content);
+    const evidenceWindows=good?selectEvidenceWindows(content):[];
+    const review=good||result.status==='needs_ocr'?technicalReview(content):null;
     const page={url:actual,status:result.status||'failed',strategy:result.strategy||'none',
       reason:result.reason||'',title:CLEAN(content.title).slice(0,180),
-      textChars:text.length,snippet:text.slice(0,1300),aiText:text.slice(0,4800),
+      textChars:text.length,snippet:text.slice(0,1300),aiText:evidenceWindows.map(w=>w.text).join('\n[... omitted source text ...]\n').slice(0,4800),
+      evidenceWindows,technicalReview:review,
       headings:(content.headings||[]).slice(0,12),evidence:(result.evidence||[]).slice(0,8),
       structuredProducts:jsonProducts,warnings:(result.warnings||[]).slice(0,9),
       lead:next.reason,stage:isProduct?'product_detail':kind==='document'||kind==='technical'?'technical_evidence':
@@ -240,7 +289,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     seen.add(actual);queue.delete(actual);
     if(kind==='form'){
       irrelevantPages++;noGain++;
-      Object.assign(page,{retrievalStatus:page.status,status:'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',structuredProducts:[],evidence:[]});
+      Object.assign(page,{retrievalStatus:page.status,status:'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
       if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
       continue;
     }
@@ -252,7 +301,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     if(duplicateOf){
       duplicatePages++;noGain++;
       Object.assign(page,{retrievalStatus:page.status,status:'duplicate',duplicateOf,useful:false,technicalEvidence:false,
-        snippet:'',aiText:'',structuredProducts:[],evidence:[]});
+        snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
       if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
       continue;
     }
@@ -260,7 +309,9 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     if(fingerprint)fingerprints.set(fingerprint,actual);
     stats.uniquePages++;if(isProduct)stats.productPages++;if(kind==='catalog')stats.catalogPages++;
     if(kind==='technical'||kind==='document')stats.technicalPages++;
-    onEvidence(result,requested);
+    // OCR candidate text and geometry-only rows stay in the local review report, not the intelligence input.
+    const evidenceResult=Array.isArray(content.pdfPages)?{...result,content:{...content,pdfPages:content.pdfPages.map(({ocrText,layoutRows,...native})=>native)}}:result;
+    onEvidence(evidenceResult,requested);
     if(kind==='company')companySeen=true;
     if(isProduct)productPages++;
     if(kind==='catalog')categoryPages++;
@@ -319,6 +370,10 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       productEvidenceCandidates:productCount,sourceTechnicalPages:pages.filter(x=>x.technicalEvidence).length,
       directProductDocumentLinks:documentLinks.size,stopReason,
       retrievedPages:successfulPages+duplicatePages+irrelevantPages,duplicatePages,irrelevantPages,filteredLinks,frontierDropped,remainingLeads:queue.size,
+      pdfDocuments:pages.filter(p=>p.technicalReview?.pdfCoverage).length,
+      pdfPagesNeedingOcr:pages.reduce((n,p)=>n+(p.technicalReview?.pdfCoverage?.ocrRequiredPages?.length||0),0),
+      pdfOcrReviewPages:pages.reduce((n,p)=>n+(p.technicalReview?.ocrReview?.length||0),0),
+      sourceTableCount:pages.reduce((n,p)=>n+(p.technicalReview?.tableCount||0),0),
       localeAlternativeVisits,preferredLocale,branchCoverage:[...branches].map(([key,stats])=>({key,...stats})),
       unvisitedBranches:[...new Set([...queue.values()].map(x=>x.branch))].filter(key=>!branches.has(key)),branchCoverageIsHeuristic:true},
     seedAccessAttempts,
