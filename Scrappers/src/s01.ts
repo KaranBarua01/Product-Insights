@@ -17,6 +17,7 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
   const maxBytes=Math.min(2_000_000,Math.max(100_000,policy.maxBytesHtml??1_250_000));
   const queue=[safe.href],visited=new Set<string>();
   const pages:SourcePage[]=[],textParts:string[]=[],sourceSections:NonNullable<ExtractedContent['sourceSections']>=[],links:NonNullable<ExtractedContent['links']>=[],documents:string[]=[],headings:string[]=[],jsonLd:unknown[]=[],appState:unknown[]=[],evidence:ExtractionEvidence[]=[],warnings:string[]=[];
+  const tables:NonNullable<ExtractedContent['tables']>=[];
   const linkSeen=new Set<string>(),documentSeen=new Set<string>(),seenText=new Set<string>();
   let firstTitle:string|undefined,firstDescription:string|undefined,firstUrl=safe.href,truncatedCount=0,fetchErrors=0;
   let pdfResponse=false;
@@ -49,6 +50,8 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
       else if(text)warnings.push(`Duplicate visible text found at ${fetched.url}; not counted twice`);
       if(fetched.truncated){truncatedCount++;warnings.push(`HTML truncated at ${maxBytes} bytes: ${fetched.url}`)}
       warnings.push(...parsed.warnings);evidence.push(...parsed.evidence);
+      // Each raw table retains its own page URL; never attribute a secondary page to the seed.
+      for(const table of content.tables??[]){if(tables.length>=16){warnings.push('Combined HTML table limit reached');break;}tables.push(table);}
       for(const h of content.headings??[])if(!headings.includes(h)&&headings.length<70)headings.push(h);
       for(const link of content.links??[])if(!linkSeen.has(link.url)&&links.length<260){linkSeen.add(link.url);links.push(link)}
       for(const doc of content.documents??[])if(!documentSeen.has(doc)&&documents.length<35){documentSeen.add(doc);documents.push(doc)}
@@ -79,6 +82,6 @@ export async function scrapeS01(url:string,deps:Dependencies,policy:ExecutionPol
   const formHeading=/^(?:request (?:a )?(?:quote|demo)|contact (?:us|sales)|sign (?:in|up)|log in|subscribe)$/i.test((headings[0]||firstTitle||'').trim());
   const status:ScrapeCore['status']=allTruncated||text.trim().length<40?'partial':'completed';
   const reason=`Inspected ${pages.length} HTML page(s), ${text.length} text chars, ${truncatedCount} truncated, ${fetchErrors} failed`;
-  const content:ExtractedContent={title:firstTitle,description:firstDescription,text,headings,links,documents,jsonLd,appState,sampledPages:pages,sourceSections};
+  const content:ExtractedContent={title:firstTitle,description:firstDescription,text,headings,links,documents,tables,jsonLd,appState,sampledPages:pages,sourceSections};
   return {strategy:'S01',status,reason,sourceUrl:firstUrl,content,evidence,warnings,...((sparse||allTruncated||dynamicShell)&&!formHeading?{next:'S02' as const}:{})};
 }
