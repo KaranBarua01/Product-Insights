@@ -2,6 +2,8 @@ name: Acquisition phase 1 regression
 on:
   push:
     branches: [feat/acquisition-phase1-access-recovery]
+  pull_request:
+    branches: [experiment/v3-ten-site-generalization-20261123]
   workflow_dispatch:
 permissions:
   contents: read
