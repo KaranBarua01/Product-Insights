@@ -73,14 +73,15 @@ export function stage2ParentChoices(nodes,products=[]){
   const l3=ranked.filter(x=>x.n.level===3).sort((a,b)=>b.match-a.match).slice(0,14).map(x=>x.n);
   return [...fixed,...l2,...l3].slice(0,78).map(n=>({code:n.code,label:n.label,path:n.path,level:n.level}));
 }
+function evidenceTexts(page){return Array.isArray(page.evidenceWindows)?page.evidenceWindows.map(w=>String(w.text||'')):[String(page.aiText||page.snippet||'')];}
 export function validateAiProducts(items,pages){
-  const pageMap=new Map(pages.map(p=>[p.url,String(p.aiText||p.snippet||'')]));
+  const pageMap=new Map(pages.map(p=>[p.url,evidenceTexts(p)]));
   const result=[],seen=new Set();
   for(const item of Array.isArray(items)?items.slice(0,30):[]){
     if(!item||typeof item!=='object')continue;
     const name=String(item.name||'').trim(),quote=String(item.quote||'').trim();
-    const text=pageMap.get(item.sourceUrl);
-    if(!text||name.length<4||name.length>140||quote.length<12||quote.length>240||!norm(text).includes(norm(quote))||
+    const texts=pageMap.get(item.sourceUrl);
+    if(!texts||name.length<4||name.length>140||quote.length<12||quote.length>240||!texts.some(t=>norm(t).includes(norm(quote)))||
       !['product_model','product_family'].includes(item.kind)||!nameWords(name)||
       !(' '+nameWords(quote)+' ').includes(' '+nameWords(name)+' '))continue;
     const key=norm(name)+'|'+item.sourceUrl;
@@ -124,7 +125,7 @@ function groupEvidenceIsPresent(group,pages){
   const quote=norm(group.quote);
   if(!quote||quote.length<8)return false;
   return pages.some(page=>page.url===group.sourceUrl&&(
-    [page.aiText||page.snippet||'',page.title||'',...(page.headings||[])].some(t=>norm(t).includes(quote))||
+    [...evidenceTexts(page),page.title||'',...(page.headings||[])].some(t=>norm(t).includes(quote))||
     // Product names explicitly embedded in published JSON-LD may not be
     // duplicated in the truncated visible text; retain that provenance.
     (page.structuredProducts||[]).some(p=>norm(p.name)===quote)
