@@ -6,15 +6,15 @@
 import {createHash} from 'node:crypto';
 
 export const V3_MAX_PAGES=50;
-const EXCLUDE=/(?:^|\/)(?:login|signin|account|cart|checkout|privacy|terms|cookies|jobs|careers|press|blog|news|events|search|contact|request-quote|support|investors)(?:\/|$)|\.(?:png|jpe?g|gif|svg|webp|zip|mp4|css|js)(?:$|\?)/i;
+const EXCLUDE=/(?:^|\/)(?:login|signin|account|cart|checkout|privacy|terms|cookies|jobs|careers|press|blog|news|events|search|contact|request-quote|investors)(?:\/|$)|\.(?:png|jpe?g|gif|svg|webp|zip|mp4|css|js)(?:$|\?)/i;
 const ACTION_PATH=/(?:^|\/)(?:request-a-quote|request-demo|request-a-demo|book-demo|book-a-demo|contact-us|forms?|enquiry|inquiry|newsletter|subscribe|dealer-locator|store-locator|language-selector|country-selector|preview|print)(?:\/|$)/i;
-const ACTION_LABEL=/^(?:request (?:a )?(?:quote|demo)|contact (?:us|sales)|submit (?:an )?inquiry|subscribe|sign (?:in|up)|log in|print(?: page)?|select (?:country|language)|find (?:a )?dealer|download form)$/i;
+const ACTION_LABEL=/^(?:request (?:a )?(?:quote|demo)|contact (?:us|sales)|submit (?:an )?inquiry|subscribe|sign (?:in|up)|log in|print(?: page)?|select (?:country|language)|find (?:a )?dealer|download form|support|customer service|faq|faqs|help center)$/i;
 const CATALOG_TITLE=/^(?:(?:all|our|browse|explore|view all)\s+)?(?:products?|product (?:catalog(?:ue)?|families|range|categories|portfolio)|catalog(?:ue)?s?|collections|produits|produkte|productos|produtos|prodotti|producten|katalog|catalogos?)(?:\s*[-|–]\s*.*)?$/i;
 const CATALOG_PATH=/(?:^|\/)(?:product-families|product-range|product-catalog(?:ue)?|produits|produkte|productos|produtos|prodotti|producten|katalog|catalogos?)(?:\/|$)/i;
 const SPECIFIC_LABEL=/^(?!read more$|learn more$|view all$|shop now$|details$|explore$|home$|click here$|more$|next$|previous$).{3,120}$/i;
 const LOCALE=/^(?:en|de|fr|es|it|pt|nl|ja|ko|zh|pl|sv|da|fi|no|cs|tr|ar|ru)(?:[-_](?:[a-z]{2}|[0-9]{3}|hans|hant))?$/i;
-const TECH=/\b(?:datasheet|data[- ]sheet|manual|installation|technical|specification|documentation|pdf|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|assembly[- ]instructions?|engineering[- ]drawing|bom|bill[- ]of[- ]materials)\b/i;
-const STRONG_TECH=/\b(?:datasheet|data[- ]sheet|manual|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|bill[- ]of[- ]materials|engineering[- ]drawing)\b/i;
+const TECH=/\b(?:datasheets?|data[- ]sheets?|manuals?|installation|technical|specifications?|documentation|downloads?|pdf|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|assembly[- ]instructions?|engineering[- ]drawing|bom|bill[- ]of[- ]materials)\b/i;
+const STRONG_TECH=/\b(?:datasheets?|data[- ]sheets?|manuals?|exploded|spare[- ]parts?|replacement[- ]parts?|parts?[- ]list|bill[- ]of[- ]materials|engineering[- ]drawing)\b/i;
 const PRODUCT=/\b(?:product|products|model|series|sku|item|catalog|pumps?|bearings?|bushings?|enclosures?|racks?|equipment|systems?|components?)\b/i;
 const DETAIL=/(?:^|\/)(?:products?|product|item|items|models?|sku|p)\/[^/?#]+\/?$/i;
 const CATEGORY=/(?:^|\/)(?:products?|catalog(?:ue)?|categories|collections|product-category|families|shop|portfolio)(?:\/|$)/i;
@@ -57,8 +57,9 @@ export function v3PageKind(url,{title='',headings=[],text='',jsonLd=[],links=[]}
   try{
     const p=new URL(url).pathname;
     if(/\.pdf$/i.test(p))return 'document';
-    if(IDENTITY.test(p)||localeRoute(url).parts.length===0)return 'company';
     const heading=CLEAN(headings[0]||title);
+    if(ACTION_LABEL.test(heading))return 'form';
+    if(IDENTITY.test(p)||localeRoute(url).parts.length===0)return 'company';
     const names=structuralProducts({jsonLd},url);
     const childLinks=(Array.isArray(links)?links:[]).filter(l=>{
       try{const dest=new URL(l.url);return dest.hostname===new URL(url).hostname&&
@@ -162,7 +163,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
   const startedAt=new Date().toISOString(),queue=new Map(),seen=new Set(),pages=[];
   const documentLinks=new Map(),warnings=[],seedAccessAttempts=[];
   const acceptedSources=new Map(),fingerprints=new Map(),branches=new Map(),preferredRoutes=new Set();
-  let preferredLocale=localeRoute(initial.href).locale,duplicatePages=0,filteredLinks=0,frontierDropped=0,localeAlternativeVisits=0;
+  let preferredLocale=localeRoute(initial.href).locale,duplicatePages=0,irrelevantPages=0,filteredLinks=0,frontierDropped=0,localeAlternativeVisits=0;
   let companySeen=false,productCount=0,usefulPages=0,productPages=0,categoryPages=0,technicalPages=0;
   let newParts=0,noGain=0,stopReason='frontier_exhausted',discoveredLeads=0,blockedPages=0;
   const initialUrl=v3SafeUrl(initial.href,host);
@@ -234,6 +235,12 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       continue;
     }
     seen.add(actual);queue.delete(actual);
+    if(kind==='form'){
+      irrelevantPages++;noGain++;
+      Object.assign(page,{retrievalStatus:page.status,status:'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',structuredProducts:[],evidence:[]});
+      if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
+      continue;
+    }
     if(acceptedSources.size===0)preferredLocale=localeRoute(actual).locale;
     const local=localeRoute(actual);
     if(local.locale===preferredLocale)preferredRoutes.add(local.route);
@@ -307,7 +314,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       catalogPages:categoryPages,technicalPages,blockedPages,discoveredLeads,
       productEvidenceCandidates:productCount,sourceTechnicalPages:pages.filter(x=>x.technicalEvidence).length,
       directProductDocumentLinks:documentLinks.size,stopReason,
-      retrievedPages:successfulPages+duplicatePages,duplicatePages,filteredLinks,frontierDropped,remainingLeads:queue.size,
+      retrievedPages:successfulPages+duplicatePages+irrelevantPages,duplicatePages,irrelevantPages,filteredLinks,frontierDropped,remainingLeads:queue.size,
       localeAlternativeVisits,preferredLocale,branchCoverage:[...branches].map(([key,stats])=>({key,...stats})),
       unvisitedBranches:[...new Set([...queue.values()].map(x=>x.branch))].filter(key=>!branches.has(key)),branchCoverageIsHeuristic:true},
     seedAccessAttempts,
