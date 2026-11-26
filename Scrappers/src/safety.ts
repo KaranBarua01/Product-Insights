@@ -46,7 +46,7 @@ export function robotsAllowed(text:string,targetPath:string):boolean{
   matches.sort((a,b)=>b.path.length-a.path.length||(a.kind==='allow'?-1:1));
   return matches[0]?.kind!=='disallow';
 }
-export class ResponseLimitError extends Error{constructor(limit:number){super(`Response exceeds ${limit}-byte limit`);this.name='ResponseLimitError'}}
+export class ResponseLimitError extends Error{constructor(public readonly limit:number){super(`Response exceeds ${limit}-byte limit`);this.name='ResponseLimitError'}}
 /** Stable access reasons: classify policy stops separately from transport failures. */
 export type AccessFailureCode='redirect_policy'|'redirect_loop'|'redirect_limit'|'redirect_invalid'|'robots_denied'|'robots_unavailable'|'rate_limited'|'timeout'|'network_transient';
 export class AccessFault extends Error{
@@ -75,11 +75,13 @@ async function discardBody(response:Response):Promise<void>{
 }
 export interface BoundedResponse {url:string;status:number;type:string;bytes:Uint8Array;truncated:boolean}
 export async function fetchBounded(raw:string,hosts:readonly string[],fetcher:typeof fetch,
-  budget:{timeoutMs:number;maxBytes:number;rootHost?:string;robotsRules?:string;truncate?:boolean},
+  budget:{timeoutMs:number;maxBytes:number;rootHost?:string;robotsRules?:string;truncate?:boolean;largePdf?:boolean},
   accept='text/html,application/pdf;q=0.8,*/*;q=0.2'):Promise<BoundedResponse>{
   let target=raw;const original=assertAllowed(raw,hosts,budget.rootHost);
   const visited=new Set<string>();let retried=false;
-  const maxBytes=Math.min(Math.max(budget.maxBytes,1),3_000_000);
+  // The default cap remains 3 MB. Only S03's trusted local policy can opt into the larger PDF ceiling.
+  const ceiling=budget.largePdf===true&&accept==='application/pdf'?12_000_000:3_000_000;
+  const maxBytes=Math.min(Math.max(budget.maxBytes,1),ceiling);
   for(let redirects=0;redirects<4;redirects++){
     const url=assertAllowed(target,hosts,original.hostname);
     if(visited.has(url.href))throw new AccessFault('redirect_loop','Redirect loop detected');
