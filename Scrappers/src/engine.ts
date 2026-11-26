@@ -6,7 +6,10 @@ import {scrapeS02} from './s02.js';
 import {scrapeS03} from './s03.js';
 function catalogNavigationScore(result:ScrapeCore):number{
   const links=result.content.links??[];
-  const useful=new Set(links.filter(l=>/\b(?:products?|catalog(?:ue)?|collections|categories|models?|series|datasheets?|manuals?)\b/i.test(l.url+' '+l.label)&&!/\b(?:login|checkout|contact|request-quote|request-demo|preview|cart)\b/i.test(l.url)).map(l=>l.url));
+  const host=new URL(result.sourceUrl).hostname;
+  const useful=new Set(links.filter(l=>{
+    try{return new URL(l.url).hostname===host&&/\b(?:products?|catalog(?:ue)?|collections|categories|models?|series|datasheets?|manuals?)\b/i.test(l.url+' '+l.label)&&!/\b(?:login|checkout|contact|request-quote|request-demo|preview|cart)\b/i.test(l.url)}catch{return false}
+  }).map(l=>l.url));
   const structured=(result.content.jsonLd??[]).some(x=>/"@type"\s*:\s*"Product(?:Group)?"/i.test(JSON.stringify(x)));
   return Math.min(30,useful.size)+(structured?10:0);
 }
@@ -36,8 +39,11 @@ export async function extract(request:ExtractRequest,deps:Dependencies,policy:Ex
     }else if(route.strategy==='S01'&&result.next==='S02'&&deps.browser){
       const browser=await perform('S02');
       if(browser.status==='blocked')result=browser;
-      else if(['completed','partial'].includes(browser.status)&&((browser.content.text?.length??0)>(result.content.text?.length??0)||
-        catalogNavigationScore(browser)>catalogNavigationScore(result)))result=browser;
+      else if(['completed','partial'].includes(browser.status)){
+        const renderedScore=catalogNavigationScore(browser),httpScore=catalogNavigationScore(result);
+        if(renderedScore>httpScore||(renderedScore===httpScore&&(browser.content.text?.length??0)>(result.content.text?.length??0)))result=browser;
+        else output.warnings.push('Browser produced no richer content or catalog navigation; kept HTTP response');
+      }
       else output.warnings.push('Browser produced no richer content or catalog navigation; kept HTTP response');
     }
   }
