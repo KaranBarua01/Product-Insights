@@ -1,0 +1,26 @@
+name: Acquisition phase 1 regression
+on:
+  push:
+    branches: [feat/acquisition-phase1-access-recovery]
+  pull_request:
+    branches: [experiment/v3-ten-site-generalization-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: Scrappers
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --omit=optional --no-audit --no-fund
+      - run: npm run build
+      - run: node --test tests/access-recovery.test.mjs tests/scrappers.test.mjs tests/research-v3.test.mjs
