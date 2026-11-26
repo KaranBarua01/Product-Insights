@@ -234,6 +234,9 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     return item.score+(item.fromProductPage?55:0)+diversity-(alternative?180:0)+gapPriority(item,missing);
   }
   while(queue.size>0&&pages.length<maxPages&&shouldContinue()){
+    if(adaptiveStop({visited:pages.length,maxPages,noGain,frontier:[...queue.values()],missing,branchStats:branches})){
+      stopReason='diminishing_returns';break;
+    }
     const preferred=preferenceSet();
     const options=[...queue.values()].sort((a,b)=>priority(b,preferred)-priority(a,preferred)||a.order-b.order);
     const next=options[0];queue.delete(next.url);
@@ -292,7 +295,8 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     }
     seen.add(actual);queue.delete(actual);
     if(!quality.discoveryAllowed){
-      irrelevantPages++;noGain++;
+      if(quality.classification!=='soft_error')irrelevantPages++;
+      noGain++;
       Object.assign(page,{retrievalStatus:page.status,status:quality.classification==='soft_error'?'soft_error':'irrelevant',useful:false,technicalEvidence:false,snippet:'',aiText:'',evidenceWindows:[],technicalReview:null,structuredProducts:[],evidence:[]});
       if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
       continue;
@@ -316,7 +320,7 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
     if(kind==='technical'||kind==='document')stats.technicalPages++;
     // OCR candidate text and geometry-only rows stay in the local review report, not the intelligence input.
     const evidenceResult=Array.isArray(content.pdfPages)?{...result,content:{...content,pdfPages:content.pdfPages.map(({ocrText,layoutRows,...native})=>native)}}:result;
-    onEvidence(evidenceResult,requested);
+    onEvidence({...evidenceResult,acquisitionQuality:quality},requested);
     if(kind==='company')companySeen=true;
     if(isProduct)productPages++;
     if(kind==='catalog')categoryPages++;
@@ -361,16 +365,13 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
         parent:candidate.fromProductPage?actual:old.parent,
         fromProductPage:old.fromProductPage||candidate.fromProductPage});}
     }
-    // Stop only after a substantial sample and no remaining high-value links.
-    if(adaptiveStop({visited:pages.length,maxPages,noGain,frontier:[...queue.values()],missing,branchStats:branches})){
-      stopReason='diminishing_returns';break;
-    }
     if(delayMs&&queue.size&&pages.length<maxPages)await new Promise(r=>setTimeout(r,delayMs));
   }
   if(!shouldContinue())stopReason='cancelled';
   else if(stopReason!=='rate_limited'&&pages.length>=maxPages)stopReason='budget_exhausted';
   const successfulPages=pages.filter(p=>['completed','partial'].includes(p.status)).length;
   const evidenceQuality=qualityTracker.summary(pages,[...queue.values()],stopReason,{frontierDropped,maxPages});
+  evidenceQuality.directDocumentLeads=[...documentLinks.values()].slice(0,150).map(l=>({...l,reviewStatus:pages.some(p=>p.url===l.documentUrl&&p.quality?.accepted)?'source_retrieved_relationship_unverified':'not_assessed_or_unavailable'}));
   return {schemaVersion:'pi-research-v3/1',requestedUrl:initialUrl,startedAt,
     status:successfulPages?'sampled':'no_successful_pages',requestedPages:maxPages,pages,evidenceQuality,
     products:pages.flatMap(x=>x.structuredProducts).slice(0,120),
