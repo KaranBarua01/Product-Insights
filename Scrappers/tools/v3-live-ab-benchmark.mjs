@@ -51,11 +51,11 @@ async function run(which){
     const result=await extract({url:target,mode:'auto',maxPdfPages:8},
       {fetcher,browser},{allowedHosts:[u.hostname],timeoutMs:10000,maxHtmlPages:1,
         maxBytesHtml:1_250_000,maxBytesPdf:3_000_000},'none');
-    pages.push({...result,url:result.sourceUrl||target});
+    if(which!=='v3')pages.push({...result,url:result.sourceUrl||target});
     return result;
   };
   const research=which==='v3'?await runResearchV3({url:u.href,maxPages:limit,delayMs:350,
-    extractPage}):await runResearch({url:u.href,maxPages:limit,delayMs:350,extractPage});
+    extractPage,onEvidence:(result,target)=>pages.push({...result,url:result.sourceUrl||target})}):await runResearch({url:u.href,maxPages:limit,delayMs:350,extractPage});
   const detected=which==='v3'?extractProductIntelligenceV3({companyName:site.name,rootUrl:u.href,pages}):
     extractProductIntelligence({companyName:site.name,rootUrl:u.href,pages});
   const partEvidence=which==='v3'?enrichPartEvidenceV3({companyName:site.name,companyUrl:u.href,
@@ -63,7 +63,10 @@ async function run(which){
     buildPartEvidenceReport({companyName:site.name,companyUrl:u.href,products:detected.products,pages});
   return {executionStatus:'completed',elapsedMs:Math.round(performance.now()-t),
     pagesVisited:research.coverage?.visitedPages||0,
-    pagesUsable:research.coverage?.successfulPages||pages.filter(p=>['completed','partial'].includes(p.status)).length,
+    pagesUsable:research.coverage?.successfulPages??pages.filter(p=>['completed','partial'].includes(p.status)).length,
+    duplicatePages:research.coverage?.duplicatePages??null,
+    remainingLeads:research.coverage?.remainingLeads??null,
+    branchCoverage:research.coverage?.branchCoverage??null,
     technicalPages:research.coverage?.technicalPages||0,
     productCandidates:detected.products.length,
     productFamilyLabels:detected.productFamilies?.length||0,

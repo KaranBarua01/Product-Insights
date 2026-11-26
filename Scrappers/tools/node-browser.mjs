@@ -1,5 +1,6 @@
 /** Optional Playwright browser adapter. Works on Windows, Linux, macOS, Docker or via CDP. */
 import {assertAllowed,robotsAllowed} from '../dist/safety.js';
+import {assertPublicDns} from './research-lab-security.mjs';
 
 export function createPlaywrightBrowserCapture(options={}) {
   const cdpUrl=options.cdpUrl || process.env.PLAYWRIGHT_CDP_URL || '';
@@ -9,6 +10,9 @@ export function createPlaywrightBrowserCapture(options={}) {
   const inspectHoldMs=Number.isInteger(options.inspectHoldMs)?Math.max(0,Math.min(5000,options.inspectHoldMs)):0;
   return async function capture(raw,allowedHosts,robotsRules='') {
     const target=assertAllowed(raw,allowedHosts);
+    // Preflight is not a DNS-pinned browser sandbox. This adapter remains for
+    // operator-approved local/CI research only, not the universal remote agent.
+    await assertPublicDns(target.hostname);
     let chromium;
     try {({chromium}=await import('playwright'));}
     catch {throw new Error('Playwright not installed. Run npm install and npx playwright install chromium (or configure PLAYWRIGHT_CDP_URL).');}
@@ -22,7 +26,9 @@ export function createPlaywrightBrowserCapture(options={}) {
           const req=route.request();let permitted=false;
           try {
             const u=assertAllowed(req.url(),allowedHosts,target.hostname);
-            permitted=robotsAllowed(robotsRules,u.pathname+u.search);
+            permitted=['GET','HEAD'].includes(req.method())&&!(target.protocol==='https:'&&u.protocol!=='https:')&&robotsAllowed(robotsRules,u.pathname+u.search);
+            if(permitted&&/(?:^|\/)(?:login|logout|checkout|cart|subscribe|request-quote|request-demo|forms?)(?:\/|$)/i.test(u.pathname))permitted=false;
+            if(permitted)await assertPublicDns(u.hostname);
             // Avoid expensive downloads; block off-host scripts/resources by default.
             if(['image','media','font','websocket'].includes(req.resourceType()))permitted=false;
           }catch{/* deny unapproved URL */}
@@ -30,14 +36,14 @@ export function createPlaywrightBrowserCapture(options={}) {
         });
         const page=await context.newPage();
         try {
-          await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:12_000});
-          await page.waitForTimeout(800);
-          const more=page.getByRole('button',{name:/^(load more|show more|view more)$/i}).first();
-          if(await more.count()){try{await more.click({timeout:1000});await page.waitForTimeout(700)}catch{/* optional single interaction */}}
+          const response=await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:12_000});
+          const httpStatus=response?.status();
+          // No clicks or form submissions; render the approved public page only.
+          if(httpStatus===undefined||httpStatus<400)await page.waitForTimeout(800);
           const finalUrl=page.url();assertAllowed(finalUrl,allowedHosts,target.hostname);
           const html=await page.content();
           if(!headless&&inspectHoldMs)await page.waitForTimeout(inspectHoldMs);
-          return {url:finalUrl,html:html.slice(0,1_500_000),truncated:html.length>1_500_000};
+          return {url:finalUrl,html:html.slice(0,1_500_000),truncated:html.length>1_500_000,httpStatus};
         }finally{await page.close();}
       }finally{await context.close();}
     }finally{await browser.close();}
