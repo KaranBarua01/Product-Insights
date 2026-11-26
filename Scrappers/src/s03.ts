@@ -70,7 +70,7 @@ export async function unpdfParser(bytes:Uint8Array,maxPages:number):Promise<PdfP
       try{
         const page=await doc.getPage(n);
         try{const textContent=await page.getTextContent();pages.push({page:n,...extractPdfLayout(textContent.items)});}
-        finally{try{page.cleanup();}catch{/* preserve successfully extracted text */}}
+        finally{try{(page as unknown as {cleanup?:()=>unknown}).cleanup?.();}catch{/* preserve successfully extracted text */}}
       }catch{pages.push({page:n,text:'',extractionFailed:true});}
     }
     return {pageCount:pages.length,totalPages:doc.numPages,truncated:doc.numPages>pages.length,pages};
