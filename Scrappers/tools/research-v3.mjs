@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 
 export const V3_MAX_PAGES=50;
 const EXCLUDE=/(?:^|\/)(?:login|signin|account|cart|checkout|privacy|terms|cookies|jobs|careers|press|blog|news|events|search|contact|request-quote|investors)(?:\/|$)|\.(?:png|jpe?g|gif|svg|webp|zip|mp4|css|js)(?:$|\?)/i;
-const ACTION_PATH=/(?:^|\/)(?:request-a-quote|request-demo|request-a-demo|book-demo|book-a-demo|contact-us|forms?|enquiry|inquiry|newsletter|subscribe|dealer-locator|store-locator|language-selector|country-selector|preview|print)(?:\/|$)/i;
+const ACTION_PATH=/(?:^|\/)(?:request-a-quote|request-demo|request-a-demo|book-demo|book-a-demo|contact-us|forms?|enquiry|inquiry|newsletter|subscribe|dealer-locator|store-locator|language-selector|country-selector|preview|print-view)(?:\/|$)/i;
 const ACTION_LABEL=/^(?:request (?:a )?(?:quote|demo)|contact (?:us|sales)|submit (?:an )?inquiry|subscribe|sign (?:in|up)|log in|print(?: page)?|select (?:country|language)|find (?:a )?dealer|download form|support|customer service|faq|faqs|help center)$/i;
 const CATALOG_TITLE=/^(?:(?:all|our|browse|explore|view all)\s+)?(?:products?|product (?:catalog(?:ue)?|families|range|categories|portfolio)|catalog(?:ue)?s?|collections|produits|produkte|productos|produtos|prodotti|producten|katalog|catalogos?)(?:\s*[-|–]\s*.*)?$/i;
 const CATALOG_PATH=/(?:^|\/)(?:product-families|product-range|product-catalog(?:ue)?|produits|produkte|productos|produtos|prodotti|producten|katalog|catalogos?)(?:\/|$)/i;
@@ -32,7 +32,7 @@ export function v3SafeUrl(raw,host){
       if(/^(?:action|do)$/i.test(key)&&/^(?:login|logout|submit|checkout|add.to.cart|delete|edit|subscribe|preview)$/i.test(value))return null;
     }
     u.hash='';if(u.pathname.length>1)u.pathname=u.pathname.replace(/\/+$/,'');
-    for(const key of [...u.searchParams.keys()])if(/^(?:utm_.*|fbclid|gclid|ref|mc_cid|mc_eid)$/i.test(key))u.searchParams.delete(key);
+    for(const key of [...u.searchParams.keys()])if(/^(?:utm_.*|fbclid|gclid|mc_cid|mc_eid)$/i.test(key))u.searchParams.delete(key);
     return u.href;
   }catch{return null;}
 }
@@ -66,9 +66,11 @@ export function v3PageKind(url,{title='',headings=[],text='',jsonLd=[],links=[]}
         dest.pathname.startsWith(p.replace(/\/+$/,'')+'/')&&substantiveLabel(CLEAN(l.label));}catch{return false}
     }).length;
     const hasSku=names.length===1||/\b(?:sku|part (?:no|number)|model (?:no|number))\b/i.test(String(text).slice(0,3000));
-    if(isCatalogTitle(heading)||names.length>1||
+    const productGroup=/"@type"\s*:\s*(?:"ProductGroup"|\[[^\]]*"ProductGroup")/i.test(JSON.stringify(jsonLd).slice(0,180000));
+    if(productGroup&&!isCatalogTitle(heading))return 'product';
+    if(isCatalogTitle(heading)||(names.length>1&&!DETAIL.test(p))||
        (childLinks>=3&&!hasSku&&(CATEGORY.test(p)||CATALOG_PATH.test(p)||/\b(?:range|families|series|catalog|products)\b/i.test(heading))))return 'catalog';
-    if(names.length===1)return 'product';
+    if(names.length>=1)return 'product';
     if(/(?:^|\/)(?:product-category|categories|collections|catalog(?:ue)?|families)(?:\/|$)/i.test(p)||CATALOG_PATH.test(p))return 'catalog';
     if(DETAIL.test(p))return 'product';
     if(TECH.test(p))return 'technical';
@@ -197,7 +199,8 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       result={sourceUrl:next.url,status:'failed',strategy:'none',reason:String(e?.message||e),content:{},evidence:[],warnings:[]};
     }
     // Treat out-of-scope redirects as blocked, never let their text into research.
-    const received=v3SafeUrl(result?.sourceUrl||next.url,host);
+    const receivedCandidate=v3SafeUrl(result?.sourceUrl||next.url,host);
+    const received=receivedCandidate&&!(initial.protocol==='https:'&&new URL(receivedCandidate).protocol!=='https:')?receivedCandidate:null;
     if(!received){warnings.push('Off-host redirect or invalid source rejected for '+next.url);
       result={sourceUrl:next.url,status:'blocked',strategy:'none',reason:'Off-host redirect rejected',content:{},evidence:[]};}
     const actual=received||next.url;
@@ -287,7 +290,8 @@ export async function runResearchV3({url,maxPages=30,extractPage,onProgress=()=>
       const old=queue.get(candidate.url);
       if(!old){
         if(queue.size>=maxCandidates){
-          const weakest=[...queue.values()].sort((a,b)=>priority(a,pagePreferred)-priority(b,pagePreferred)||b.order-a.order)[0];
+          const weakest=[...queue.values()].reduce((a,b)=>priority(a,pagePreferred)<priority(b,pagePreferred)||
+            (priority(a,pagePreferred)===priority(b,pagePreferred)&&a.order>b.order)?a:b);
           if(priority(candidate,pagePreferred)<=priority(weakest,pagePreferred)){frontierDropped++;continue;}
           queue.delete(weakest.url);frontierDropped++;
         }
