@@ -47,3 +47,25 @@ test('saved zero-lead catalogue becomes visible after source-quoted AI discovery
   await lab.close();lab=createLab(options);port=await lab.listen();out=await (await fetch('http://127.0.0.1:'+port+'/api/results')).json();assert.equal(out.outcome_catalogue.discovered,1);assert.equal(out.outcome_catalogue.products[0].name,'centrifugal pumps');assert.equal(out.summary.metrics.batches_completed,0);
  }finally{await lab.close();rmSync(resultsDir,{recursive:true,force:true});}
 });
+
+test('company history keeps multiple runs and failed evidence independently visible; historical AI review and export do not modify active run',async()=>{
+ const resultsDir=mkdtempSync(join(tmpdir(),'pi-history-test-'));
+ const options={root,port:0,resultsDir,dbPath,runtime:()=>({ready:true}),acquisition:async(_r,c)=>c.url.includes('blocked')?{requestedUrl:c.url,status:'blocked',pages:[],products:[]}:({...fixture(1),requestedUrl:c.url})};
+ let lab=createLab({...options,restore:false});
+ try{
+  let port=await lab.listen(),base='http://127.0.0.1:'+port;
+  const run=async(url,site_id)=>{const x=lab.startQueueRun({url,maxPages:1,provider:'deterministic',strategy:'auto',browser:'none'},{issue:201,job_id:'test_benchmark',benchmark:'benchmark_100',company:site_id==='001'?'Company A':'Company B',sector:'Fixture',site_id});await x.completion;return x.id;};
+  const first=await run('https://maker-a.invalid/','001');const failed=await run('https://blocked.invalid/','002');const second=await run('https://maker-a.invalid/','001');
+  let hist=await (await fetch(base+'/api/history')).json();assert.equal(hist.runs.length,3);assert.equal(hist.current_run,second);assert.equal(hist.runs.find(r=>r.id===failed).phase,'no_usable_evidence');assert.equal(hist.runs.find(r=>r.id===first).company,'Company A');
+  const work=lab.getOutcomeWorklist(first),review=structuredClone(work.review_template);review.products[0].status='assessed';review.products[0].parts=[{component:'impeller',material:'Steel',processes:['Machining'],condition:'If machined steel design',basis:'inferred'}];
+  assert.equal(lab.applyOutcomeReview(review,{merge:true}).run_id,first);
+  assert.equal(lab.getState().id,second);assert.equal(lab.getState().outcomeReview,null);
+  let archived=await (await fetch(base+'/api/history/run?run_id='+encodeURIComponent(first))).json();assert.equal(archived.report.outcome_catalogue.assessed,1);assert.equal(archived.status.id,first);
+  const live=await (await fetch(base+'/api/results')).json();assert.equal(live.run_id,second);assert.equal(live.outcome_catalogue.assessed,0);
+  const exported=await (await fetch(base+'/api/export/outcome?run_id='+encodeURIComponent(first))).json();assert.equal(exported.run_id,first);
+  assert.equal((await fetch(base+'/api/history/run?run_id=..%2F')).status,400);assert.equal((await fetch(base+'/api/export/outcome?run_id=..%2F')).status,400);assert.throws(()=>lab.getOutcomeWorklist(failed));
+  hist=await (await fetch(base+'/api/history')).json();assert.equal(hist.runs.find(r=>r.id===first).reviewed,true);
+  await lab.close();lab=createLab(options);port=await lab.listen();base='http://127.0.0.1:'+port;
+  archived=await (await fetch(base+'/api/history/run?run_id='+encodeURIComponent(first))).json();assert.equal(archived.report.outcome_catalogue.assessed,1);assert.equal(lab.getState().id,second);
+ }finally{await lab.close();rmSync(resultsDir,{recursive:true,force:true});}
+});
