@@ -134,3 +134,15 @@ test('a successful release cannot be mistaken for a different installed release'
   assert.equal(r.status,'already_installed');
  }finally{await rm(root,{recursive:true,force:true})}
 });
+
+test('repeated stage reuses verified file without another network request',async()=>{
+ const root=await fixture();
+ try{
+  await stage(root,{manifest:manifest(),fetcher:fakeFetch(manifest())});
+  const noNetwork=async()=>{throw Error('network should not be called')};
+  const s=await stage(root,{manifest:manifest(),fetcher:noNetwork});
+  assert.equal(s.status,'already_staged');
+  assert.equal(await readFile(join(root,'app/main.mjs'),'utf8'),OLD);
+  await protectedFiles(root);
+ }finally{await rm(root,{recursive:true,force:true})}
+});
