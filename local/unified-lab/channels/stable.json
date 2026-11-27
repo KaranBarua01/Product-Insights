@@ -2,14 +2,38 @@
   "schemaVersion": "pi-local-update/v1",
   "channel": "stable",
   "sourceRepo": "KaranBarua01/Product-Insights",
-  "sourceCommit": "21b359234fb856529ee687d69f6dfb9bacff0881",
-  "releaseId": "2026.11.27-canary.1",
+  "sourceCommit": "23d2d952e2d9b4c6527d4f138dc9ce7b7b66c392",
+  "releaseId": "2026.11.27-app.1",
   "minNode": 24,
   "files": [
     {
-      "path": "updater/release-marker.txt",
-      "bytes": 165,
-      "sha256": "ff3789a4a9e2c770dd58cfc2f8436e704fa20dac5faac49819469431474147ac",
+      "path": "app/index.html",
+      "bytes": 7497,
+      "sha256": "d74053911a5a32d62f37d495b50e8239b030ef947a758eccb5a63336520ded5d",
+      "fromSha256": "d34db312ec80717bd5f41e32f76399fd40bc573f498b8a566ecb0ae4a61fc2ca"
+    },
+    {
+      "path": "app/app.js",
+      "bytes": 19007,
+      "sha256": "b4b78fa174b30c694362b46beca7069d0b7619b85a6868c0d4850b985cb26f3d",
+      "fromSha256": "93e8eabb57f055d9259de0447d2d65b4a7b0e253738ee911a970f9c375de358f"
+    },
+    {
+      "path": "app/server.mjs",
+      "bytes": 17996,
+      "sha256": "b5042a7b40283f4a97502c33442b49d26dbb50009e1399af7958240662621afc",
+      "fromSha256": "10c53e52f8d1998462902e0bddb59763a768f7fea0adb18f419aee7ea57260b6"
+    },
+    {
+      "path": "app/update-status.mjs",
+      "bytes": 778,
+      "sha256": "f5231663385dd7cafa42dd5c9324135d3fd31c2dd027dc30dc3a4c831774dc4f",
+      "fromSha256": null
+    },
+    {
+      "path": "tests/update-status.test.mjs",
+      "bytes": 1828,
+      "sha256": "ea670f54362f9ffef3d6b91401b53a49d38692a1ecfcbfe2669306e392e2772f",
       "fromSha256": null
     }
   ]
