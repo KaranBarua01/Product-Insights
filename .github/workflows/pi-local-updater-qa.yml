@@ -32,5 +32,8 @@ jobs:
           node --check tools/pi-local-updater/core.mjs
           node --check tools/pi-local-updater/cli.mjs
           node --check tools/pi-local-updater/core.test.mjs
+          node --check tools/pi-local-updater/bridge-patch.mjs
+          node --check tools/pi-local-updater/watch.mjs
+          node --check tools/pi-local-updater/bridge.test.mjs
       - name: Offline security, staging and rollback tests
-        run: node --test tools/pi-local-updater/core.test.mjs
+        run: node --test tools/pi-local-updater/*.test.mjs
