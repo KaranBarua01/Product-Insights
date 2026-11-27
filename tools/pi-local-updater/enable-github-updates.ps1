@@ -84,9 +84,9 @@ try {
 @echo off
 setlocal
 cd /d "%~dp0"
-node.exe "%~dp0updater\cli.mjs" auto "%~dp0"
-if errorlevel 1 echo Update channel unavailable; continuing installed version.
-node.exe "%~dp0updater\cli.mjs" activate-if-staged "%~dp0"
+node.exe ".\updater\cli.mjs" auto "."
+if errorlevel 1 echo Update channel unavailable; checking already staged release.
+node.exe ".\updater\cli.mjs" activate-if-staged "."
 if errorlevel 1 (echo A staged update could not be verified. Application not started. & pause & exit /b 1)
 '@
  foreach ($mode in @('AGENT','LOCALHOST')) {
