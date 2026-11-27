@@ -50,9 +50,9 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
    if(!item||item.version!==version){
     const old=readJSON(path);if(old.id!==id)continue;
     const url=old.config?.url||old.sample?.requested_url;let host;try{host=new URL(url).hostname.toLowerCase().replace(/^www\./,'');}catch{continue;}
-    const review=outcome?readJSON(outcome):null,reviewed=review?.run_id===id&&['pi-final-outcome/review-v1','pi-final-outcome/review-v2'].includes(review?.schemaVersion);
-    const products=reviewed?[...(review.products||[]).filter(p=>p.status!=='rejected'),...(review.discovered_products||[])]:[];
-    item={id,version,company_key:host,company:old.config?.company||host,url,sector:old.config?.sector||null,benchmark_issue:old.config?.benchmark?old.config.queue_issue:null,site_id:old.config?.site_id||null,started_at:old.started_at,finished_at:old.finished_at,phase:old.busy&&id!==s.id?'interrupted':old.phase,busy:!!old.busy&&id===s.id,pages_attempted:old.sample?.pages_attempted??(old.pages||[]).filter(p=>p&&p.status!=='visiting').length,pages_usable:old.sample?.pages_usable??0,reviewed,review_products:reviewed?products.length:null,assessed:reviewed?products.filter(p=>p.status==='assessed').length:null,provider:old.config?.provider||null};
+    let review=null;try{review=outcome?readJSON(outcome):null;}catch{}const reviewed=review?.run_id===id&&['pi-final-outcome/review-v1','pi-final-outcome/review-v2'].includes(review?.schemaVersion);
+    const products=reviewed?[...(Array.isArray(review.products)?review.products:[]).filter(p=>p?.status!=='rejected'),...(Array.isArray(review.discovered_products)?review.discovered_products:[])]:[];
+    item={id,version,company_key:host,company:old.config?.company||host,url,sector:old.config?.sector||null,benchmark_issue:old.config?.benchmark?old.config.queue_issue:null,site_id:old.config?.site_id||null,started_at:old.started_at,finished_at:old.finished_at,phase:id===s.id?s.phase:old.busy?'interrupted':old.phase,busy:id===s.id&&s.busy,pages_attempted:old.sample?.pages_attempted??(old.pages||[]).filter(p=>p&&p.status!=='visiting').length,pages_usable:old.sample?.pages_usable??0,reviewed,review_products:reviewed?products.length:null,assessed:reviewed?products.filter(p=>p?.status==='assessed').length:null,provider:old.config?.provider||null};
     historyCache.set(id,item);
    }
    rows.push(item);
@@ -67,11 +67,7 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
  async function callEngine(path,method='GET',data){const r=await engine.fetch(new Request('http://127.0.0.1'+path,{method,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify(data)}:{})}),{PRODUCT_INSIGHTS_DB:adapter});return {status:r.status,body:await r.json()};}
  async function refreshOllama(force=false){if(force||!ollamaCache||Date.now()-ollamaChecked>7000){ollamaCache=await ollamaHealth(ollamaBase);ollamaChecked=Date.now();}return ollamaCache;}
  function output(t=s){return {run_id:t.id,requested_url:t.report?.requestedUrl||t.config?.url||null,sample:t.packet?.sample||null,acquisition:t.report?{status:t.report.status,coverage:t.report.coverage,evidenceQuality:t.report.evidenceQuality||null,pattern_assessments:t.report.pattern_assessments||[],benchmarkAcquisition:t.report.benchmarkAcquisition,products:t.report.products||[],warnings:t.report.warnings||[],pages:(t.report.pages||[]).map((p,i)=>({id:i+1,url:p.url,title:p.title,status:p.status,strategy:p.strategy,reason:p.reason,textChars:p.textChars,snippet:p.snippet,aiText:p.aiText,structuredProducts:p.structuredProducts,headings:p.headings,warnings:p.warnings,quality:p.quality||null,technicalReview:p.technicalReview||null,evidenceWindows:p.evidenceWindows||[]}))}:null,summary:t.summary,engineering:t.engineering,outcome_review:t.outcomeReview,outcome_catalogue:buildOutcomeCatalogue(t.report,t.outcomeReview),provider:t.config?.provider||null,note:'Local draft V2 reference, not live Cloudflare. Observed website proposals and inferred engineering hypotheses require human review. No procurement or supplier matching.'};}
- function currentOutcomeWorklist(runId=s.id){
-  if(!validRunId(runId))throw Error('Invalid saved run ID');const t=viewRun(runId);
-  if(t.busy||!t.report||!t.packet||!t.id)throw Error('Requested run has no completed evidence');return makeOutcomeWorklist(t.id,t.report,t.packet);
- }
- function getOutcomeWorklist(runId){if(!validRunId(runId))throw Error('Invalid saved run ID');const t=viewRun(runId);if(t.config?.provider!=='deterministic'||t.phase!=='complete'||t.busy)throw Error('Complete deterministic collection first');return makeOutcomeWorklist(t.id,t.report,t.packet);}
+ function getOutcomeWorklist(runId){if(!validRunId(runId))throw Error('Invalid saved run ID');const t=viewRun(runId);if(t.config?.provider!=='deterministic'||t.phase!=='complete'||t.busy||!t.report||!t.packet||!t.packet.batches?.length)throw Error('Complete deterministic collection first');return makeOutcomeWorklist(t.id,t.report,t.packet);}
  function applyOutcomeReview(input,{merge=false}={}){
   if(s.busy)throw Error('Wait for the active acquisition to finish before importing a review');
   if(!validRunId(input?.run_id))throw Error('Invalid saved run ID');const t=viewRun(input.run_id);
@@ -130,9 +126,9 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
    return send(res,200,getOutcomeWorklist(u.searchParams.get('run_id')||s.id),'application/json; charset=utf-8',{'Content-Disposition':'attachment; filename="final_outcome_worklist.json"'});
   }
   if(req.method==='POST'&&p==='/api/outcome/review'){
-   if(s.busy)return send(res,409,{error:'Research is running'});
+   if(s.busy||queueAgent?.snapshot()?.active_job)return send(res,409,{error:'Research or a queue job is running'});
    const b=await body(req,1048576);
-   if(s.busy)return send(res,409,{error:'Research is running'});
+   if(s.busy||queueAgent?.snapshot()?.active_job)return send(res,409,{error:'Research or a queue job is running'});
    return send(res,200,{ok:true,...applyOutcomeReview(b)});
   }
   if(req.method==='GET'&&p.startsWith('/api/export/')){const key=p.slice('/api/export/'.length),id=u.searchParams.get('run_id');if(!Object.hasOwn(FILES,key))return send(res,404,{error:'Export not available'});const dir=id?runDirectory(id):s.dir,path=dir?runFile(dir,key):null;if(!path)return send(res,404,{error:'Export not available'});const data=readFileSync(path);res.writeHead(200,{...CORSLESS,'Content-Type':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="${FILES[key]}"`});return res.end(data);}
