@@ -116,6 +116,7 @@ export async function stage(root,{fetcher=fetch,manifest=null}={}){
   if(s.journal)throw Error('Interrupted update requires recovery');
   if(s.rejected?.releaseId===m.releaseId)throw Error('Release quarantined after failed activation or rollback');
   if(s.installed?.releaseId===m.releaseId)return {status:'already_installed',releaseId:m.releaseId};
+  if(s.staged?.releaseId===m.releaseId){await verifyStaged(base,m);return {status:'already_staged',releaseId:m.releaseId};}
   const folder=join(updateRoot(base),'staging',m.releaseId);
   await safeTarget(base,'local-data/pi-updates/staging/'+m.releaseId);
   await rm(folder,{recursive:true,force:true});await mkdir(folder,{recursive:true});
