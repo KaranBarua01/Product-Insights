@@ -36,7 +36,7 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
   t.report=readRunFile(dir,'acquisition');t.packet=readRunFile(dir,'shared');t.results=readRunFile(dir,'ollama')?.results||[];
   if(t.packet)t.summary=aggregate(t.packet,t.results);
   t.engineering=readRunFile(dir,'full')?.engineering||[];
-  if(t.report&&t.packet){const saved=readRunFile(dir,'outcome');if(saved){try{t.outcomeReview=validateOutcomeReview(makeOutcomeWorklist(id,t.report,t.packet),saved);}catch(e){console.warn('Saved engineering review not restored:',e.message);}}}
+  if(t.report&&t.packet){try{const saved=readRunFile(dir,'outcome');if(saved)t.outcomeReview=validateOutcomeReview(makeOutcomeWorklist(id,t.report,t.packet),saved);}catch(e){console.warn('Saved engineering review not restored:',e.message);}}
   return t;
  }
  function viewRun(id){if(!id||id===s.id)return s;return loadSavedRun(id);}
