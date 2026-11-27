@@ -68,7 +68,9 @@ test('offline activation executes smoke, switches files, and rollback restores e
   const b=await rollback(root,{offline:async()=>true});assert.equal(b.status,'rolled_back');
   assert.equal(await readFile(join(root,'app/main.mjs'),'utf8'),OLD);
   await assert.rejects(readFile(join(root,'app/extra.js')),e=>e.code==='ENOENT');
-  assert.equal((await status(root)).installed,null);await protectedFiles(root);
+  assert.equal((await status(root)).installed,null);
+  assert.equal((await status(root)).rejected?.releaseId,'r1-demo');
+  assert.equal((await check(root,{fetcher:fakeFetch(m)})).available,false);await protectedFiles(root);
  }finally{await rm(root,{recursive:true,force:true})}
 });
 test('failed post-update smoke restores original files automatically',async()=>{
@@ -76,7 +78,9 @@ test('failed post-update smoke restores original files automatically',async()=>{
   await stage(root,{manifest:manifest(),fetcher:fakeFetch(manifest())});
   await assert.rejects(activate(root,{offline:async()=>true,smoke:async()=>{throw Error('fixture regression failure')}}),/fixture regression/);
   assert.equal(await readFile(join(root,'app/main.mjs'),'utf8'),OLD);
-  assert.equal((await status(root)).journal,null);await protectedFiles(root);
+  assert.equal((await status(root)).journal,null);
+  assert.equal((await status(root)).rejected?.reason,'failed_smoke_or_activation');
+  await assert.rejects(stage(root,{manifest:manifest(),fetcher:fakeFetch(manifest())}),/quarantined/);await protectedFiles(root);
  }finally{await rm(root,{recursive:true,force:true})}
 });
 test('wrong source hash cannot be staged or executed',async()=>{
@@ -120,7 +124,7 @@ test('interrupted activation journal can recover without touching user data',asy
   await writeFile(join(root,'local-data/pi-updates/journal.json'),JSON.stringify({releaseId:'r1-demo',files:[{path:'app/main.mjs',existed:true,beforeSha256:hash(OLD)}],previous:null}));
   const r=await recover(root);assert.equal(r.status,'rolled_back_incomplete');
   assert.equal(await readFile(join(root,'app/main.mjs'),'utf8'),OLD);
-  assert.equal((await status(root)).journal,null);await protectedFiles(root);
+  assert.equal((await status(root)).journal,null);assert.equal((await status(root)).rejected?.reason,'interrupted_activation');await protectedFiles(root);
  }finally{await rm(root,{recursive:true,force:true})}
 });
 test('a successful release cannot be mistaken for a different installed release',async()=>{
