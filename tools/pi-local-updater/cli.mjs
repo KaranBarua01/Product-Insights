@@ -31,7 +31,17 @@ async function run(){
  else if(command==='rollback'){result=await rollback(root,{offline});}
  else if(command==='activate-if-staged'){
   const current=await status(root);
-  result=current.journal?await recover(root):current.staged?.releaseId!==current.installed?.releaseId?await activate(root,{offline,smoke}):{status:'no_pending_release'};
+  if(current.journal)result=await recover(root);
+  else if(!current.staged||current.staged.releaseId===current.installed?.releaseId)result={status:'no_pending_release'};
+  else if(current.staged.releaseId===current.rejected?.releaseId)result={status:'quarantined_previous_version_retained',releaseId:current.staged.releaseId};
+  else{
+   try{result=await activate(root,{offline,smoke});}
+   catch(e){
+    const after=await status(root);
+    if(after.rejected?.releaseId!==current.staged.releaseId||after.journal)throw e;
+    result={status:'failed_release_rolled_back',releaseId:current.staged.releaseId,detail:String(e.message||e)};
+   }
+  }
  }else throw Error('Unknown fixed updater action');
  console.log(JSON.stringify(result,null,2));
 }
