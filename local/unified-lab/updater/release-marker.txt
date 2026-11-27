@@ -1,0 +1,4 @@
+Product Insights GitHub updater canary
+Release: 2026.11.27-canary.1
+Provider: agnostic
+Purpose: verify staged automatic updates; no application or database changes.

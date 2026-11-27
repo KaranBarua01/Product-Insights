@@ -1,0 +1,52 @@
+name: PI local updater QA
+on:
+  push:
+    branches: [feat/gh-local-update-channel-v1]
+    paths:
+      - 'tools/pi-local-updater/**'
+      - '.github/workflows/pi-local-updater-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/pi-local-updater/**'
+      - '.github/workflows/pi-local-updater-qa.yml'
+permissions:
+  contents: read
+jobs:
+  updater:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Syntax checks
+        run: |
+          node --check tools/pi-local-updater/core.mjs
+          node --check tools/pi-local-updater/cli.mjs
+          node --check tools/pi-local-updater/core.test.mjs
+          node --check tools/pi-local-updater/bridge-patch.mjs
+          node --check tools/pi-local-updater/watch.mjs
+          node --check tools/pi-local-updater/bridge.test.mjs
+      - name: Offline security, staging and rollback tests
+        run: node --test tools/pi-local-updater/*.test.mjs
+      - name: Real pinned GitHub canary staging and rollback
+        run: node tools/pi-local-updater/canary-e2e.mjs
+      - name: Check quoted Windows folder argument with spaces
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          mkdir "%RUNNER_TEMP%\Product Insights Updater Test"
+          copy /Y "tools\pi-local-updater\quoted-root.test.ps1" "%RUNNER_TEMP%\Product Insights Updater Test\quoted-root.test.ps1"
+          copy /Y "tools\pi-local-updater\test-root-argument.bat" "%RUNNER_TEMP%\Product Insights Updater Test\test-root-argument.bat"
+          call "%RUNNER_TEMP%\Product Insights Updater Test\test-root-argument.bat"
+      - name: Hash-pinned Windows bootstrap dry run
+        if: matrix.os == 'windows-latest'
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/pi-local-updater/enable-github-updates.ps1 -TestOnly

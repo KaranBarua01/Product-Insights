@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "pi-local-update/v1",
+  "channel": "stable",
+  "sourceRepo": "KaranBarua01/Product-Insights",
+  "sourceCommit": "21b359234fb856529ee687d69f6dfb9bacff0881",
+  "releaseId": "2026.11.27-canary.1",
+  "minNode": 24,
+  "files": [
+    {
+      "path": "updater/release-marker.txt",
+      "bytes": 165,
+      "sha256": "ff3789a4a9e2c770dd58cfc2f8436e704fa20dac5faac49819469431474147ac",
+      "fromSha256": null
+    }
+  ]
+}
