@@ -5,11 +5,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = [IO.Path]::GetFullPath($RootPath)
-$Pin = 'a37f17395ea9f12d787c0591d0b5f2cca8030262'
+$Pin = '06f3bb6c873d1497c33cec2165313083c08276c7'
 $Repo = 'KaranBarua01/Product-Insights'
 $Files = [ordered]@{
  'core.mjs'         = 'e175aecf1ab241b7b271f22a3ab91ebb03c12aed'
- 'cli.mjs'          = 'eefaa5e0734aae4a4dc865ddc5469df7f1bb469a'
+ 'cli.mjs'          = '32e8951ca8d7829c3a8eddd666218d28075b971f'
  'watch.mjs'        = '4b75b5085302b759fa28b531710de5107ec1fe98'
  'bridge-patch.mjs' = '83e642f6c397bdc22b139e0ac5813296ed811acc'
  'core.test.mjs'    = '3546b9281f7799cc11676c47be7ed663e210eaf1'
