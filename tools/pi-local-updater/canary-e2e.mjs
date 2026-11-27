@@ -9,7 +9,7 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {stage,activate,rollback,status,validateManifest} from './core.mjs';
 const here=fileURLToPath(new URL('./',import.meta.url));
-const channel=resolve(here,'../../../local/unified-lab/channels/stable.json');
+const channel=resolve(here,'../../local/unified-lab/channels/stable.json');
 const manifest=validateManifest(JSON.parse(await readFile(channel,'utf8')));
 if(manifest.files.length!==1||manifest.files[0].path!=='updater/release-marker.txt'||manifest.files[0].fromSha256!==null)
  throw Error('Canary must install one inert new text file');
