@@ -15,7 +15,7 @@ export const REPO='KaranBarua01/PI-Agent-Queue', OWNER='KaranBarua01', REPO_ID=1
 export const QUEUE_LABEL='pi-local-agent-job', JOB_SCHEMA='pi-local-agent/job-v1', RESULT_SCHEMA='pi-local-agent/result-v1';
 export const SITES=Object.freeze({research_baja_50:{url:'https://www.bajadesigns.com/',maxPages:50},research_1up_50:{url:'https://1up-usa.com/',maxPages:50},ollama_1up:{url:'https://1up-usa.com/',maxPages:7}});
 export const ACTIONS=Object.freeze(['health','ollama_health','run_tests','update_status','update_check','update_stage','collect_website','benchmark_failed34','export_benchmark_evidence','export_final_outcome','import_final_outcome',...Object.keys(SITES)]);
-export const REMOTE_REVISION='phase4-final-outcome-bridge-v1';
+export const REMOTE_REVISION='phase4-final-outcome-catalogue-v2';
 const RUN_ID=/^[\dTZ-]+_[0-9a-f-]{36}$/;
 function publicSeed(raw){
  if(typeof raw!=='string'||raw.length>2048)throw Error('Invalid public HTTPS seed');
@@ -51,7 +51,7 @@ export function parseJob(issue,now=Date.now()){
  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||end-start>MAX_AGE||start>now+60000||now>=end||now-start>MAX_AGE)throw Error('Expired or future-dated job');
  if(j.action==='collect_website'){j.url=publicSeed(j.url);if(!Number.isInteger(j.maxPages)||j.maxPages<1||j.maxPages>50)throw Error('Invalid page budget');}
  if(j.action==='export_benchmark_evidence'&&(!Number.isSafeInteger(j.benchmarkIssue)||j.benchmarkIssue<1||typeof j.siteId!=='string'||!/^\d{3}$/.test(j.siteId)))throw Error('Invalid benchmark evidence selector');
- if(['export_final_outcome','import_final_outcome'].includes(j.action)&&(typeof j.runId!=='string'||j.runId.length>100||!RUN_ID.test(j.runId)))throw Error('Invalid outcome run selector');
+ if(['export_final_outcome','import_final_outcome'].includes(j.action)&&!(j.action==='export_final_outcome'&&j.runId==='current')&&(typeof j.runId!=='string'||j.runId.length>100||!RUN_ID.test(j.runId)))throw Error('Invalid outcome run selector');
  if(j.action==='import_final_outcome'&&(!/^[a-f0-9]{64}$/.test(j.worklistSha256||'')||!/^[a-f0-9]{64}$/.test(j.reviewSha256||'')||!Number.isSafeInteger(j.reviewParts)||j.reviewParts<1||j.reviewParts>OUTCOME_REVIEW_MAX_PARTS))throw Error('Invalid outcome review metadata');
  return {...j,issueNumber:issue.number};
 }
@@ -119,9 +119,9 @@ export function createQueueAgent({root,lab,token='',api=token?makeGitHubApi(toke
   if(j.action==='run_tests')return {...await testRunner(),action:j.action};
   const rec=state.jobs[String(j.issueNumber)];
   if(j.action==='export_final_outcome'){
-   const worklist=lab.getOutcomeWorklist(j.runId);const raw=JSON.stringify(worklist);
+   const runId=j.runId==='current'?lab.getState().id:j.runId;if(typeof runId!=='string'||!RUN_ID.test(runId))throw Error('No current completed run');const worklist=lab.getOutcomeWorklist(runId);const raw=JSON.stringify(worklist);
    if((token&&raw.includes(token))||tokenLike.test(raw)||Buffer.byteLength(raw,'utf8')>MAX_EXPORT)throw Error('Worklist is not eligible for private export');
-   rec.runId=j.runId;save();return {status:'completed',action:j.action,run_id:j.runId,products:worklist.leads.length,worklist_sha256:outcomeHash(raw)};
+   rec.runId=runId;save();return {status:'completed',action:j.action,run_id:runId,requested_url:worklist.requested_url,products:worklist.leads.length,sources:worklist.sources.length,worklist_sha256:outcomeHash(raw)};
   }
   if(j.action==='import_final_outcome'){
    const comments=await existingComments(j.issueNumber),raw=assembleOutcomeReview(comments,j);
