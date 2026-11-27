@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 // Provider-neutral, per-run engineering review; never writes to the vocabulary database.
 export const REVIEW_SCHEMA='pi-final-outcome/review-v1';
 const nonempty=(v,max)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
@@ -31,4 +32,28 @@ export function validateOutcomeReview(worklist,input){
   products.push({lead_id:p.lead_id,name:p.name,sku:p.sku,source_url:p.source_url,status:p.status,parts});
  }
  return {schemaVersion:REVIEW_SCHEMA,run_id:worklist.run_id,products};
+}
+
+export const OUTCOME_REVIEW_MAX_BYTES=1048576,OUTCOME_REVIEW_MAX_PARTS=64,OUTCOME_REVIEW_CHUNK=24000;
+export const outcomeHash=text=>createHash('sha256').update(text,'utf8').digest('hex');
+// Only already owner-filtered private issue comments are supplied by the queue agent.
+export function assembleOutcomeReview(comments,job){
+ if(!Number.isSafeInteger(job.reviewParts)||job.reviewParts<1||job.reviewParts>OUTCOME_REVIEW_MAX_PARTS||!/^[a-f0-9]{64}$/.test(job.reviewSha256||''))throw Error('Invalid review attachment metadata');
+ const prefix='PI_OUTCOME_REVIEW:'+job.jobId+':',parts=new Map();
+ for(const c of comments){
+  const body=c?.body;if(typeof body!=='string'||!body.startsWith(prefix))continue;
+  const end=body.indexOf('\n');if(end<0)throw Error('Invalid review chunk');
+  const match=body.slice(prefix.length,end).match(/^([1-9]\d*)\/([1-9]\d*)$/);
+  if(!match)throw Error('Invalid review marker');
+  const part=Number(match[1]),total=Number(match[2]);
+  if(total!==job.reviewParts||part>total||parts.has(part))throw Error('Duplicate or mismatched review part');
+  if(body.length>65000)throw Error('Review comment too large');
+  const payload=JSON.parse(body.slice(end+1));
+  if(!payload||Array.isArray(payload)||Object.keys(payload).length!==1||typeof payload.text!=='string'||payload.text.length<1||payload.text.length>OUTCOME_REVIEW_CHUNK)throw Error('Invalid review chunk content');
+  parts.set(part,payload.text);
+ }
+ if(parts.size!==job.reviewParts)throw Error('Incomplete review attachment');
+ const raw=Array.from({length:job.reviewParts},(_,i)=>parts.get(i+1)).join('');
+ if(Buffer.byteLength(raw,'utf8')>OUTCOME_REVIEW_MAX_BYTES||outcomeHash(raw)!==job.reviewSha256)throw Error('Review size or SHA-256 mismatch');
+ return raw;
 }
