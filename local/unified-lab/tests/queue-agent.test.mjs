@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {fileURLToPath} from 'node:url';
-import {REPO,OWNER,REPO_ID,OWNER_ID,JOB_SCHEMA,QUEUE_LABEL,parseJob,attachment,createQueueAgent} from '../app/queue-agent.mjs';
+import {REPO,OWNER,REPO_ID,OWNER_ID,JOB_SCHEMA,QUEUE_LABEL,parseJob,attachment,createQueueAgent,parseBaseline100,BASELINE100_HASH} from '../app/queue-agent.mjs';
 import {createLab} from '../app/server.mjs';
 import {MODEL} from '../app/intelligence.mjs';
 import {makeOutcomeWorklist,outcomeHash,validateOutcomeReview} from '../app/final-outcome.mjs';
@@ -86,4 +86,19 @@ test('outcome bridge exports only the current run and imports exact owner review
   await agent.pumpOnce();assert.match(result(84).error,/not current/);assert.equal(applied,1);
   agent.stop();
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('fixed 100-company cohort checks the exact ordered original site projection and excludes modified or incomplete records',()=>{
+ const sites=Array.from({length:100},(_,i)=>({id:String(i+1).padStart(3,'0'),company:'Company '+i,sector:'Fixture sector',url:'https://maker'+i+'.com/',anchors:[{phrase:'fixture product'}]}));
+ const expected=createHash('sha256').update(JSON.stringify(sites)).digest('hex');
+ const comments=sites.map((s,i)=>({body:'PI_BENCHMARK_SITE:63:'+s.id+'\n\n~~~json\n'+JSON.stringify({schemaVersion:'pi-acquisition-benchmark/site-v1',issueNumber:63,benchmark_id:'pi-v08-100-20261126',completed:i+1,total:100,row:{...s,usable:12}})+'\n~~~'}));
+ assert.deepEqual(parseBaseline100(comments.slice().reverse(),expected),sites);
+ assert.throws(()=>parseBaseline100(comments.slice(1),expected),/integrity/);
+ assert.throws(()=>parseBaseline100([...comments,comments[0]],expected),/integrity/);
+ assert.throws(()=>parseBaseline100(comments,BASELINE100_HASH),/integrity/);
+ const altered=structuredClone(comments);altered[0].body=altered[0].body.replace('Company 0','Changed company');
+ assert.throws(()=>parseBaseline100(altered,expected),/integrity/);
+ assert.equal(parseJob(makeIssue(101,'benchmark_100'),clock).action,'benchmark_100');
+ assert.equal(parseJob(makeIssue(102,'list_research_runs'),clock).action,'list_research_runs');
+ assert.throws(()=>parseJob(makeIssue(103,'benchmark_100',{url:'https://other.com/'}),clock));
 });
