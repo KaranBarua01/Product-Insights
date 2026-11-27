@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24.19.0'
@@ -34,4 +35,4 @@ jobs:
             node --check "$f"
           done
       - name: Read-only update status and source ownership fixtures
-        run: node --test local/unified-lab/tests/update-status.test.mjs local/unified-lab/tests/source-contract.test.mjs
+        run: node --test local/unified-lab/tests/update-status.test.mjs local/unified-lab/tests/source-contract.test.mjs local/unified-lab/tests/stable-channel.test.mjs
