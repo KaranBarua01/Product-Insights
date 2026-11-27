@@ -9,6 +9,8 @@ import {fileURLToPath} from 'node:url';
 import {REPO,OWNER,REPO_ID,OWNER_ID,JOB_SCHEMA,QUEUE_LABEL,parseJob,attachment,createQueueAgent} from '../app/queue-agent.mjs';
 import {createLab} from '../app/server.mjs';
 import {MODEL} from '../app/intelligence.mjs';
+import {makeOutcomeWorklist,outcomeHash,validateOutcomeReview} from '../app/final-outcome.mjs';
+import './final-outcome.test.mjs';
 const clock=Date.parse('2026-11-25T17:55:00Z');
 const owner={login:OWNER,id:OWNER_ID};
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -59,5 +61,29 @@ test('remote benchmark collects the exact 34 failed seeds locally without Ollama
   await agent.pumpOnce();assert.equal(calls.length,34);assert.deepEqual(calls.map(c=>c.url),manifest.sites.map(s=>s.url));assert.ok(calls.every(c=>c.maxPages===50));const comments=q.comments.get(70).map(c=>c.body);assert.equal(comments.filter(c=>c.startsWith('PI_FAILED34_SITE:')).length,34);const summary=unpack(comments.find(c=>c.startsWith('PI_AGENT_RESULT:')));assert.equal(summary.result.completed,34);assert.equal(summary.result.rows[0].siteId,'006');assert.equal(summary.result.rows[0].outcome,'provisional_recovery');assert.equal(summary.attachments.length,0);
   await agent.pumpOnce();assert.equal(calls.length,34);const exported=unpack(q.comments.get(71).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);assert.equal(exported.attachments.length,1);assert.equal(exported.attachments[0].name,'01_shared_input.json');assert.equal(exported.attachments[0].status,'shared_private_queue');
   await agent.pumpOnce();assert.equal(calls.length,35);assert.equal(calls[34].maxPages,2);const collected=unpack(q.comments.get(72).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);assert.equal(collected.result.provider,'chatgpt');assert.equal(collected.attachments.length,1);agent.stop();
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('outcome bridge exports only the current run and imports exact owner review, rejecting stale or unauthorized data',async()=>{
+ const dir=makeTmp(),runId='2026-11-27T10-00-00-000Z_12345678-1234-1234-1234-123456789abc',url='https://maker.com/product';
+ try{
+  const report={products:[{name:'Exact product',sku:'P-1',sourceUrl:url}]},packet={batches:[{input:{sources:[{id:1,url,text:'The aluminum housing protects the internal motor.'}]}}]},work=makeOutcomeWorklist(runId,report,packet),wh=outcomeHash(JSON.stringify(work));
+  const saveDir=join(dir,'results',runId);mkdirSync(saveDir,{recursive:true});writeFileSync(join(saveDir,'00_acquisition_report.json'),JSON.stringify(report));writeFileSync(join(saveDir,'01_shared_input.json'),JSON.stringify(packet));
+  const review=structuredClone(work.review_template);review.products[0].status='assessed';review.products[0].parts=[{component:'housing',material:'Aluminum',processes:['CNC machining'],condition:'If machined from billet',basis:'source_quoted_component',source_id:1,quote:'The aluminum housing protects the internal motor.'}];
+  const raw=JSON.stringify(review),meta={runId,worklistSha256:wh,reviewSha256:outcomeHash(raw),reviewParts:1};
+  const jobs=[makeIssue(80,'export_final_outcome',{runId}),makeIssue(81,'import_final_outcome',meta),makeIssue(82,'import_final_outcome',meta),makeIssue(83,'import_final_outcome',{...meta,worklistSha256:'0'.repeat(64)}),makeIssue(84,'export_final_outcome',{runId:'2026-11-27T10-00-00-000Z_00000000-0000-0000-0000-000000000000'})];
+  assert.throws(()=>parseJob(makeIssue(85,'export_final_outcome',{runId:'../'}),clock));
+  assert.throws(()=>parseJob(makeIssue(86,'import_final_outcome',{...meta,reviewParts:65}),clock));
+  const q=queueMock(jobs),comment=(n,user=owner)=>({user,body:'PI_OUTCOME_REVIEW:test_job_'+n+':1/1\n'+JSON.stringify({text:raw})});
+  q.comments.get(81).push(comment(81));q.comments.get(82).push(comment(82,{login:'other',id:2}));q.comments.get(83).push(comment(83));
+  let applied=0;const lab={...fakeLab(),getOutcomeWorklist(id){if(id!==runId)throw Error('Requested run is not current');return work;},applyOutcomeReview(input,opts){assert.equal(opts.merge,true);const v=validateOutcomeReview(work,input);applied++;return {run_id:runId,products:v.products.length,assessed:1};}};
+  const agent=createQueueAgent({root:dir,lab,api:q.api,clock:()=>clock,commentDelayMs:0});
+  const result=n=>unpack(q.comments.get(n).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);
+  await agent.pumpOnce();assert.equal(result(80).result.worklist_sha256,wh);assert.equal(result(80).attachments[0].name,'final_outcome_worklist.json');assert.equal(result(80).attachments[0].sha256,wh);
+  await agent.pumpOnce();assert.equal(result(81).result.assessed,1);assert.equal(applied,1);
+  await agent.pumpOnce();assert.match(result(82).error,/Incomplete/);
+  await agent.pumpOnce();assert.match(result(83).error,/worklist changed/);
+  await agent.pumpOnce();assert.match(result(84).error,/not current/);assert.equal(applied,1);
+  agent.stop();
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

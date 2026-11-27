@@ -32,6 +32,11 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
  async function callEngine(path,method='GET',data){const r=await engine.fetch(new Request('http://127.0.0.1'+path,{method,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify(data)}:{})}),{PRODUCT_INSIGHTS_DB:adapter});return {status:r.status,body:await r.json()};}
  async function refreshOllama(force=false){if(force||!ollamaCache||Date.now()-ollamaChecked>7000){ollamaCache=await ollamaHealth(ollamaBase);ollamaChecked=Date.now();}return ollamaCache;}
  function output(){return {run_id:s.id,requested_url:s.report?.requestedUrl||s.config?.url||null,sample:s.packet?.sample||null,acquisition:s.report?{status:s.report.status,coverage:s.report.coverage,evidenceQuality:s.report.evidenceQuality||null,pattern_assessments:s.report.pattern_assessments||[],benchmarkAcquisition:s.report.benchmarkAcquisition,products:s.report.products||[],warnings:s.report.warnings||[],pages:(s.report.pages||[]).map((p,i)=>({id:i+1,url:p.url,title:p.title,status:p.status,strategy:p.strategy,reason:p.reason,textChars:p.textChars,snippet:p.snippet,aiText:p.aiText,structuredProducts:p.structuredProducts,headings:p.headings,warnings:p.warnings,quality:p.quality||null,technicalReview:p.technicalReview||null,evidenceWindows:p.evidenceWindows||[]}))}:null,summary:s.summary,engineering:s.engineering,outcome_review:s.outcomeReview,provider:s.config?.provider||null,note:'Local draft V2 reference, not live Cloudflare. Observed website proposals and inferred engineering hypotheses require human review. No procurement or supplier matching.'};}
+ function currentOutcomeWorklist(runId=s.id){if(s.busy||!s.report||!s.packet||!s.id||runId!==s.id)throw Error('Requested run is not the current completed research run');return makeOutcomeWorklist(s.id,s.report,s.packet);}
+ function getOutcomeWorklist(runId){if(s.config?.provider!=='deterministic'||s.phase!=='complete')throw Error('Complete deterministic collection first');return currentOutcomeWorklist(runId);}
+ function applyOutcomeReview(input,{merge=false}={}){const worklist=currentOutcomeWorklist(input?.run_id);const incoming=validateOutcomeReview(worklist,input);let review=incoming;if(merge&&s.outcomeReview){const by=new Map(s.outcomeReview.products.map(p=>[p.lead_id,p]));for(const p of incoming.products)by.set(p.lead_id,p);review=validateOutcomeReview(worklist,{...incoming,products:[...by.values()].sort((a,b)=>a.lead_id-b.lead_id)});}
+  write('outcome',review);s.outcomeReview=review;s.revision++;persist();write('full',output());return {run_id:s.id,products:review.products.length,assessed:review.products.filter(p=>p.status==='assessed').length};
+ }
  function updateSummary(){if(!s.packet)return;s.summary=aggregate(s.packet,s.results);write('summary',s.summary);s.revision++;}
  async function enrichEngineering(){
   const leads=new Map();for(const p of s.summary?.products||[])leads.set(p.name.toLowerCase(),{name:p.name,source:'Ollama website proposal',category_id:p.category_id||null,category_candidates:p.category_candidates||[],model_hypotheses:p.engineering_hypotheses||[]});for(const p of s.report?.products||[]){const name=str(p.name||p.productName||p.label,150);if(name&&!leads.has(name.toLowerCase()))leads.set(name.toLowerCase(),{name,source:'Structured extraction lead',category_id:null,category_candidates:[],model_hypotheses:[]});}
@@ -72,15 +77,13 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
   if(req.method==='GET'&&p==='/api/results')return send(res,200,output());
   if(req.method==='GET'&&p==='/api/outcome/worklist'){
    if(s.busy||!s.report||!s.packet)return send(res,409,{error:'Complete deterministic collection first'});
-   return send(res,200,makeOutcomeWorklist(s.id,s.report,s.packet),'application/json; charset=utf-8',{'Content-Disposition':'attachment; filename="final_outcome_worklist.json"'});
+   return send(res,200,currentOutcomeWorklist(),'application/json; charset=utf-8',{'Content-Disposition':'attachment; filename="final_outcome_worklist.json"'});
   }
   if(req.method==='POST'&&p==='/api/outcome/review'){
    if(s.busy||!s.report||!s.packet)return send(res,409,{error:'Complete deterministic collection first'});
    const b=await body(req,1048576);
    if(s.busy||!s.report||!s.packet)return send(res,409,{error:'Current run is not ready'});
-   const review=validateOutcomeReview(makeOutcomeWorklist(s.id,s.report,s.packet),b);
-   write('outcome',review);s.outcomeReview=review;s.revision++;persist();write('full',output());
-   return send(res,200,{ok:true,products:review.products.length});
+   return send(res,200,{ok:true,...applyOutcomeReview(b)});
   }
   if(req.method==='GET'&&p.startsWith('/api/export/')){const key=p.slice('/api/export/'.length);if(!Object.hasOwn(FILES,key)||!s.dir||!existsSync(join(s.dir,FILES[key])))return send(res,404,{error:'Export not available'});const data=readFileSync(join(s.dir,FILES[key]));res.writeHead(200,{...CORSLESS,'Content-Type':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="${FILES[key]}"`});return res.end(data);}
   if(req.method==='POST'&&p==='/api/run'){
@@ -96,6 +99,6 @@ export function createLab({root=ROOT,port=8790,resultsDir=join(root,'results'),a
   return send(res,404,{error:'Not found'});
  }catch(e){console.error('API error:',e.message);if(!res.headersSent)send(res,400,{error:str(e.message,300)||'Invalid request'});else res.end();}});
  server.on('close',()=>{queueAgent?.stop();s.cancelRequested=true;s.controller?.abort();try{db.close();}catch{}});
- return {server,listen:()=>new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',()=>{server.off('error',reject);resolve(server.address().port);});}),close:()=>new Promise(resolve=>server.close(resolve)),getState:()=>s,setQueueAgent:agent=>{queueAgent=agent;},startQueueRun:(config,origin)=>beginRun(config,origin)};
+ return {server,listen:()=>new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',()=>{server.off('error',reject);resolve(server.address().port);});}),close:()=>new Promise(resolve=>server.close(resolve)),getState:()=>s,getOutcomeWorklist,applyOutcomeReview,setQueueAgent:agent=>{queueAgent=agent;},startQueueRun:(config,origin)=>beginRun(config,origin)};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){const lab=createLab({port:Number(process.env.PI_LAB_PORT||8791)});try{const p=await lab.listen();console.log(`Product Insights Research Lab: http://127.0.0.1:${p}/`);}catch(e){console.error(e.message);process.exitCode=1;}}
