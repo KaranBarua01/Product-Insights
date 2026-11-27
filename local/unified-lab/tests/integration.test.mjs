@@ -34,3 +34,16 @@ test('direct engineering review updates current deterministic result and survive
   await lab.close();lab=createLab(options);port=await lab.listen();out=await (await fetch('http://127.0.0.1:'+port+'/api/results')).json();assert.equal(out.outcome_review.run_id,run.id);assert.equal(out.outcome_review.products[0].parts[0].component,'impeller');
  }finally{await lab.close();rmSync(resultsDir,{recursive:true,force:true});}
 });
+
+test('saved zero-lead catalogue becomes visible after source-quoted AI discovery; original acquisition stays unchanged',async()=>{
+ const resultsDir=mkdtempSync(join(tmpdir(),'pi-catalogue-test-')),options={root,port:0,resultsDir,dbPath,runtime:()=>({ready:true}),acquisition:async()=>({...fixture(1),products:[]})};
+ let lab=createLab({...options,restore:false});
+ try{
+  let port=await lab.listen();const run=lab.startQueueRun({url:'https://fixture.invalid/',maxPages:1,provider:'deterministic',strategy:'auto',browser:'none'},null);await run.completion;
+  const work=lab.getOutcomeWorklist(run.id),review=structuredClone(work.review_template);assert.equal(work.leads.length,0);const src=work.sources[0];
+  review.discovered_products=[{name:'centrifugal pumps',sku:'',source_id:src.id,source_url:src.url,quote:'Acme manufactures centrifugal pumps',status:'assessed',parts:[{component:'impeller',material:'Stainless steel',processes:['Casting','Machining'],condition:'If cast stainless design',basis:'source_quoted_component',source_id:src.id,quote:'Our pumps use a rotating impeller.'}]}];
+  assert.deepEqual(lab.applyOutcomeReview(review,{merge:true}),{run_id:run.id,products:1,assessed:1,discovered:1,rejected:0});
+  let out=await (await fetch('http://127.0.0.1:'+port+'/api/results')).json();assert.equal(out.acquisition.products.length,0);assert.equal(out.outcome_catalogue.products[0].name,'centrifugal pumps');assert.equal(out.outcome_catalogue.products[0].review.parts[0].component,'impeller');
+  await lab.close();lab=createLab(options);port=await lab.listen();out=await (await fetch('http://127.0.0.1:'+port+'/api/results')).json();assert.equal(out.outcome_catalogue.discovered,1);assert.equal(out.outcome_catalogue.products[0].name,'centrifugal pumps');assert.equal(out.summary.metrics.batches_completed,0);
+ }finally{await lab.close();rmSync(resultsDir,{recursive:true,force:true});}
+});
