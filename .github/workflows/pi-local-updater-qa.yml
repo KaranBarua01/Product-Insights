@@ -39,6 +39,14 @@ jobs:
         run: node --test tools/pi-local-updater/*.test.mjs
       - name: Real pinned GitHub canary staging and rollback
         run: node tools/pi-local-updater/canary-e2e.mjs
+      - name: Check quoted Windows folder argument with spaces
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          mkdir "%RUNNER_TEMP%\Product Insights Updater Test"
+          copy /Y "tools\pi-local-updater\quoted-root.test.ps1" "%RUNNER_TEMP%\Product Insights Updater Test\quoted-root.test.ps1"
+          copy /Y "tools\pi-local-updater\test-root-argument.bat" "%RUNNER_TEMP%\Product Insights Updater Test\test-root-argument.bat"
+          call "%RUNNER_TEMP%\Product Insights Updater Test\test-root-argument.bat"
       - name: Hash-pinned Windows bootstrap dry run
         if: matrix.os == 'windows-latest'
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/pi-local-updater/enable-github-updates.ps1 -TestOnly
