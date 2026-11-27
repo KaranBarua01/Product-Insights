@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {fileURLToPath} from 'node:url';
-import {REPO,OWNER,REPO_ID,OWNER_ID,JOB_SCHEMA,QUEUE_LABEL,parseJob,attachment,createQueueAgent} from '../app/queue-agent.mjs';
+import {REPO,OWNER,REPO_ID,OWNER_ID,JOB_SCHEMA,QUEUE_LABEL,parseJob,attachment,createQueueAgent,parseBaseline100,BASELINE100_HASH} from '../app/queue-agent.mjs';
 import {createLab} from '../app/server.mjs';
 import {MODEL} from '../app/intelligence.mjs';
 import {makeOutcomeWorklist,outcomeHash,validateOutcomeReview} from '../app/final-outcome.mjs';
@@ -18,7 +18,7 @@ const makeIssue=(number,action='health',fields={})=>({number,state:'open',user:o
 const unpack=body=>JSON.parse(body.slice(body.indexOf('~~~json\n')+8,body.lastIndexOf('\n~~~')));
 function queueMock(items,{privateRepo=true,failFirstAttachment=false}={}){
  const issues=new Map(items.map(x=>[x.number,structuredClone(x)])),comments=new Map(items.map(x=>[x.number,[]]));let failed=false,writes=0;
- const api=async(method,path,payload)=>{const base='/repos/'+REPO;if(path===base&&method==='GET')return {private:privateRepo,id:REPO_ID,full_name:REPO};assert.ok(path.startsWith(base+'/issues'));const p=path.slice(base.length);if(p.startsWith('/issues?'))return [...issues.values()].filter(x=>x.state==='open');const match=p.match(/^\/issues\/(\d+)(\/comments)?(?:\?.*)?$/);assert.ok(match);const num=Number(match[1]);if(match[2]){if(method==='GET')return comments.get(num);if(method==='POST'){if(failFirstAttachment&&!failed&&payload.body.startsWith('PI_AGENT_ATTACHMENT:')){failed=true;throw Error('fixture transient upload failure');}writes++;comments.get(num).push({user:owner,body:payload.body});return {id:writes};}}if(method==='GET')return structuredClone(issues.get(num));if(method==='PATCH'){writes++;issues.get(num).state=payload.state;return issues.get(num);}throw Error('Unexpected mock request');};
+ const api=async(method,path,payload)=>{const base='/repos/'+REPO;if(path===base&&method==='GET')return {private:privateRepo,id:REPO_ID,full_name:REPO};assert.ok(path.startsWith(base+'/issues'));const p=path.slice(base.length);if(p.startsWith('/issues?'))return [...issues.values()].filter(x=>x.state==='open');const match=p.match(/^\/issues\/(\d+)(\/comments)?(?:\?.*)?$/);assert.ok(match);const num=Number(match[1]);if(match[2]){if(method==='GET'){const page=Number(p.match(/[?&]page=(\d+)/)?.[1]||1);return comments.get(num).slice((page-1)*100,page*100);}if(method==='POST'){if(failFirstAttachment&&!failed&&payload.body.startsWith('PI_AGENT_ATTACHMENT:')){failed=true;throw Error('fixture transient upload failure');}writes++;comments.get(num).push({user:owner,body:payload.body});return {id:writes};}}if(method==='GET')return structuredClone(issues.get(num));if(method==='PATCH'){writes++;issues.get(num).state=payload.state;return issues.get(num);}throw Error('Unexpected mock request');};
  return {api,issues,comments,writes:()=>writes};
 }
 const fakeLab=()=>({getState:()=>({busy:false}),startQueueRun(){throw Error('Unexpected research');}});
@@ -85,5 +85,41 @@ test('outcome bridge exports only the current run and imports exact owner review
   await agent.pumpOnce();assert.match(result(83).error,/worklist changed/);
   await agent.pumpOnce();assert.match(result(84).error,/not current/);assert.equal(applied,1);
   agent.stop();
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('fixed 100-company cohort checks the exact ordered original site projection and excludes modified or incomplete records',()=>{
+ const sites=Array.from({length:100},(_,i)=>({id:String(i+1).padStart(3,'0'),company:'Company '+i,sector:'Fixture sector',url:'https://maker'+i+'.com/',anchors:[{phrase:'fixture product'}]}));
+ const expected=createHash('sha256').update(JSON.stringify(sites)).digest('hex');
+ const comments=sites.map((s,i)=>({body:'PI_BENCHMARK_SITE:63:'+s.id+'\n\n~~~json\n'+JSON.stringify({schemaVersion:'pi-acquisition-benchmark/site-v1',issueNumber:63,benchmark_id:'pi-v08-100-20261126',completed:i+1,total:100,row:{...s,usable:12}})+'\n~~~'}));
+ assert.deepEqual(parseBaseline100(comments.slice().reverse(),expected),sites);
+ assert.throws(()=>parseBaseline100(comments.slice(1),expected),/integrity/);
+ assert.throws(()=>parseBaseline100([...comments,comments[0]],expected),/integrity/);
+ assert.throws(()=>parseBaseline100(comments,BASELINE100_HASH),/integrity/);
+ const altered=structuredClone(comments);altered[0].body=altered[0].body.replace('Company 0','Changed company');
+ assert.throws(()=>parseBaseline100(altered,expected),/integrity/);
+ assert.equal(parseJob(makeIssue(101,'benchmark_100'),clock).action,'benchmark_100');
+ assert.equal(parseJob(makeIssue(102,'list_research_runs'),clock).action,'list_research_runs');
+ assert.throws(()=>parseJob(makeIssue(103,'benchmark_100',{url:'https://other.com/'}),clock));
+});
+
+test('100-site action replays the hash-pinned private seed cohort sequentially, saves distinct run IDs and publishes bounded checkpoints',async()=>{
+ const dir=makeTmp(),calls=[];let st={busy:false};
+ const sites=Array.from({length:100},(_,i)=>({id:String(i+1).padStart(3,'0'),company:'Company '+i,sector:'Fixture sector',url:'https://maker'+i+'.com/',anchors:[{phrase:'fixture product'}]}));
+ const expected=createHash('sha256').update(JSON.stringify(sites)).digest('hex');
+ const baseline={...makeIssue(63),state:'closed'},q=queueMock([baseline,makeIssue(201,'benchmark_100'),makeIssue(202,'list_research_runs'),makeIssue(203,'export_benchmark_evidence',{benchmarkIssue:201,siteId:'001'})]);
+ for(const [i,site] of sites.entries())q.comments.get(63).push({user:owner,body:'PI_BENCHMARK_SITE:63:'+site.id+'\n\n~~~json\n'+JSON.stringify({schemaVersion:'pi-acquisition-benchmark/site-v1',issueNumber:63,benchmark_id:'pi-v08-100-20261126',completed:i+1,total:100,row:site})+'\n~~~'});
+ const lab={getState:()=>st,listRuns:()=>calls.map(({config,origin,id})=>({id,company:origin.company,company_key:new URL(config.url).hostname,url:config.url,phase:'complete',pages_usable:1,reviewed:false,benchmark_issue:origin.issue,site_id:origin.site_id})),startQueueRun(config,origin){
+  assert.equal(config.provider,'deterministic');assert.equal(config.browser,'none');assert.equal(config.maxPages,50);assert.equal(origin.benchmark,'benchmark_100');
+  const id='2026-11-27T10-00-00-000Z_'+String(calls.length+1).padStart(36,'0');calls.push({config,origin,id});const text='fixture product available';
+  const packet={batches:[{input:{sources:[{text}]}}]};mkdirSync(join(dir,'results',id),{recursive:true});writeFileSync(join(dir,'results',id,'01_shared_input.json'),JSON.stringify(packet));
+  st={busy:false,id,packet,report:{coverage:{visitedPages:1,stopReason:'frontier_exhausted'},evidenceQuality:{counts:{accepted:1,retrieved:1,relevant:1},distinctProductCandidates:0,score:40},extracted_pages:[{extracted_text:text}]}};
+  return {id,completion:Promise.resolve({phase:'complete',sample:{pages_attempted:1,pages_usable:1},summary:{metrics:{},products:0,claims:0}})};
+ }};
+ try{const agent=createQueueAgent({root:dir,lab,api:q.api,clock:()=>clock,commentDelayMs:0,baseline100Hash:expected});
+  await agent.pumpOnce();assert.equal(calls.length,100);assert.deepEqual(calls.map(c=>c.config.url),sites.map(s=>s.url));assert.equal(new Set(calls.map(c=>c.id)).size,100);assert.equal(q.comments.get(201).filter(c=>c.body.startsWith('PI_BENCHMARK100_SITE:')).length,100);
+  const result=unpack(q.comments.get(201).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);assert.equal(result.result.completed,100);assert.equal(result.result.rows.length,100);assert.equal(result.result.usableSample,100);assert.ok(JSON.stringify(result,null,2).length<65000);
+  await agent.pumpOnce();const listing=unpack(q.comments.get(202).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);assert.equal(listing.result.rows.length,100);assert.equal(listing.result.rows[0].host,'maker0.com');
+  await agent.pumpOnce();const packet=unpack(q.comments.get(203).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);assert.equal(packet.result.run_id,calls[0].id);assert.equal(packet.attachments[0].status,'shared_private_queue');agent.stop();
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
