@@ -14,8 +14,8 @@ import {makeOutcomeWorklist,outcomeHash,assembleOutcomeReview,OUTCOME_REVIEW_MAX
 export const REPO='KaranBarua01/PI-Agent-Queue', OWNER='KaranBarua01', REPO_ID=1464395830, OWNER_ID=107566813;
 export const QUEUE_LABEL='pi-local-agent-job', JOB_SCHEMA='pi-local-agent/job-v1', RESULT_SCHEMA='pi-local-agent/result-v1';
 export const SITES=Object.freeze({research_baja_50:{url:'https://www.bajadesigns.com/',maxPages:50},research_1up_50:{url:'https://1up-usa.com/',maxPages:50},ollama_1up:{url:'https://1up-usa.com/',maxPages:7}});
-export const ACTIONS=Object.freeze(['health','ollama_health','run_tests','update_status','update_check','update_stage','collect_website','benchmark_failed34','export_benchmark_evidence','export_final_outcome','import_final_outcome',...Object.keys(SITES)]);
-export const REMOTE_REVISION='phase4-final-outcome-catalogue-v2';
+export const ACTIONS=Object.freeze(['health','ollama_health','run_tests','update_status','update_check','update_stage','collect_website','benchmark_failed34','benchmark_100','list_research_runs','export_benchmark_evidence','export_final_outcome','import_final_outcome',...Object.keys(SITES)]);
+export const REMOTE_REVISION='phase4-company-history-benchmark100-v1';
 const RUN_ID=/^[\dTZ-]+_[0-9a-f-]{36}$/;
 function publicSeed(raw){
  if(typeof raw!=='string'||raw.length>2048)throw Error('Invalid public HTTPS seed');
@@ -33,6 +33,21 @@ function loadFailedCohort(root){
 const MAX_AGE=15*60*1000, MAX_EXPORT=2*1024*1024, CHUNK=24000;
 const nowISO=()=>new Date().toISOString();
 const sha=text=>createHash('sha256').update(text,'utf8').digest('hex');
+// Pin the exact public seed/diagnostic-anchor projection of the previous private benchmark.
+export const BASELINE100_HASH='217ecfb4d231a9b39dc0888fd649a4c5c7755f4a310174df4b81ccfb76aaf8c4';
+export function parseBaseline100(comments,expectedHash=BASELINE100_HASH){
+ const sites=[];
+ for(const c of comments){
+  const body=c?.body,match=typeof body==='string'&&body.match(/^PI_BENCHMARK_SITE:63:(\d{3})\n\n~~~json\n/);if(!match)continue;
+  const end=body.lastIndexOf('\n~~~');if(end<match[0].length)throw Error('Malformed baseline site record');
+  const data=JSON.parse(body.slice(match[0].length,end)),r=data.row;
+  if(data.schemaVersion!=='pi-acquisition-benchmark/site-v1'||data.issueNumber!==63||data.total!==100||data.benchmark_id!=='pi-v08-100-20261126'||r?.id!==match[1]||!Number.isInteger(data.completed)||typeof r.company!=='string'||!r.company.trim()||r.company.length>180||typeof r.sector!=='string'||!r.sector.trim()||!Array.isArray(r.anchors)||r.anchors.length<1||r.anchors.length>10||r.anchors.some(a=>typeof a.phrase!=='string'||!a.phrase.trim()||a.phrase.length>200)||publicSeed(r.url)!==r.url)throw Error('Unexpected original benchmark site record');
+  sites.push({id:r.id,company:r.company,sector:r.sector,url:r.url,anchors:r.anchors.map(a=>({phrase:a.phrase}))});
+ }
+ sites.sort((a,b)=>a.id.localeCompare(b.id));
+ if(sites.length!==100||sites.some((s,i)=>s.id!==String(i+1).padStart(3,'0'))||new Set(sites.map(s=>s.url)).size!==100||sha(JSON.stringify(sites))!==expectedHash)throw Error('Original 100-company cohort integrity check failed');
+ return sites;
+}
 const base='/repos/'+REPO;
 const tokenLike=/(?:github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{25,}|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._-]{24,})/i;
 function safeError(e){const m=String(e?.message||e||'Unknown error');return m.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/gi,'[REDACTED]').replace(/\bBearer\s+\S+/gi,'Bearer [REDACTED]').replace(/sk-(?:proj-)?[A-Za-z0-9_-]{12,}/g,'[REDACTED]').replace(/[A-Z]:\\[^\r\n]+/gi,'[local path omitted]').slice(0,220);}
@@ -117,6 +132,7 @@ export function createQueueAgent({root,lab,token='',api=token?makeGitHubApi(toke
   if(j.action==='health'){const h=await healthCheck();const s=lab.getState();return {status:'completed',action:j.action,agentVersion:'phase4-unified-v04-base',remoteRevision:REMOTE_REVISION,nodeVersion:process.version,workspace:'Unified Local Research Lab (path omitted)',network:'outbound-only',lab_ready:true,lab_busy:!!s.busy,model:MODEL,ollama_ready:h.model_ready,allowed_actions:ACTIONS};}
   if(j.action==='ollama_health')return {...await ollamaCheck(),action:j.action};
   if(j.action==='run_tests')return {...await testRunner(),action:j.action};
+  if(j.action==='list_research_runs'){const rows=lab.listRuns();return {status:'completed',action:j.action,total:rows.length,rows:rows.slice(0,100).map(r=>({id:r.id,company:r.company,url:r.url,phase:r.phase,pages_usable:r.pages_usable,reviewed:r.reviewed,benchmark_issue:r.benchmark_issue,site_id:r.site_id})),note:'Latest 100 run metadata entries; full history on localhost.'};}
   const rec=state.jobs[String(j.issueNumber)];
   if(j.action==='export_final_outcome'){
    const runId=j.runId==='current'?lab.getState().id:j.runId;if(typeof runId!=='string'||!RUN_ID.test(runId))throw Error('No current completed run');const worklist=lab.getOutcomeWorklist(runId);const raw=JSON.stringify(worklist);
@@ -136,35 +152,37 @@ export function createQueueAgent({root,lab,token='',api=token?makeGitHubApi(toke
   }
   if(j.action==='export_benchmark_evidence'){
    const previous=state.jobs[String(j.benchmarkIssue)];
-   const row=previous?.action==='benchmark_failed34'&&previous.benchmarkRows?.find(r=>r.siteId===j.siteId);
+   const row=['benchmark_failed34','benchmark_100'].includes(previous?.action)&&previous.benchmarkRows?.find(r=>r.siteId===j.siteId);
    if(!row||!RUN_ID.test(row.runId||'')||!existsSync(join(root,'results',row.runId,'01_shared_input.json')))throw Error('No saved packet for that benchmark site');
    rec.runId=row.runId;save();return {status:'completed',action:j.action,benchmarkIssue:j.benchmarkIssue,siteId:j.siteId,run_id:row.runId,provider:'chatgpt',note:'Frozen source packet for external AI; no new crawl or local inference.'};
   }
-  if(j.action==='benchmark_failed34'){
-   const sites=loadFailedCohort(root);rec.benchmarkRows=[];save();
+  if(['benchmark_failed34','benchmark_100'].includes(j.action)){
+   const full=j.action==='benchmark_100',sites=full?parseBaseline100(await existingComments(63)):loadFailedCohort(root),total=sites.length;rec.benchmarkRows=[];active.benchmark={total,completed:0,company:null,site_id:null};save();
    for(const site of sites){
     if(stopped||paused||lab.getState().busy)break;
     const issue=await api('GET',base+'/issues/'+j.issueNumber);
     if(issue.state!=='open'||!(issue.labels||[]).some(x=>x.name===QUEUE_LABEL||x===QUEUE_LABEL))break;
-    let row={siteId:site.id,company:site.company,url:site.url,group:site.group,status:'failed'};
+    active.benchmark={total,completed:rec.benchmarkRows.length,company:site.company,site_id:site.id};
+    let row={siteId:site.id,company:site.company,url:site.url,...(site.sector?{sector:site.sector}:{}),...(site.group?{group:site.group}:{}),status:'failed'};
     try{
-     const run=lab.startQueueRun({url:site.url,maxPages:50,provider:'deterministic',strategy:'auto',browser:'none'},{issue:j.issueNumber,job_id:j.jobId});
+     const run=lab.startQueueRun({url:site.url,maxPages:50,provider:'deterministic',strategy:'auto',browser:'none'},{issue:j.issueNumber,job_id:j.jobId,benchmark:j.action,company:site.company,sector:site.sector||null,site_id:site.id});
      active.run_id=run.id;row.runId=run.id;row.startedAt=nowISO();
      const final=await run.completion;const st=lab.getState(),report=st.report||{},q=report.evidenceQuality||{},c=report.coverage||{},sample=final.sample||{};
      const norm=x=>String(x??'').normalize('NFKC').replace(/\s+/g,' ').toLowerCase();
      const native=(report.extracted_pages||[]).map(p=>norm([p.extracted_text,...(p.pdf_pages||[]).map(x=>x.text)].join(' ')));
      const selected=(st.packet?.batches||[]).flatMap(b=>b.input.sources.map(x=>norm(x.text)));
-     const anchors=(site.baseline.anchors||[]).map(a=>({phrase:a.phrase,inNativeText:native.some(t=>t.includes(norm(a.phrase))),inSelectedEvidence:selected.some(t=>t.includes(norm(a.phrase)))}));
+     const anchors=(site.anchors||site.baseline?.anchors||[]).map(a=>({phrase:a.phrase,inNativeText:native.some(t=>t.includes(norm(a.phrase))),inSelectedEvidence:selected.some(t=>t.includes(norm(a.phrase)))}));
      const hits=anchors.filter(a=>a.inSelectedEvidence).length,attempted=c.visitedPages??sample.pages_attempted??0,accepted=q.counts?.accepted??0,relevant=q.counts?.relevant??0;
      row={...row,status:final.phase,attempted,retrieved:q.counts?.retrieved??0,accepted,relevant,productCandidates:q.distinctProductCandidates??0,score:q.score??0,selectedAnchorHits:hits,anchors,remainingLeads:c.remainingLeads??0,stopReason:c.stopReason||final.phase,batches:st.packet?.batches?.length??0,network:report.benchmarkAcquisition?.network||null,outcome:!['complete','no_usable_evidence'].includes(final.phase)?'execution_incomplete':relevant>0&&attempted>0&&accepted/attempted>=0.5&&hits>0?'provisional_recovery':accepted>0?'some_evidence_review_required':'still_no_accepted_evidence'};
     }catch(e){row.error=safeError(e);if(token)row.error=row.error.split(token).join('[REDACTED]');}
-    rec.benchmarkRows.push(row);save();
-    console.log('Failed-cohort '+rec.benchmarkRows.length+'/34: '+site.company+' '+(row.outcome||row.status));
+    rec.benchmarkRows.push(row);active.benchmark.completed=rec.benchmarkRows.length;save();
+    console.log('Benchmark '+rec.benchmarkRows.length+'/'+total+': '+site.company+' '+(row.outcome||row.status));
     // Private queue checkpoint; no raw source text or credentials in progress.
-    try{await verify();const body='PI_FAILED34_SITE:'+j.issueNumber+':'+site.id+'\n\n~~~json\n'+JSON.stringify({schemaVersion:'pi-failed34/site-v1',issueNumber:j.issueNumber,completed:rec.benchmarkRows.length,total:34,row})+'\n~~~';if((token&&body.includes(token))||tokenLike.test(body))throw Error('Sensitive-pattern progress withheld');await api('POST',base+'/issues/'+j.issueNumber+'/comments',{body});if(commentDelayMs)await delay(commentDelayMs);}catch(e){console.warn('Benchmark checkpoint delivery pending; local results retained.');}
+    try{await verify();const body=(full?'PI_BENCHMARK100_SITE:':'PI_FAILED34_SITE:')+j.issueNumber+':'+site.id+'\n\n~~~json\n'+JSON.stringify({schemaVersion:full?'pi-benchmark100/site-v1':'pi-failed34/site-v1',issueNumber:j.issueNumber,completed:rec.benchmarkRows.length,total,row})+'\n~~~';if((token&&body.includes(token))||tokenLike.test(body))throw Error('Sensitive-pattern progress withheld');await api('POST',base+'/issues/'+j.issueNumber+'/comments',{body});if(commentDelayMs)await delay(commentDelayMs);}catch(e){console.warn('Benchmark checkpoint delivery pending; local results retained.');}
     if(row.status==='cancelled'||stopped||paused)break;
    }
    const rows=rec.benchmarkRows;
+   if(full)return {status:rows.length===total?'completed':'partial',action:j.action,provider:'deterministic / ChatGPT review pending',completed:rows.length,total,baselineIssue:63,cohortSha256:BASELINE100_HASH,sourceCommit:'89ec9c91706396c00d1b34e24d5a3f1bf58742ae',page_budget:50,attempted:rows.reduce((n,r)=>n+(r.attempted||0),0),accepted:rows.reduce((n,r)=>n+(r.accepted||0),0),usableSample:rows.filter(r=>r.outcome==='provisional_recovery').length,someEvidence:rows.filter(r=>r.outcome==='some_evidence_review_required').length,noAcceptedEvidence:rows.filter(r=>r.outcome==='still_no_accepted_evidence').length,incomplete:rows.filter(r=>!['complete','no_usable_evidence'].includes(r.status)).length,rows:rows.map(r=>({siteId:r.siteId,company:r.company,runId:r.runId||null,status:r.status,accepted:r.accepted||0,attempted:r.attempted||0,outcome:r.outcome||'execution_incomplete',selectedAnchorHits:r.selectedAnchorHits||0})),note:'Original seeds, same 50-page limit, Phase 4 acquisition. Per-site local reports and private checkpoints; these counts are not semantic accuracy and no ChatGPT inference was called.'};
    return {status:rows.length===34?'completed':'partial',action:j.action,provider:'chatgpt',completed:rows.length,total:34,baselineIssue:63,sourceCommit:'89ec9c91706396c00d1b34e24d5a3f1bf58742ae',provisionalRecovered:rows.filter(r=>r.outcome==='provisional_recovery').length,someEvidence:rows.filter(r=>r.outcome==='some_evidence_review_required').length,stillNoEvidence:rows.filter(r=>r.outcome==='still_no_accepted_evidence').length,incomplete:rows.filter(r=>!['provisional_recovery','some_evidence_review_required','still_no_accepted_evidence'].includes(r.outcome)).length,rows,note:'Same PC, original seeds and 50-page ceiling; exploratory recovery, not independently verified accuracy. Frozen packets available per site through export_benchmark_evidence.'};
   }
   const site=j.action==='collect_website'?{url:j.url,maxPages:j.maxPages}:SITES[j.action];if(!site)throw Error('Action not allowed');
