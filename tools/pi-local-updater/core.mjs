@@ -98,11 +98,11 @@ export function sourceUrl(m,f){
 }
 export async function status(root){
  const base=resolve(root),updates=updateRoot(base);
- return {installed:await readJson(installedFile(base)),staged:await readJson(join(updates,'staged.json')),journal:await readJson(join(updates,'journal.json'))};
+ return {installed:await readJson(installedFile(base)),staged:await readJson(join(updates,'staged.json')),journal:await readJson(join(updates,'journal.json')),rejected:await readJson(join(updates,'rejected.json'))};
 }
 export async function check(root,{fetcher=fetch}={}){
  const manifest=await fetchStable(fetcher),s=await status(root);
- return {available:manifest.releaseId!==s.installed?.releaseId,releaseId:manifest.releaseId,sourceCommit:manifest.sourceCommit,installed:s.installed?.releaseId||'legacy-local',staged:s.staged?.releaseId===manifest.releaseId};
+ return {available:manifest.releaseId!==s.installed?.releaseId&&manifest.releaseId!==s.rejected?.releaseId,releaseId:manifest.releaseId,sourceCommit:manifest.sourceCommit,installed:s.installed?.releaseId||'legacy-local',staged:s.staged?.releaseId===manifest.releaseId,rejected:s.rejected?.releaseId===manifest.releaseId};
 }
 async function verifyStaged(root,m){
  const base=resolve(root);
@@ -114,6 +114,7 @@ export async function stage(root,{fetcher=fetch,manifest=null}={}){
  return exclusive(resolve(root),async()=>{
   const base=resolve(root),m=validateManifest(manifest||await fetchStable(fetcher)),s=await status(base);
   if(s.journal)throw Error('Interrupted update requires recovery');
+  if(s.rejected?.releaseId===m.releaseId)throw Error('Release quarantined after failed activation or rollback');
   if(s.installed?.releaseId===m.releaseId)return {status:'already_installed',releaseId:m.releaseId};
   const folder=join(updateRoot(base),'staging',m.releaseId);
   await safeTarget(base,'local-data/pi-updates/staging/'+m.releaseId);
@@ -149,6 +150,9 @@ export async function recover(root){
     await atomicWrite(dest,b);
    }else await rm(dest,{force:true});
   }
+  if(journal.previous)await atomicWrite(installedFile(base),Buffer.from(JSON.stringify(journal.previous)));
+  else await rm(installedFile(base),{force:true});
+  await atomicWrite(join(dir,'rejected.json'),Buffer.from(JSON.stringify({releaseId:journal.releaseId,reason:'interrupted_activation'})));
   await rm(join(dir,'journal.json'),{force:true});
   return {status:'rolled_back_incomplete',releaseId:journal.releaseId};
  });
@@ -159,6 +163,7 @@ export async function activate(root,{offline=()=>Promise.resolve(true),smoke=asy
   const dir=updateRoot(base),m=validateManifest(await readJson(join(dir,'staged.json')));
   if(await readJson(join(dir,'journal.json')))throw Error('Interrupted update needs recovery first');
   if((await readJson(installedFile(base)))?.releaseId===m.releaseId)return {status:'already_installed',releaseId:m.releaseId};
+  if((await readJson(join(dir,'rejected.json')))?.releaseId===m.releaseId)throw Error('Release quarantined; a new reviewed release is required');
   await verifyStaged(base,m);
   const backups=join(dir,'backups',m.releaseId),records=[];
   for(const f of m.files){
@@ -194,6 +199,7 @@ export async function activate(root,{offline=()=>Promise.resolve(true),smoke=asy
      await atomicWrite(dest,b);
     }
    }
+   await atomicWrite(join(dir,'rejected.json'),Buffer.from(JSON.stringify({releaseId:m.releaseId,reason:'failed_smoke_or_activation'})));
    await rm(join(dir,'journal.json'),{force:true});
    throw error;
   }
@@ -223,6 +229,7 @@ export async function rollback(root,{offline=()=>Promise.resolve(true)}={}){
   }
   if(installed.previous)await atomicWrite(installedFile(base),Buffer.from(JSON.stringify(installed.previous)));
   else await rm(installedFile(base),{force:true});
+  await atomicWrite(join(dir,'rejected.json'),Buffer.from(JSON.stringify({releaseId:installed.releaseId,reason:'manual_rollback'})));
   return {status:'rolled_back',releaseId:installed.releaseId};
  });
 }
