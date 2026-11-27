@@ -1,0 +1,19 @@
+{
+  "revision": "89ec9c91706396c00d1b34e24d5a3f1bf58742ae",
+  "repository": "KaranBarua01/Product-Insights",
+  "gitBlobSha1": {
+    "Scrappers/src/engine.ts": "f886c22d8ce8082c1a3eda925d5f22031cd36c44",
+    "Scrappers/src/safety.ts": "a9028a8fc310b7618d25c2e17f36b8851217ff96",
+    "Scrappers/src/s01.ts": "42532e84a24e2883aafa9c9a30feb05873113946",
+    "Scrappers/src/s02.ts": "fd13d4f39a524f3298ef908c4465c128c4e2e848",
+    "Scrappers/src/s03.ts": "488d3e0927311769db94f562fa550933ea421ad8",
+    "Scrappers/src/html.ts": "aafa1f3b4559dd90ebf1986b72fb062e27a79778",
+    "Scrappers/tools/research-v3.mjs": "057fba2c0e2aa0700a1e185c33ef32374672ecea",
+    "Scrappers/tools/evidence-quality.mjs": "b07ac770724ba093f912533f680674522f452c46",
+    "Scrappers/tools/local-pdf-ocr.mjs": "113d03afd26e1977748376c837f64f8056440fd8",
+    "Scrappers/package.json": "bb6f44eafbc57d8d0e8499db2e08db050e71ed3d",
+    "engine/pattern-systems/package.json": "7819c990f9c72caa1d457f5904eaaa475ea91673",
+    "engine/pattern-systems/src/parse.ts": "c4cff7c5e17003ab3e8528ee62e4c49690ddbcd2",
+    "engine/pattern-systems/src/patterns.ts": "92cb87f7ec1a589d56700428cd50482976976866"
+  }
+}

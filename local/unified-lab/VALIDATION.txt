@@ -1,0 +1,26 @@
+VALIDATION RECORD | FULL UNIFIED PHASE 4 PROTOTYPE
+
+Source: original Product_Insights_Unified_Research_Lab_v0.4.zip supplied by user.
+Pinned cumulative engine: 89ec9c91706396c00d1b34e24d5a3f1bf58742ae.
+GitHub PR #44 cumulative acquisition regression: 113/113 passed.
+Previous Windows run supplied by user: build passed, 112 passed, 0 failed,
+1 optional real OCR test skipped; original benchmark transport crashed at
+Haas Automation with ERR_INVALID_STATE (closed stream).
+
+This packaged integration: tested locally under Node.js 22.16.0 with SQLite.
+26/26 packaged offline fixtures passed (includes 10 transport fixtures).
+Fixtures cover original read-only database and knowledge/inference APIs,
+50-page frozen input workflow, mock Ollama, retry/restore, fixed-action queue
+safety, Phase 4 adapter wiring, pattern sampling, optional local OCR policy,
+contiguous quote checks, and repeated cancelled-body/late-event cases.
+Database SHA-256 unchanged from uploaded v0.4; SQLite integrity and foreign
+key checks passed. Exact failed34 manifest checked (34 unique zero-usable IDs).
+
+Pending: Windows PowerShell launcher execution and Node 24 combined app
+integration smoke, actual upstream source retrieval/hash check in this setup,
+real website retest, and optional Windows OCR. The container cannot resolve
+GitHub archive hosts, so the upstream engine is not embedded and the real
+compiled-engine smoke is scheduled in the first-run installer. The earlier
+private stream-repair GitHub CI job failed and logs were unavailable; local
+repair fixtures passed, but this does not establish live Windows recovery.
+No claim of real-world accuracy improvement or v0.8 source parity is made.
