@@ -5,14 +5,14 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = [IO.Path]::GetFullPath($RootPath)
-$Pin = '5f3d8827f4f337123601a4a099ee14f9d2f06757'
+$Pin = 'a37f17395ea9f12d787c0591d0b5f2cca8030262'
 $Repo = 'KaranBarua01/Product-Insights'
 $Files = [ordered]@{
- 'core.mjs'         = 'b24c0d5adcb69621d103188c9854fbccd74e1057'
- 'cli.mjs'          = 'b19bea8ed63ba738d0f65205451b59c4f269ca04'
+ 'core.mjs'         = 'e175aecf1ab241b7b271f22a3ab91ebb03c12aed'
+ 'cli.mjs'          = 'eefaa5e0734aae4a4dc865ddc5469df7f1bb469a'
  'watch.mjs'        = '4b75b5085302b759fa28b531710de5107ec1fe98'
  'bridge-patch.mjs' = '83e642f6c397bdc22b139e0ac5813296ed811acc'
- 'core.test.mjs'    = 'd0f9a6beccdb030b26681e3998be6ee1b0093dfb'
+ 'core.test.mjs'    = '3546b9281f7799cc11676c47be7ed663e210eaf1'
  'bridge.test.mjs'  = '7593a2e761c70ef1503bb9f4b8e1489a0a1d9d5a'
 }
 function GitBlobSha1([string]$Path) {
