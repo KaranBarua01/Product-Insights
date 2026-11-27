@@ -1,0 +1,37 @@
+name: PI local lab source QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'local/unified-lab/**'
+      - '.github/workflows/pi-local-lab-source-qa.yml'
+  push:
+    branches: [chore/platform-import-local-phase4-app-v1]
+    paths:
+      - 'local/unified-lab/**'
+      - '.github/workflows/pi-local-lab-source-qa.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Syntax and import validation
+        shell: bash
+        run: |
+          for f in local/unified-lab/start.mjs local/unified-lab/verify-runtime.mjs local/unified-lab/runtime-smoke.mjs local/unified-lab/app/*.mjs local/unified-lab/app/app.js local/unified-lab/engine/*.mjs local/unified-lab/benchmark/*.mjs local/unified-lab/tests/*.mjs; do
+            node --check "$f"
+          done
+      - name: Read-only update status and source ownership fixtures
+        run: node --test local/unified-lab/tests/update-status.test.mjs local/unified-lab/tests/source-contract.test.mjs

@@ -1,0 +1,790 @@
+{
+  "schemaVersion": "pi-failed-cohort/v1",
+  "baselineIssue": 63,
+  "sourceCommit": "89ec9c91706396c00d1b34e24d5a3f1bf58742ae",
+  "maxPages": 50,
+  "networkRequestLimit": 360,
+  "byteLimit": 67108864,
+  "sites": [
+    {
+      "id": "006",
+      "company": "Haas Automation",
+      "url": "https://www.haascnc.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "machining centers"
+          },
+          {
+            "phrase": "lathe"
+          }
+        ]
+      }
+    },
+    {
+      "id": "010",
+      "company": "SKF",
+      "url": "https://www.skf.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {},
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "bearings"
+          },
+          {
+            "phrase": "seals"
+          }
+        ]
+      }
+    },
+    {
+      "id": "014",
+      "company": "ABB Robotics",
+      "url": "https://new.abb.com/products/robotics/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "timeout": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "robots"
+          },
+          {
+            "phrase": "robotics"
+          }
+        ]
+      }
+    },
+    {
+      "id": "016",
+      "company": "Mazak",
+      "url": "https://www.mazakusa.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "machining"
+          },
+          {
+            "phrase": "turning"
+          }
+        ]
+      }
+    },
+    {
+      "id": "019",
+      "company": "Molex",
+      "url": "https://www.molex.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "timeout": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "connectors"
+          },
+          {
+            "phrase": "cable assemblies"
+          }
+        ]
+      }
+    },
+    {
+      "id": "020",
+      "company": "NTN",
+      "url": "https://www.ntnamericas.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "ball bearings"
+          },
+          {
+            "phrase": "roller bearings"
+          }
+        ]
+      }
+    },
+    {
+      "id": "022",
+      "company": "Grundfos",
+      "url": "https://www.grundfos.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "timeout": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "pumps"
+          },
+          {
+            "phrase": "circulator"
+          }
+        ]
+      }
+    },
+    {
+      "id": "025",
+      "company": "Siemens Energy",
+      "url": "https://www.siemens-energy.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "gas turbines"
+          },
+          {
+            "phrase": "transformers"
+          }
+        ]
+      }
+    },
+    {
+      "id": "045",
+      "company": "Nordex",
+      "url": "https://www.nordex-online.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "size_or_transfer_limit": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "wind turbines"
+          },
+          {
+            "phrase": "rotor"
+          }
+        ]
+      }
+    },
+    {
+      "id": "066",
+      "company": "Hurco",
+      "url": "https://www.hurco.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "machining centers"
+          },
+          {
+            "phrase": "CNC"
+          }
+        ]
+      }
+    },
+    {
+      "id": "073",
+      "company": "Waupaca Foundry",
+      "url": "https://www.waupacafoundry.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "gray iron"
+          },
+          {
+            "phrase": "ductile iron"
+          }
+        ]
+      }
+    },
+    {
+      "id": "084",
+      "company": "SICK",
+      "url": "https://www.sick.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "sensors"
+          },
+          {
+            "phrase": "LiDAR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "087",
+      "company": "Woodward",
+      "url": "https://www.woodward.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 0,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "dns_or_public_network_policy": 1
+        },
+        "stop_class": "dns_or_public_network_policy",
+        "anchors": [
+          {
+            "phrase": "control"
+          },
+          {
+            "phrase": "actuation"
+          }
+        ]
+      }
+    },
+    {
+      "id": "094",
+      "company": "Dake",
+      "url": "https://www.dakecorp.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "other_failure": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "press"
+          },
+          {
+            "phrase": "bandsaw"
+          }
+        ]
+      }
+    },
+    {
+      "id": "097",
+      "company": "Mindray",
+      "url": "https://www.mindray.com/",
+      "group": "technical_failure",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "size_or_transfer_limit": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "ultrasound"
+          },
+          {
+            "phrase": "patient monitoring"
+          }
+        ]
+      }
+    },
+    {
+      "id": "009",
+      "company": "TE Connectivity",
+      "url": "https://www.te.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "connectors"
+          },
+          {
+            "phrase": "sensors"
+          }
+        ]
+      }
+    },
+    {
+      "id": "011",
+      "company": "Medtronic",
+      "url": "https://www.medtronic.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "medical devices"
+          },
+          {
+            "phrase": "pacemakers"
+          }
+        ]
+      }
+    },
+    {
+      "id": "018",
+      "company": "Dana",
+      "url": "https://www.dana.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "axles"
+          },
+          {
+            "phrase": "drivetrain"
+          }
+        ]
+      }
+    },
+    {
+      "id": "026",
+      "company": "Okuma",
+      "url": "https://www.okuma.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "access_restricted": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "machining"
+          },
+          {
+            "phrase": "lathe"
+          }
+        ]
+      }
+    },
+    {
+      "id": "029",
+      "company": "Amphenol",
+      "url": "https://www.amphenol.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "connectors"
+          },
+          {
+            "phrase": "sensors"
+          }
+        ]
+      }
+    },
+    {
+      "id": "038",
+      "company": "Dorman Products",
+      "url": "https://www.dormanproducts.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "automotive"
+          },
+          {
+            "phrase": "parts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "039",
+      "company": "Phoenix Contact",
+      "url": "https://www.phoenixcontact.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "terminal blocks"
+          },
+          {
+            "phrase": "connectors"
+          }
+        ]
+      }
+    },
+    {
+      "id": "059",
+      "company": "Wurth Elektronik",
+      "url": "https://www.we-online.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "inductors"
+          },
+          {
+            "phrase": "connectors"
+          }
+        ]
+      }
+    },
+    {
+      "id": "064",
+      "company": "Festo",
+      "url": "https://www.festo.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "pneumatic"
+          },
+          {
+            "phrase": "actuator"
+          }
+        ]
+      }
+    },
+    {
+      "id": "074",
+      "company": "Rockwell Automation",
+      "url": "https://www.rockwellautomation.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "controllers"
+          },
+          {
+            "phrase": "drives"
+          }
+        ]
+      }
+    },
+    {
+      "id": "075",
+      "company": "Eaton",
+      "url": "https://www.eaton.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "circuit breakers"
+          },
+          {
+            "phrase": "power distribution"
+          }
+        ]
+      }
+    },
+    {
+      "id": "079",
+      "company": "Littelfuse",
+      "url": "https://www.littelfuse.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "fuses"
+          },
+          {
+            "phrase": "circuit protection"
+          }
+        ]
+      }
+    },
+    {
+      "id": "081",
+      "company": "Drager",
+      "url": "https://www.draeger.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "access_restricted": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "ventilation"
+          },
+          {
+            "phrase": "anesthesia"
+          }
+        ]
+      }
+    },
+    {
+      "id": "088",
+      "company": "Omron Electronic Components",
+      "url": "https://components.omron.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "relays"
+          },
+          {
+            "phrase": "switches"
+          }
+        ]
+      }
+    },
+    {
+      "id": "089",
+      "company": "ResMed",
+      "url": "https://www.resmed.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "CPAP"
+          },
+          {
+            "phrase": "masks"
+          }
+        ]
+      }
+    },
+    {
+      "id": "092",
+      "company": "Cognex",
+      "url": "https://www.cognex.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "access_or_network_stop",
+        "anchors": [
+          {
+            "phrase": "machine vision"
+          },
+          {
+            "phrase": "barcode"
+          }
+        ]
+      }
+    },
+    {
+      "id": "093",
+      "company": "Cummins",
+      "url": "https://www.cummins.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "access_restricted": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "engines"
+          },
+          {
+            "phrase": "generators"
+          }
+        ]
+      }
+    },
+    {
+      "id": "095",
+      "company": "Safran",
+      "url": "https://www.safran-group.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "access_restricted": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "aircraft engines"
+          },
+          {
+            "phrase": "landing gear"
+          }
+        ]
+      }
+    },
+    {
+      "id": "096",
+      "company": "TDK",
+      "url": "https://product.tdk.com/",
+      "group": "policy_recheck",
+      "baseline": {
+        "attempted": 1,
+        "usable": 0,
+        "quality": "no_usable_evidence",
+        "problems": {
+          "robots_or_access_policy": 1
+        },
+        "stop_class": "frontier_exhausted_or_early_stop",
+        "anchors": [
+          {
+            "phrase": "capacitors"
+          },
+          {
+            "phrase": "inductors"
+          }
+        ]
+      }
+    }
+  ]
+}
