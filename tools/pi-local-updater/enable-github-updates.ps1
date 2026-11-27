@@ -99,7 +99,7 @@ if errorlevel 1 (echo A staged update could not be verified. Application not sta
   $updated += $dest
  }
  Write-Host 'GitHub updater connected. Remote fixed actions: update_status, update_check, update_stage.'
- Write-Host 'Use START_GITHUB_AGENT.bat or START_GITHUB_LOCALHOST.bat from now on.
+ Write-Host 'Use START_GITHUB_AGENT.bat or START_GITHUB_LOCALHOST.bat from now on.'
 } catch {
  foreach ($file in $updated) {
   if ($null -eq $original[$file]) { Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue }
