@@ -70,13 +70,36 @@ try {
   $updated += $dest
  }
  # Only the known patched Phase 4 local agent is supported. Back up before writing.
+ foreach ($relative in @('app\queue-agent.mjs','start.mjs')) {
+  $path = Join-Path $Root $relative
+  $original[$path] = [IO.File]::ReadAllBytes($path)
+  $updated += $path
+ }
  Push-Location -LiteralPath $Root
  try {
   CheckedNode @('--input-type=module','-e',"import {installBridge} from './updater/bridge-patch.mjs'; const result=await installBridge(process.cwd()); console.log(JSON.stringify(result));")
   CheckedNode @('--experimental-sqlite','--test','engine/test.mjs','tests/integration.test.mjs','tests/queue-agent.test.mjs','tests/acquisition-phase4.test.mjs','benchmark/pinned-fetch.test.mjs')
  } finally { Pop-Location }
+ $common = @'
+@echo off
+setlocal
+cd /d "%~dp0"
+node.exe "%~dp0updater\cli.mjs" auto "%~dp0"
+if errorlevel 1 echo Update channel unavailable; continuing installed version.
+node.exe "%~dp0updater\cli.mjs" activate-if-staged "%~dp0"
+if errorlevel 1 (echo A staged update could not be verified. Application not started. & pause & exit /b 1)
+'@
+ foreach ($mode in @('AGENT','LOCALHOST')) {
+  $name = "START_GITHUB_$mode.bat"
+  $dest = Join-Path $Root $name
+  $original[$dest] = if (Test-Path -LiteralPath $dest) { [IO.File]::ReadAllBytes($dest) } else { $null }
+  $launcher = if ($mode -eq 'AGENT') { 'START_WITH_AGENT.bat' } else { 'START_LOCALHOST.bat' }
+  $text = $common + "`r`n" + 'call "%~dp0' + $launcher + '"' + "`r`n" + 'exit /b %ERRORLEVEL%' + "`r`n"
+  [IO.File]::WriteAllText($dest,$text,[Text.Encoding]::ASCII)
+  $updated += $dest
+ }
  Write-Host 'GitHub updater connected. Remote fixed actions: update_status, update_check, update_stage.'
- Write-Host 'Use START_GITHUB_AGENT.bat or START_GITHUB_LOCALHOST.bat from now on.'
+ Write-Host 'Use START_GITHUB_AGENT.bat or START_GITHUB_LOCALHOST.bat from now on.
 } catch {
  foreach ($file in $updated) {
   if ($null -eq $original[$file]) { Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue }
