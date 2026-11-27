@@ -1,0 +1,36 @@
+name: PI local updater QA
+on:
+  push:
+    branches: [feat/gh-local-update-channel-v1]
+    paths:
+      - 'tools/pi-local-updater/**'
+      - '.github/workflows/pi-local-updater-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/pi-local-updater/**'
+      - '.github/workflows/pi-local-updater-qa.yml'
+permissions:
+  contents: read
+jobs:
+  updater:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Syntax checks
+        run: |
+          node --check tools/pi-local-updater/core.mjs
+          node --check tools/pi-local-updater/cli.mjs
+          node --check tools/pi-local-updater/core.test.mjs
+      - name: Offline security, staging and rollback tests
+        run: node --test tools/pi-local-updater/core.test.mjs
