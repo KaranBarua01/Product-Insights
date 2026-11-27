@@ -2,57 +2,45 @@
   "schemaVersion": "pi-local-update/v1",
   "channel": "stable",
   "sourceRepo": "KaranBarua01/Product-Insights",
-  "sourceCommit": "a4bfc4f22ba3390a991f5fcff7f80185b239c409",
-  "releaseId": "2026.11.27-app.4",
+  "sourceCommit": "c727f45f4ce85d9cc1b4cf95feaab658a1d4a95b",
+  "releaseId": "2026.11.27-app.5",
   "minNode": 24,
   "files": [
     {
-      "path": "app/final-outcome.mjs",
-      "bytes": 9863,
-      "sha256": "5676bb25c55b779b4f4064898317e39c5b15b8ba5b556f0cbf3d38ba175cf6c6",
-      "fromSha256": "fae5270058e75b98dbbffc5bc7869410d226f1f96fa3da0315ff738190f7a82f"
-    },
-    {
       "path": "app/server.mjs",
-      "bytes": 20637,
-      "sha256": "491569976bbc31481354cf38ae59c40fa0a077d1781d4dbd8560d18b5cb24464",
-      "fromSha256": "21bc732c1a0770860df58f94a8a15583dc14c8046e64ba30d0731498adc5b2e5"
+      "bytes": 24250,
+      "sha256": "05ef29f891ed14e72b184629e8c4edca7b3667c907e3af5798bd7799ca5a3bab",
+      "fromSha256": "491569976bbc31481354cf38ae59c40fa0a077d1781d4dbd8560d18b5cb24464"
     },
     {
       "path": "app/queue-agent.mjs",
-      "bytes": 26237,
-      "sha256": "838d55d5218714074def75c70a7e84d74b326e49e62f548a26d3541b8565cde8",
-      "fromSha256": "c7b367f3450024b8bf256019695d746283997111604d9160ab45e55c4fbf9db7"
+      "bytes": 30119,
+      "sha256": "604954f78d1a5f56713cd85a09efa69f6050687848ae09e272947e84f02b3427",
+      "fromSha256": "838d55d5218714074def75c70a7e84d74b326e49e62f548a26d3541b8565cde8"
     },
     {
       "path": "app/app.js",
-      "bytes": 23348,
-      "sha256": "c28c1f660a46562eda35ea49ba08eec735161c1b1c9c95ac06d9f773a226b0d9",
-      "fromSha256": "758eb14bf87818e86516cbbebaacc17698de166f975dc69841d99a17c2502b3d"
+      "bytes": 27997,
+      "sha256": "78eea825fa8faa1298eb4d1226f511e96637e60925f5854f759d19ec2dea68f7",
+      "fromSha256": "c28c1f660a46562eda35ea49ba08eec735161c1b1c9c95ac06d9f773a226b0d9"
     },
     {
       "path": "app/index.html",
-      "bytes": 8814,
-      "sha256": "b299b437b8abfd177e19e132a1c9944870dcb05d62ac32363aec78bd44ddb985",
-      "fromSha256": "ae34110d0593fd1e457ae9e0dd6c07a1000f9191ed8f05b0c9c83137dad26c2c"
-    },
-    {
-      "path": "tests/final-outcome.test.mjs",
-      "bytes": 7732,
-      "sha256": "e579fa056c3365e76a6e15a13e89f3f20eca5d94a86a4ae2cd8c12de67e69083",
-      "fromSha256": "bd23f27b66c3e12a6c7e55a5b33885f8d671ea9ccc249997dd641cea26f92500"
+      "bytes": 9652,
+      "sha256": "01064b92763b98e19b9cf9f083df85be36a4773dd7b6259e37d19120c5149010",
+      "fromSha256": "b299b437b8abfd177e19e132a1c9944870dcb05d62ac32363aec78bd44ddb985"
     },
     {
       "path": "tests/queue-agent.test.mjs",
-      "bytes": 17141,
-      "sha256": "2bed83c4dd8fe6843c338c5595902896df813d794f04e9716bfa32b6ecd91f00",
-      "fromSha256": "d23959641c10db148f6a5cfac1f49dc133ce7d9cfac3741deb09538e53e02c1d"
+      "bytes": 22064,
+      "sha256": "6b26f1d992477dda67b844ceb672bf0f23999f80b750e8721ab0d8719d7487ff",
+      "fromSha256": "2bed83c4dd8fe6843c338c5595902896df813d794f04e9716bfa32b6ecd91f00"
     },
     {
       "path": "tests/integration.test.mjs",
-      "bytes": 12787,
-      "sha256": "2cce864f067adbe525c94a3e6dd74fad753b5664596f7230351518629df5e52e",
-      "fromSha256": "b2711a09066d837f83642f6cacc596d13d97000c6a29d204be747d4d972788d5"
+      "bytes": 15713,
+      "sha256": "9e8a3e1e2d5e70ba13a95bc79771efc34f71f5bbc27cb2db37b4951f9205054e",
+      "fromSha256": "2cce864f067adbe525c94a3e6dd74fad753b5664596f7230351518629df5e52e"
     }
   ]
 }
