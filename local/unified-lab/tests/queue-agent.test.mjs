@@ -71,12 +71,12 @@ test('outcome bridge exports only the current run and imports exact owner review
   const saveDir=join(dir,'results',runId);mkdirSync(saveDir,{recursive:true});writeFileSync(join(saveDir,'00_acquisition_report.json'),JSON.stringify(report));writeFileSync(join(saveDir,'01_shared_input.json'),JSON.stringify(packet));
   const review=structuredClone(work.review_template);review.products[0].status='assessed';review.products[0].parts=[{component:'housing',material:'Aluminum',processes:['CNC machining'],condition:'If machined from billet',basis:'source_quoted_component',source_id:1,quote:'The aluminum housing protects the internal motor.'}];
   const raw=JSON.stringify(review),meta={runId,worklistSha256:wh,reviewSha256:outcomeHash(raw),reviewParts:1};
-  const jobs=[makeIssue(80,'export_final_outcome',{runId}),makeIssue(81,'import_final_outcome',meta),makeIssue(82,'import_final_outcome',meta),makeIssue(83,'import_final_outcome',{...meta,worklistSha256:'0'.repeat(64)}),makeIssue(84,'export_final_outcome',{runId:'2026-11-27T10-00-00-000Z_00000000-0000-0000-0000-000000000000'})];
-  assert.throws(()=>parseJob(makeIssue(85,'export_final_outcome',{runId:'../'}),clock));
+  const jobs=[makeIssue(80,'export_final_outcome',{runId:'current'}),makeIssue(81,'import_final_outcome',meta),makeIssue(82,'import_final_outcome',meta),makeIssue(83,'import_final_outcome',{...meta,worklistSha256:'0'.repeat(64)}),makeIssue(84,'export_final_outcome',{runId:'2026-11-27T10-00-00-000Z_00000000-0000-0000-0000-000000000000'})];
+  assert.throws(()=>parseJob(makeIssue(85,'export_final_outcome',{runId:'../'}),clock));assert.throws(()=>parseJob(makeIssue(87,'import_final_outcome',{...meta,runId:'current'}),clock));
   assert.throws(()=>parseJob(makeIssue(86,'import_final_outcome',{...meta,reviewParts:65}),clock));
   const q=queueMock(jobs),comment=(n,user=owner)=>({user,body:'PI_OUTCOME_REVIEW:test_job_'+n+':1/1\n'+JSON.stringify({text:raw})});
   q.comments.get(81).push(comment(81));q.comments.get(82).push(comment(82,{login:'other',id:2}));q.comments.get(83).push(comment(83));
-  let applied=0;const lab={...fakeLab(),getOutcomeWorklist(id){if(id!==runId)throw Error('Requested run is not current');return work;},applyOutcomeReview(input,opts){assert.equal(opts.merge,true);const v=validateOutcomeReview(work,input);applied++;return {run_id:runId,products:v.products.length,assessed:1};}};
+  let applied=0;const lab={...fakeLab(),getState:()=>({busy:false,id:runId}),getOutcomeWorklist(id){if(id!==runId)throw Error('Requested run is not current');return work;},applyOutcomeReview(input,opts){assert.equal(opts.merge,true);const v=validateOutcomeReview(work,input);applied++;return {run_id:runId,products:v.products.length,assessed:1};}};
   const agent=createQueueAgent({root:dir,lab,api:q.api,clock:()=>clock,commentDelayMs:0});
   const result=n=>unpack(q.comments.get(n).find(c=>c.body.startsWith('PI_AGENT_RESULT:')).body);
   await agent.pumpOnce();assert.equal(result(80).result.worklist_sha256,wh);assert.equal(result(80).attachments[0].name,'final_outcome_worklist.json');assert.equal(result(80).attachments[0].sha256,wh);
