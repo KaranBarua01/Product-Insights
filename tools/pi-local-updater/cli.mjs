@@ -25,7 +25,7 @@ async function run(){
  if(command==='status')result=await status(root);
  else if(command==='check')result=await check(root);
  else if(command==='stage')result=await stage(root);
- else if(command==='auto'){const release=await check(root);result=release.available?await stage(root):{status:'up_to_date',installed:release.installed};}
+ else if(command==='auto'){const release=await check(root);result=!release.available?{status:release.rejected?'quarantined':'up_to_date',installed:release.installed}:release.staged?{status:'already_staged',releaseId:release.releaseId}:await stage(root);}
  else if(command==='recover'){if(!await offline())throw Error('Stop the lab before recovery');result=await recover(root);}
  else if(command==='activate'){result=await activate(root,{offline,smoke});}
  else if(command==='rollback'){result=await rollback(root,{offline});}
