@@ -9,12 +9,13 @@ import {readFileSync,writeFileSync,renameSync,mkdirSync,existsSync} from 'node:f
 import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {MODEL,OLLAMA,ollamaHealth} from './intelligence.mjs';
+import {makeOutcomeWorklist,outcomeHash,assembleOutcomeReview,OUTCOME_REVIEW_MAX_PARTS} from './final-outcome.mjs';
 
 export const REPO='KaranBarua01/PI-Agent-Queue', OWNER='KaranBarua01', REPO_ID=1464395830, OWNER_ID=107566813;
 export const QUEUE_LABEL='pi-local-agent-job', JOB_SCHEMA='pi-local-agent/job-v1', RESULT_SCHEMA='pi-local-agent/result-v1';
 export const SITES=Object.freeze({research_baja_50:{url:'https://www.bajadesigns.com/',maxPages:50},research_1up_50:{url:'https://1up-usa.com/',maxPages:50},ollama_1up:{url:'https://1up-usa.com/',maxPages:7}});
-export const ACTIONS=Object.freeze(['health','ollama_health','run_tests','update_status','update_check','update_stage','collect_website','benchmark_failed34','export_benchmark_evidence',...Object.keys(SITES)]);
-export const REMOTE_REVISION='phase4-remote-benchmark-v1';
+export const ACTIONS=Object.freeze(['health','ollama_health','run_tests','update_status','update_check','update_stage','collect_website','benchmark_failed34','export_benchmark_evidence','export_final_outcome','import_final_outcome',...Object.keys(SITES)]);
+export const REMOTE_REVISION='phase4-final-outcome-bridge-v1';
 const RUN_ID=/^[\dTZ-]+_[0-9a-f-]{36}$/;
 function publicSeed(raw){
  if(typeof raw!=='string'||raw.length>2048)throw Error('Invalid public HTTPS seed');
@@ -41,7 +42,7 @@ export function parseJob(issue,now=Date.now()){
  if(!(issue.labels||[]).some(x=>x.name===QUEUE_LABEL||x===QUEUE_LABEL))throw Error('Not a labeled queue job');
  const raw=issue.body;if(typeof raw!=='string'||raw.length>2500)throw Error('Invalid job body');
  let j;try{j=JSON.parse(raw);}catch{throw Error('Invalid job JSON');}
- const keys=['schemaVersion','jobId','action','issuedAt','expiresAt',...(j?.action==='collect_website'?['url','maxPages']:j?.action==='export_benchmark_evidence'?['benchmarkIssue','siteId']:[])];
+ const keys=['schemaVersion','jobId','action','issuedAt','expiresAt',...(j?.action==='collect_website'?['url','maxPages']:j?.action==='export_benchmark_evidence'?['benchmarkIssue','siteId']:j?.action==='export_final_outcome'?['runId']:j?.action==='import_final_outcome'?['runId','worklistSha256','reviewSha256','reviewParts']:[])];
  if(!j||Array.isArray(j)||typeof j!=='object'||Object.keys(j).length!==keys.length||keys.some(k=>!Object.hasOwn(j,k)))throw Error('Unexpected job fields');
  if(j.schemaVersion!==JOB_SCHEMA||!ACTIONS.includes(j.action)||typeof j.jobId!=='string'||!/^[A-Za-z0-9_-]{8,64}$/.test(j.jobId))throw Error('Unknown action or invalid job ID');
  const iso=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/;
@@ -50,6 +51,8 @@ export function parseJob(issue,now=Date.now()){
  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||end-start>MAX_AGE||start>now+60000||now>=end||now-start>MAX_AGE)throw Error('Expired or future-dated job');
  if(j.action==='collect_website'){j.url=publicSeed(j.url);if(!Number.isInteger(j.maxPages)||j.maxPages<1||j.maxPages>50)throw Error('Invalid page budget');}
  if(j.action==='export_benchmark_evidence'&&(!Number.isSafeInteger(j.benchmarkIssue)||j.benchmarkIssue<1||typeof j.siteId!=='string'||!/^\d{3}$/.test(j.siteId)))throw Error('Invalid benchmark evidence selector');
+ if(['export_final_outcome','import_final_outcome'].includes(j.action)&&(typeof j.runId!=='string'||j.runId.length>100||!RUN_ID.test(j.runId)))throw Error('Invalid outcome run selector');
+ if(j.action==='import_final_outcome'&&(!/^[a-f0-9]{64}$/.test(j.worklistSha256||'')||!/^[a-f0-9]{64}$/.test(j.reviewSha256||'')||!Number.isSafeInteger(j.reviewParts)||j.reviewParts<1||j.reviewParts>OUTCOME_REVIEW_MAX_PARTS))throw Error('Invalid outcome review metadata');
  return {...j,issueNumber:issue.number};
 }
 export function makeGitHubApi(token){
@@ -64,7 +67,7 @@ export function makeGitHubApi(token){
 function isPrivate(info){return info?.private===true&&info.id===REPO_ID&&info.full_name?.toLowerCase()===REPO.toLowerCase();}
 function splitText(text){const parts=[];for(let i=0;i<text.length;){let end=Math.min(i+CHUNK,text.length);if(end<text.length&&/[\uD800-\uDBFF]/.test(text[end-1]))end--;parts.push(text.slice(i,end));i=end;}return parts;}
 export function attachment(number,jobId,name,text,secret=''){
- if(!['01_shared_input.json','02_ollama_results.json'].includes(name))throw Error('Attachment type not approved');
+ if(!['01_shared_input.json','02_ollama_results.json','final_outcome_worklist.json'].includes(name))throw Error('Attachment type not approved');
  if(typeof text!=='string')return {manifest:{name,status:'missing'},comments:[]};
  if(Buffer.byteLength(text,'utf8')>MAX_EXPORT)return {manifest:{name,status:'too_large_local_only',bytes:Buffer.byteLength(text,'utf8')},comments:[]};
  if((secret&&text.includes(secret))||tokenLike.test(text))return {manifest:{name,status:'sensitive_pattern_local_only'},comments:[]};
@@ -90,7 +93,13 @@ export function createQueueAgent({root,lab,token='',api=token?makeGitHubApi(toke
  const save=()=>{const tmp=statePath+'.tmp';writeFileSync(tmp,JSON.stringify(state,null,2)+'\n',{encoding:'utf8',mode:0o600});renameSync(tmp,statePath);};
  const snapshot=()=>({...status,paused,active_job:active?{...active}:null});
  const verify=async()=>{if(!isPrivate(await api('GET',base)))throw Error('Expected verified private PI-Agent-Queue repository');};
- function readArtifacts(record){const result=[];if(!record.runId||!RUN_ID.test(record.runId))return result;const files=['collect_website','export_benchmark_evidence'].includes(record.action)?['01_shared_input.json']:['01_shared_input.json','02_ollama_results.json'];for(const file of files){let text=null;try{text=readFileSync(join(root,'results',record.runId,file),'utf8');}catch{}result.push(attachment(record.issueNumber,record.jobId,file,text,token));}return result;}
+ function readArtifacts(record){const result=[];if(!record.runId||!RUN_ID.test(record.runId))return result;
+  if(record.action==='export_final_outcome'){
+   const name='final_outcome_worklist.json';let raw=null;
+   try{const dir=join(root,'results',record.runId),report=JSON.parse(readFileSync(join(dir,'00_acquisition_report.json'),'utf8')),packet=JSON.parse(readFileSync(join(dir,'01_shared_input.json'),'utf8'));const candidate=JSON.stringify(makeOutcomeWorklist(record.runId,report,packet));if(outcomeHash(candidate)===record.result?.worklist_sha256)raw=candidate;}catch{}
+   return [attachment(record.issueNumber,record.jobId,name,raw,token)];
+  }
+  if(record.action==='import_final_outcome')return result;const files=['collect_website','export_benchmark_evidence'].includes(record.action)?['01_shared_input.json']:['01_shared_input.json','02_ollama_results.json'];for(const file of files){let text=null;try{text=readFileSync(join(root,'results',record.runId,file),'utf8');}catch{}result.push(attachment(record.issueNumber,record.jobId,file,text,token));}return result;}
  async function existingComments(number){const comments=[];for(let i=1;i<=5;i++){const r=await api('GET',base+'/issues/'+number+'/comments?per_page=100&page='+i);if(!Array.isArray(r))throw Error('Invalid issue comments');comments.push(...r.filter(c=>c.user?.login?.toLowerCase()===OWNER.toLowerCase()&&c.user?.id===OWNER_ID));if(r.length<100)return comments;}throw Error('Too many issue comments; cannot safely de-duplicate');}
  async function report(rec){
   if(stopped)return;await verify();const current=await api('GET',base+'/issues/'+rec.issueNumber);if(current.state!=='open'){rec.status='reported';save();return;}
@@ -109,6 +118,22 @@ export function createQueueAgent({root,lab,token='',api=token?makeGitHubApi(toke
   if(j.action==='ollama_health')return {...await ollamaCheck(),action:j.action};
   if(j.action==='run_tests')return {...await testRunner(),action:j.action};
   const rec=state.jobs[String(j.issueNumber)];
+  if(j.action==='export_final_outcome'){
+   const worklist=lab.getOutcomeWorklist(j.runId);const raw=JSON.stringify(worklist);
+   if((token&&raw.includes(token))||tokenLike.test(raw)||Buffer.byteLength(raw,'utf8')>MAX_EXPORT)throw Error('Worklist is not eligible for private export');
+   rec.runId=j.runId;save();return {status:'completed',action:j.action,run_id:j.runId,products:worklist.leads.length,worklist_sha256:outcomeHash(raw)};
+  }
+  if(j.action==='import_final_outcome'){
+   const comments=await existingComments(j.issueNumber),raw=assembleOutcomeReview(comments,j);
+   if((token&&raw.includes(token))||tokenLike.test(raw))throw Error('Review contains a sensitive pattern');
+   const current=await api('GET',base+'/issues/'+j.issueNumber),fresh=parseJob(current,clock());
+   if(JSON.stringify(fresh)!==JSON.stringify(j)||stopped||paused)throw Error('Review authorization changed');
+   const worklist=lab.getOutcomeWorklist(j.runId);
+   if(outcomeHash(JSON.stringify(worklist))!==j.worklistSha256)throw Error('Outcome worklist changed; export again');
+   const review=JSON.parse(raw);if(review?.run_id!==j.runId)throw Error('Review run does not match job');
+   const result=lab.applyOutcomeReview(review,{merge:true});
+   return {status:'completed',action:j.action,...result,review_sha256:j.reviewSha256};
+  }
   if(j.action==='export_benchmark_evidence'){
    const previous=state.jobs[String(j.benchmarkIssue)];
    const row=previous?.action==='benchmark_failed34'&&previous.benchmarkRows?.find(r=>r.siteId===j.siteId);
