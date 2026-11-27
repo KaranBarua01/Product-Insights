@@ -49,7 +49,9 @@
         "AGENTS.md",
         ".gitignore",
         "GITHUB_ACTIONS_DEPLOY.md",
-        "CLOUDFLARE_SETUP.md"
+        "CLOUDFLARE_SETUP.md",
+        "tools/pi-local-updater/",
+        "local/unified-lab/"
       ],
       "notes": "CI, ownership governance, security and central controller coordination."
     }
@@ -114,6 +116,12 @@
       "ownerLane": "PLATFORM",
       "canonicalPath": ".github/workflows/ci.yml",
       "status": "source-ci-only-controller-deploys"
+    },
+    {
+      "id": "github-local-updater",
+      "ownerLane": "PLATFORM",
+      "canonicalPath": "tools/pi-local-updater/",
+      "status": "verified-prototype-pending-reviewed-release"
     }
   ]
 }
