@@ -14,7 +14,7 @@ function offline(){
  });
 }
 function smoke(app){
- const args=['--experimental-sqlite','--test','engine/test.mjs','tests/integration.test.mjs','tests/queue-agent.test.mjs','tests/acquisition-phase4.test.mjs','benchmark/pinned-fetch.test.mjs'];
+ const args=['--experimental-sqlite','--test','engine/test.mjs','tests/integration.test.mjs','tests/queue-agent.test.mjs','tests/acquisition-phase4.test.mjs','benchmark/pinned-fetch.test.mjs','updater/core.test.mjs','updater/bridge.test.mjs'];
  const env={...process.env};delete env.PI_AGENT_GITHUB_TOKEN;
  const r=spawnSync(process.execPath,args,{cwd:app,env,stdio:'inherit',windowsHide:true,timeout:180000});
  if(r.error||r.status!==0)throw Error('Post-update regression tests failed (automatic rollback requested)');
