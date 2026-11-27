@@ -37,6 +37,8 @@ jobs:
           node --check tools/pi-local-updater/bridge.test.mjs
       - name: Offline security, staging and rollback tests
         run: node --test tools/pi-local-updater/*.test.mjs
+      - name: Real pinned GitHub canary staging and rollback
+        run: node tools/pi-local-updater/canary-e2e.mjs
       - name: Hash-pinned Windows bootstrap dry run
         if: matrix.os == 'windows-latest'
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/pi-local-updater/enable-github-updates.ps1 -TestOnly
